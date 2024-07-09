@@ -1,0 +1,13 @@
+{
+  "dependencies": [
+    "glew",
+    "glm",
+    "tracy",
+    "spdlog",
+    "sdl2",
+    {
+      "name": "imgui",
+      "features": ["opengl3-binding", "sdl2-binding"]
+    }
+  ]
+}
