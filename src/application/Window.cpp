@@ -5,6 +5,10 @@
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
+
+#include "pch.hpp"
+#include "spdlog/spdlog.h"
+
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
 #else
@@ -111,12 +115,11 @@ void Window::Init(int width, int height, const char* title, EventCallback event_
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #else
-  // GL 3.0 + GLSL 130
-  const char* glsl_version = "#version 130";
+  const char* glsl_version = "#version 430";
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 #endif
 
   // From 2.0.18: Enable native IME.
@@ -151,6 +154,16 @@ void Window::Init(int width, int height, const char* title, EventCallback event_
   // Setup Platform/Renderer backends
   ImGui_ImplSDL2_InitForOpenGL(window_, gl_context);
   ImGui_ImplOpenGL3_Init(glsl_version);
+
+  GLenum err = glewInit();
+  if (err != GLEW_OK) {
+    /* Problem: glewInit failed, something is seriously wrong. */
+    const char* err_string = reinterpret_cast<const char*>(glewGetErrorString(err));
+    spdlog::critical("GLEW initialization failed: {}", err_string);
+  }
+
+  const char* version = reinterpret_cast<const char*>(glewGetString(GLEW_VERSION));
+  spdlog::info("Using GLEW version: {}", version);
 }
 
 void Window::StartFrame() {
@@ -180,9 +193,11 @@ void Window::StartFrame() {
       case SDL_KEYUP:
         if (io.WantCaptureKeyboard) break;
         event_callback_(event);
+        break;
       case SDL_MOUSEMOTION:
         if (io.WantCaptureMouse) break;
         event_callback_(event);
+        break;
       default:
         break;
     }
@@ -218,3 +233,59 @@ bool Window::ShouldClose() const { return should_close_; }
 void Window::SetVsync(bool vsync) { vsync_on_ = vsync; }
 
 bool Window::GetVsync() const { return vsync_on_; }
+
+std::string Window::GetEventTypeString(Uint32 eventType) {
+  static const std::unordered_map<Uint32, std::string> EventTypeMap = {
+      {SDL_QUIT, "SDL_QUIT"},
+      {SDL_APP_TERMINATING, "SDL_APP_TERMINATING"},
+      {SDL_APP_LOWMEMORY, "SDL_APP_LOWMEMORY"},
+      {SDL_APP_WILLENTERBACKGROUND, "SDL_APP_WILLENTERBACKGROUND"},
+      {SDL_APP_DIDENTERBACKGROUND, "SDL_APP_DIDENTERBACKGROUND"},
+      {SDL_APP_WILLENTERFOREGROUND, "SDL_APP_WILLENTERFOREGROUND"},
+      {SDL_APP_DIDENTERFOREGROUND, "SDL_APP_DIDENTERFOREGROUND"},
+      {SDL_WINDOWEVENT, "SDL_WINDOWEVENT"},
+      {SDL_SYSWMEVENT, "SDL_SYSWMEVENT"},
+      {SDL_KEYDOWN, "SDL_KEYDOWN"},
+      {SDL_KEYUP, "SDL_KEYUP"},
+      {SDL_TEXTEDITING, "SDL_TEXTEDITING"},
+      {SDL_TEXTINPUT, "SDL_TEXTINPUT"},
+      {SDL_KEYMAPCHANGED, "SDL_KEYMAPCHANGED"},
+      {SDL_MOUSEMOTION, "SDL_MOUSEMOTION"},
+      {SDL_MOUSEBUTTONDOWN, "SDL_MOUSEBUTTONDOWN"},
+      {SDL_MOUSEBUTTONUP, "SDL_MOUSEBUTTONUP"},
+      {SDL_MOUSEWHEEL, "SDL_MOUSEWHEEL"},
+      {SDL_JOYAXISMOTION, "SDL_JOYAXISMOTION"},
+      {SDL_JOYBALLMOTION, "SDL_JOYBALLMOTION"},
+      {SDL_JOYHATMOTION, "SDL_JOYHATMOTION"},
+      {SDL_JOYBUTTONDOWN, "SDL_JOYBUTTONDOWN"},
+      {SDL_JOYBUTTONUP, "SDL_JOYBUTTONUP"},
+      {SDL_JOYDEVICEADDED, "SDL_JOYDEVICEADDED"},
+      {SDL_JOYDEVICEREMOVED, "SDL_JOYDEVICEREMOVED"},
+      {SDL_CONTROLLERAXISMOTION, "SDL_CONTROLLERAXISMOTION"},
+      {SDL_CONTROLLERBUTTONDOWN, "SDL_CONTROLLERBUTTONDOWN"},
+      {SDL_CONTROLLERBUTTONUP, "SDL_CONTROLLERBUTTONUP"},
+      {SDL_CONTROLLERDEVICEADDED, "SDL_CONTROLLERDEVICEADDED"},
+      {SDL_CONTROLLERDEVICEREMOVED, "SDL_CONTROLLERDEVICEREMOVED"},
+      {SDL_CONTROLLERDEVICEREMAPPED, "SDL_CONTROLLERDEVICEREMAPPED"},
+      {SDL_FINGERDOWN, "SDL_FINGERDOWN"},
+      {SDL_FINGERUP, "SDL_FINGERUP"},
+      {SDL_FINGERMOTION, "SDL_FINGERMOTION"},
+      {SDL_DOLLARGESTURE, "SDL_DOLLARGESTURE"},
+      {SDL_DOLLARRECORD, "SDL_DOLLARRECORD"},
+      {SDL_MULTIGESTURE, "SDL_MULTIGESTURE"},
+      {SDL_CLIPBOARDUPDATE, "SDL_CLIPBOARDUPDATE"},
+      {SDL_DROPFILE, "SDL_DROPFILE"},
+      {SDL_DROPTEXT, "SDL_DROPTEXT"},
+      {SDL_DROPBEGIN, "SDL_DROPBEGIN"},
+      {SDL_DROPCOMPLETE, "SDL_DROPCOMPLETE"},
+      {SDL_AUDIODEVICEADDED, "SDL_AUDIODEVICEADDED"},
+      {SDL_AUDIODEVICEREMOVED, "SDL_AUDIODEVICEREMOVED"},
+      {SDL_RENDER_TARGETS_RESET, "SDL_RENDER_TARGETS_RESET"},
+      {SDL_RENDER_DEVICE_RESET, "SDL_RENDER_DEVICE_RESET"}};
+
+  auto it = EventTypeMap.find(eventType);
+  if (it != EventTypeMap.end()) {
+    return it->second;
+  }
+  return "Unknown event";
+}

@@ -4,7 +4,20 @@ set(SOURCES
     application/main.cpp
     application/Application.cpp
     application/Window.cpp
-    application/Input.cpp
+    application/Settings.cpp
+    application/EventDispatcher.cpp
+
+    renderer/ShaderManager.cpp
+    renderer/Renderer.cpp
+
+    renderer/opengl/Texture2d.cpp
+    renderer/opengl/Debug.cpp
+    renderer/opengl/Shader.cpp
+    renderer/opengl/VertexArray.cpp
+    renderer/opengl/Buffer.cpp
+
+    util/LoadFile.cpp
+
     EAssert.cpp
     pch.cpp
 )

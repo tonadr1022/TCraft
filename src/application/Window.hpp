@@ -19,6 +19,8 @@ class Window {
   void StartFrame();
   void EndFrame() const;
 
+  static std::string GetEventTypeString(Uint32 eventType);
+
   bool imgui_enabled{true};
   [[nodiscard]] bool GetVsync() const;
   [[nodiscard]] bool ShouldClose() const;

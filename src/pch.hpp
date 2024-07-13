@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <spdlog/logger.h>
 
 #include <algorithm>
 #include <bitset>

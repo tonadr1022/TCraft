@@ -87,11 +87,11 @@ def main():
     parser.add_argument("-b", "--build", help="Build the program", action="store_true")
     parser.add_argument(
         "--mode",
-        help="CMake build type (default RelWithDebInfo)",
+        help="CMake build type (default Debug)",
         type=str,
         choices=BUILD_MODES,
         metavar="BUILD_MODE",
-        default="RelWithDebInfo",
+        default="Debug",
     )
     parser.add_argument("-c", help="Configure", action="store_true")
     parser.add_argument("--clean", help="Remove all build files", action="store_true")
