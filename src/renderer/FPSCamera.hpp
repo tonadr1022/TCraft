@@ -10,8 +10,9 @@ class FPSCamera {
 
   static constexpr const glm::vec3 UpVector{0.f, 1.f, 0.f};
   void Update(double dt);
+  void OnImGui() const;
 
-  glm::vec3 position_{};
+  glm::vec3 position_{0};
   [[nodiscard]] const glm::vec3& GetFront() const { return front_; }
 
  private:

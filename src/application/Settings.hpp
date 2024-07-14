@@ -3,8 +3,12 @@
 class Settings {
  public:
   static Settings& Get();
-  float mouse_sensitivity{1.f};
-  float fps_cam_fov_deg{90};
+  void OnImGui();
+  void LoadSettings(const std::string& path);
+  void SaveSettings(const std::string& path);
+  float mouse_sensitivity;
+  float fps_cam_fov_deg;
+  bool imgui_enabled;
 
  private:
   friend class Application;

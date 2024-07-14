@@ -9,6 +9,7 @@ set(SOURCES
 
     renderer/ShaderManager.cpp
     renderer/Renderer.cpp
+    renderer/FPSCamera.cpp
 
     renderer/opengl/Texture2d.cpp
     renderer/opengl/Debug.cpp
@@ -17,6 +18,8 @@ set(SOURCES
     renderer/opengl/Buffer.cpp
 
     util/LoadFile.cpp
+    gameplay/Player.cpp
+    gameplay/World.cpp
 
     EAssert.cpp
     pch.cpp
@@ -33,4 +36,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     GLEW::GLEW
     glm::glm
     spdlog::spdlog
+    nlohmann_json::nlohmann_json
 )

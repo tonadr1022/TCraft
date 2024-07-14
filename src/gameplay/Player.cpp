@@ -1,13 +1,18 @@
 #include "Player.hpp"
 
 #include <SDL_keycode.h>
+#include <SDL_mouse.h>
+#include <imgui.h>
 
 #include <glm/geometric.hpp>
 #include <glm/trigonometric.hpp>
 
 #include "application/Input.hpp"
+#include "application/Window.hpp"
 
 void Player::Update(double dt) {
+  // SDL_ShowCursor(camera_focused_ ? SDL_DISABLE : SDL_ENABLE);
+  if (!camera_focused_) return;
   float movement_offset = move_speed_ * dt;
   glm::vec3 movement(0.f);
   if (Input::IsKeyDown(SDLK_w) || Input::IsKeyDown(SDLK_i)) {
@@ -33,6 +38,29 @@ void Player::Update(double dt) {
     position_ += movement;
   }
   fps_camera_.position_ = position_;
-
-  fps_camera_.Update(dt);
+  if (camera_focused_) fps_camera_.Update(dt);
 }
+
+void Player::OnImGui() const {
+  ImGui::Begin("Player", nullptr,
+               ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
+  ImGui::Text("Position %f, %f, %f", position_.x, position_.y, position_.z);
+  ImGui::Text("Camera Focused: %s", camera_focused_ ? "true" : "false");
+  if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
+    fps_camera_.OnImGui();
+  }
+  ImGui::End();
+}
+
+bool Player::OnEvent(const SDL_Event& event) {
+  switch (event.type) {
+    case SDL_KEYDOWN:
+      if (event.key.keysym.sym == SDLK_f && event.key.keysym.mod & KMOD_ALT) {
+        camera_focused_ = !camera_focused_;
+        SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
+        return true;
+      }
+  }
+  return false;
+}
+void Player::Init() const { SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE); }

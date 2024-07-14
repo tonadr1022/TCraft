@@ -2,10 +2,14 @@
 
 #include <SDL.h>
 #include <SDL_events.h>
+#include <SDL_video.h>
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
 
+#include <glm/vec2.hpp>
+
+#include "application/Settings.hpp"
 #include "pch.hpp"
 #include "spdlog/spdlog.h"
 
@@ -92,8 +96,12 @@ void SetImGuiStyle() {
 }
 }  // namespace
 
+Window* Window::instance_ = nullptr;
+Window::Window() { instance_ = this; }
+Window& Window::Get() { return *instance_; }
+
 // https://github.com/ocornut/imgui/blob/bb224c8aa1de1992c6ea3483df56fb04d6d1b5b6/examples/example_sdl2_opengl3/main.cpp
-void Window::Init(int width, int height, const char* title, EventCallback event_callback) {
+void Window::Init(int width, int height, const char* title, const EventCallback& event_callback) {
   event_callback_ = event_callback;
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
     spdlog::critical("Error: {}\n", SDL_GetError());
@@ -190,6 +198,13 @@ void Window::StartFrame() {
         }
         break;
       case SDL_KEYDOWN:
+        if (event.key.keysym.sym == SDLK_g && event.key.keysym.mod & KMOD_ALT) {
+          Settings::Get().imgui_enabled = !Settings::Get().imgui_enabled;
+          break;
+        }
+        if (io.WantCaptureKeyboard) break;
+        event_callback_(event);
+        break;
       case SDL_KEYUP:
         if (io.WantCaptureKeyboard) break;
         event_callback_(event);
@@ -203,7 +218,7 @@ void Window::StartFrame() {
     }
   }
 
-  if (imgui_enabled) {
+  if (Settings::Get().imgui_enabled) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
@@ -219,13 +234,21 @@ void Window::Shutdown() {
   SDL_DestroyWindow(window_);
   SDL_Quit();
 }
+void Window::CenterCursor() {
+  auto dims = GetWindowSize();
+  SDL_WarpMouseInWindow(window_, static_cast<float>(dims.x) / 2, static_cast<float>(dims.y) / 2);
+}
+
+void Window::SetMouseGrab(bool state) {
+  SDL_SetWindowMouseGrab(window_, static_cast<SDL_bool>(state));
+}
 
 void Window::EndFrame() const {
-  if (imgui_enabled) {
+  if (Settings::Get().imgui_enabled) {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    SDL_GL_SwapWindow(window_);
   }
+  SDL_GL_SwapWindow(window_);
 }
 
 bool Window::ShouldClose() const { return should_close_; }
@@ -289,3 +312,19 @@ std::string Window::GetEventTypeString(Uint32 eventType) {
   }
   return "Unknown event";
 }
+
+glm::ivec2 Window::GetWindowSize() const {
+  int x;
+  int y;
+  SDL_GetWindowSize(window_, &x, &y);
+  return {x, y};
+}
+
+glm::ivec2 Window::GetMousePosition() const {
+  int x;
+  int y;
+  SDL_GetMouseState(&x, &y);
+  return {x, y};
+}
+
+glm::ivec2 Window::GetWindowCenter() const { return GetWindowSize() / 2; }
