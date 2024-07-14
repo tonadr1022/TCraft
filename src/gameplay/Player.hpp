@@ -12,9 +12,10 @@ class Player {
   void OnImGui() const;
   bool OnEvent(const SDL_Event& event);
 
+  glm::vec3 position_{0};
+
  private:
   FPSCamera fps_camera_;
   bool camera_focused_{true};
   float move_speed_{0.01};
-  glm::vec3 position_{0};
 };

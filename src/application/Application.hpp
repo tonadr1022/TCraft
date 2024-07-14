@@ -2,11 +2,12 @@
 
 #include "application/EventDispatcher.hpp"
 #include "application/Window.hpp"
-#include "gameplay/Player.hpp"
+#include "gameplay/world/World.hpp"
 
 class ShaderManager;
 class Settings;
 class Renderer;
+class InternalSettings;
 
 class Application {
  public:
@@ -19,9 +20,10 @@ class Application {
  private:
   ShaderManager* shader_manager_{nullptr};
   Settings* settings_{nullptr};
+  InternalSettings* internal_settings_{nullptr};
   Renderer* renderer_{nullptr};
   Window window_;
-  Player player_;
+  World world_;
   EventDispatcher event_dispatcher_;
   void ImGuiTest();
 };

@@ -17,8 +17,9 @@ class Window {
   void SetCursorVisible(bool cursor_visible);
   void CenterCursor();
   void SetUserPointer(void* ptr);
-  void StartFrame();
-  void EndFrame() const;
+  void StartRenderFrame();
+  void PollEvents();
+  void EndRenderFrame() const;
   void SetMouseGrab(bool state);
 
   static std::string GetEventTypeString(Uint32 eventType);

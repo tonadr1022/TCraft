@@ -5,11 +5,14 @@ set(SOURCES
     application/Application.cpp
     application/Window.cpp
     application/Settings.cpp
+    application/InternalSettings.cpp
     application/EventDispatcher.cpp
 
     renderer/ShaderManager.cpp
     renderer/Renderer.cpp
     renderer/FPSCamera.cpp
+    renderer/ChunkMesher.cpp
+    renderer/ChunkMesh.cpp
 
     renderer/opengl/Texture2d.cpp
     renderer/opengl/Debug.cpp
@@ -19,7 +22,10 @@ set(SOURCES
 
     util/LoadFile.cpp
     gameplay/Player.cpp
-    gameplay/World.cpp
+    gameplay/world/World.cpp
+    gameplay/world/TerrainGenerator.cpp
+    gameplay/world/Chunk.cpp
+    gameplay/world/ChunkData.cpp
 
     EAssert.cpp
     pch.cpp

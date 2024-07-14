@@ -12,11 +12,16 @@ class FPSCamera {
   void Update(double dt);
   void OnImGui() const;
 
-  glm::vec3 position_{0};
+  void Save();
+  void Load();
+
+  glm::vec3 position_;
   [[nodiscard]] const glm::vec3& GetFront() const { return front_; }
 
+  bool first_mouse_{true};
+
  private:
-  glm::vec3 front_{0, 0, -1};
-  float yaw_{-90.f}, pitch_{0.f};
+  glm::vec3 front_;
+  float yaw_, pitch_;
   float near_plane_{0.1f}, far_plane_{1000.f};
 };

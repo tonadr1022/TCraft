@@ -2,7 +2,9 @@
 
 #include "pch.hpp"
 
-Buffer::Buffer(uint32_t size_bytes, GLbitfield flags, void* data) {
+Buffer::Buffer() = default;
+
+void Buffer::Init(uint32_t size_bytes, GLbitfield flags, void* data) {
   glCreateBuffers(1, &id_);
   glNamedBufferStorage(id_, size_bytes, data, flags);
 }

@@ -173,8 +173,7 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
   const char* version = reinterpret_cast<const char*>(glewGetString(GLEW_VERSION));
   spdlog::info("Using GLEW version: {}", version);
 }
-
-void Window::StartFrame() {
+void Window::PollEvents() {
   // Poll and handle events (inputs, window resize, etc.)
   // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants
   // to use your inputs.
@@ -217,13 +216,24 @@ void Window::StartFrame() {
         break;
     }
   }
+}
 
+void Window::StartRenderFrame() {
   if (Settings::Get().imgui_enabled) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
   }
 }
+
+void Window::EndRenderFrame() const {
+  if (Settings::Get().imgui_enabled) {
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  }
+  SDL_GL_SwapWindow(window_);
+}
+
 void Window::Shutdown() {
   // Cleanup
   ImGui_ImplOpenGL3_Shutdown();
@@ -241,14 +251,6 @@ void Window::CenterCursor() {
 
 void Window::SetMouseGrab(bool state) {
   SDL_SetWindowMouseGrab(window_, static_cast<SDL_bool>(state));
-}
-
-void Window::EndFrame() const {
-  if (Settings::Get().imgui_enabled) {
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-  }
-  SDL_GL_SwapWindow(window_);
 }
 
 bool Window::ShouldClose() const { return should_close_; }

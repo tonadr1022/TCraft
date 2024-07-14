@@ -1,1 +1,21 @@
-{"fps_cam_fov_deg":105.00000762939453,"imgui_enabled":true,"mouse_sensitivity":1.0}
+{
+  "fps_cam": {
+    "pitch": -38.200042724609375,
+    "yaw": 31.099905014038086
+  },
+  "main": {
+    "fps_cam_fov_deg": 103.00000762939453,
+    "imgui_enabled": true,
+    "load_distance": 0,
+    "mouse_sensitivity": 1.0,
+    "wireframe_enabled": false
+  },
+  "world": {
+    "load_distance": 31,
+    "player_position": [
+      -10.675644874572754,
+      45.11812210083008,
+      -1.0214141607284546
+    ]
+  }
+}

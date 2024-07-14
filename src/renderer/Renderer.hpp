@@ -2,6 +2,9 @@
 
 #include <SDL_events.h>
 
+#include <glm/mat4x4.hpp>
+#include <glm/vec2.hpp>
+
 struct DrawElementsIndirectCommand {
   uint32_t count;
   uint32_t instance_count;
@@ -11,13 +14,19 @@ struct DrawElementsIndirectCommand {
 };
 
 class Buffer;
+class World;
+
+struct RenderInfo {
+  glm::ivec2 window_dims;
+  glm::mat4 vp_matrix;
+};
 
 class Renderer {
  public:
   bool render_gui_{true};
   bool render_chunks_{true};
 
-  void Render();
+  void Render(World& world, const RenderInfo& render_info);
   void Init();
   bool OnEvent(const SDL_Event& event);
 

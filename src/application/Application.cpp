@@ -13,8 +13,8 @@
 #include "Settings.hpp"
 #include "Window.hpp"
 #include "application/Input.hpp"
+#include "application/InternalSettings.hpp"
 #include "gameplay/Player.hpp"
-#include "gameplay/World.hpp"
 #include "renderer/Cube.hpp"
 #include "renderer/Renderer.hpp"
 #include "renderer/ShaderManager.hpp"
@@ -25,6 +25,7 @@
 namespace {
 
 constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
+constexpr const auto InternalSettingsPath = GET_PATH("resources/internal_settings.json");
 struct Vertex {
   glm::vec3 position;
   glm::vec2 tex_coords;
@@ -35,78 +36,66 @@ struct Vertex {
 Application::Application(int width, int height, const char* title) {
   // load settings first
   settings_ = new Settings;
+  internal_settings_ = new InternalSettings;
 
   window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
 
   // Create singletons
   // TODO(tony): implement config file
-  Settings::Get().LoadSettings(SettingsPath);
+  Settings::Get().Load(SettingsPath);
+  InternalSettings::Get().Load(InternalSettingsPath);
   shader_manager_ = new ShaderManager;
   renderer_ = new Renderer;
 
   // Add event listeners
   event_dispatcher_.AddListener(
       [this](const SDL_Event& event) { return Renderer::Get().OnEvent(event); });
-  event_dispatcher_.AddListener([this](const SDL_Event& event) { return player_.OnEvent(event); });
+  event_dispatcher_.AddListener([this](const SDL_Event& event) { return world_.OnEvent(event); });
 
   Renderer::Get().Init();
-  player_.Init();
 }
 
+RenderInfo render_info;
 void Application::Run() {
-  World world;
-  world.Load(GET_PATH("resources/worlds/world_default"));
-
-  VertexArray vao;
-  vao.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
-  vao.EnableAttribute<float>(1, 2, offsetof(Vertex, tex_coords));
-  auto cube_vertex_buffer =
-      std::make_unique<Buffer>(sizeof(CubeVertices), 0, (void*)CubeVertices.data());
-  auto cube_index_buffer =
-      std::make_unique<Buffer>(sizeof(CubeIndices), 0, (void*)CubeIndices.data());
-  cube_vertex_buffer->Bind(GL_ARRAY_BUFFER);
-  cube_index_buffer->Bind(GL_ELEMENT_ARRAY_BUFFER);
-  vao.AttachVertexBuffer(cube_vertex_buffer->Id(), 0, 0, sizeof(Vertex));
-  vao.AttachElementBuffer(cube_index_buffer->Id());
+  world_.Load(GET_PATH("resources/worlds/world_default"));
 
   Uint64 curr_time = SDL_GetPerformanceCounter();
   Uint64 prev_time = 0;
   double dt = 0;
   // create vao
   while (!window_.ShouldClose()) {
+    //////////////////////////// DELTA TIME ///////////////////////////////
     prev_time = curr_time;
     curr_time = SDL_GetPerformanceCounter();
     dt = ((curr_time - prev_time) * 1000 / static_cast<double>(SDL_GetPerformanceFrequency()));
-    window_.StartFrame();
-    player_.Update(dt);
-    auto dims = window_.GetWindowSize();
-    glm::mat4 vp_matrix =
-        player_.GetCamera().GetProjection(static_cast<float>(dims.y) / static_cast<float>(dims.x)) *
-        player_.GetCamera().GetView();
 
-    glViewport(0, 0, dims.x, dims.y);
-    glClearColor(1, 0.6, 0.6, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    /////////////////////////////// UPDATE ////////////////////////////////////////
+    window_.PollEvents();
+    world_.Update(dt);
 
-    auto color = ShaderManager::Get().GetShader("color");
-    color->Bind();
-    color->SetVec3("color", {0, 1, 0});
-    color->SetMat4("model_matrix", glm::mat4{1});
-    color->SetMat4("vp_matrix", vp_matrix);
-    vao.Bind();
-    glDrawElements(GL_TRIANGLES, CubeIndices.size(), GL_UNSIGNED_INT, nullptr);
-
+    ////////////////////////// RENDERING ///////////////////////////////////
+    window_.StartRenderFrame();
+    auto& player = world_.GetPlayer();
+    render_info.window_dims = window_.GetWindowSize();
+    float aspect_ratio = static_cast<float>(render_info.window_dims.y) /
+                         static_cast<float>(render_info.window_dims.x);
+    render_info.vp_matrix =
+        player.GetCamera().GetProjection(aspect_ratio) * player.GetCamera().GetView();
+    Renderer::Get().Render(world_, render_info);
     if (Settings::Get().imgui_enabled) OnImGui();
-    window_.EndFrame();
+    window_.EndRenderFrame();
   }
 
+  /////////////////////////// SHUTDOWN ////////////////////////////////////////
+  world_.Save();
   window_.Shutdown();
 }
 
 Application::~Application() {
   delete renderer_;
   delete shader_manager_;
-  Settings::Get().SaveSettings(SettingsPath);
+  Settings::Get().Save(SettingsPath);
+  InternalSettings::Get().Save(InternalSettingsPath);
   delete settings_;
 }
 
@@ -123,11 +112,11 @@ void Application::OnEvent(const SDL_Event& event) {
 }
 
 void Application::OnImGui() {
-  player_.OnImGui();
   ImGuiIO& io = ImGui::GetIO();
   static int counter = 0;
   ImGui::Begin("App", nullptr, ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
   ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
   Settings::Get().OnImGui();
+  world_.OnImGui();
   ImGui::End();
 }

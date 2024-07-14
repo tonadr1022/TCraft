@@ -1,0 +1,10 @@
+{
+  "main": {
+    "fps_cam_fov_deg": 105.00000762939453,
+    "imgui_enabled": true,
+    "mouse_sensitivity": 1.0
+  },
+  "world": {
+    "load_distance": 16
+  }
+}

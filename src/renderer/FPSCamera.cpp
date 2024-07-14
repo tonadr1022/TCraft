@@ -23,6 +23,11 @@ void FPSCamera::Update(double /* dt */) {
   auto mouse_pos = Window::Get().GetMousePosition();
   auto window_center = Window::Get().GetWindowCenter();
   glm::vec2 cursor_offset = mouse_pos - window_center;
+  if (first_mouse_) {
+    first_mouse_ = false;
+    Window::Get().CenterCursor();
+    return;
+  }
   Window::Get().CenterCursor();
 
   float mouse_multiplier = 0.1 * Settings::Get().mouse_sensitivity;
@@ -39,4 +44,15 @@ void FPSCamera::OnImGui() const {
   ImGui::Text("Yaw: %.1f, Pitch: %.1f", yaw_, pitch_);
   ImGui::Text("Position: %.1f, %.1f, %.1f", position_.x, position_.y, position_.z);
   ImGui::Text("Front: %.2f, %.2f, %.2f", front_.x, front_.y, front_.z);
+}
+
+void FPSCamera::Save() {
+  nlohmann::json j = {{"yaw", yaw_}, {"pitch", pitch_}};
+  Settings::Get().SaveSetting(j, "fps_cam");
+}
+
+void FPSCamera::Load() {
+  auto settings = Settings::Get().LoadSetting("fps_cam");
+  yaw_ = settings["yaw"].get<float>();
+  pitch_ = settings["pitch"].get<float>();
 }

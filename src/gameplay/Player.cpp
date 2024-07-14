@@ -8,10 +8,8 @@
 #include <glm/trigonometric.hpp>
 
 #include "application/Input.hpp"
-#include "application/Window.hpp"
 
 void Player::Update(double dt) {
-  // SDL_ShowCursor(camera_focused_ ? SDL_DISABLE : SDL_ENABLE);
   if (!camera_focused_) return;
   float movement_offset = move_speed_ * dt;
   glm::vec3 movement(0.f);
@@ -58,9 +56,11 @@ bool Player::OnEvent(const SDL_Event& event) {
       if (event.key.keysym.sym == SDLK_f && event.key.keysym.mod & KMOD_ALT) {
         camera_focused_ = !camera_focused_;
         SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
+        fps_camera_.first_mouse_ = true;
         return true;
       }
   }
   return false;
 }
+
 void Player::Init() const { SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE); }
