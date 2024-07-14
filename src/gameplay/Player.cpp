@@ -8,8 +8,10 @@
 #include <glm/trigonometric.hpp>
 
 #include "application/Input.hpp"
+#include "application/Window.hpp"
 
 void Player::Update(double dt) {
+  fps_camera_.position_ = position_;
   if (!camera_focused_) return;
   float movement_offset = move_speed_ * dt;
   glm::vec3 movement(0.f);
@@ -35,7 +37,6 @@ void Player::Update(double dt) {
     movement = glm::normalize(movement) * movement_offset;
     position_ += movement;
   }
-  fps_camera_.position_ = position_;
   if (camera_focused_) fps_camera_.Update(dt);
 }
 
@@ -50,17 +51,33 @@ void Player::OnImGui() const {
   ImGui::End();
 }
 
+void Player::OnCameraFocusChange() {
+  camera_focused_ = !camera_focused_;
+  SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
+  if (camera_focused_) {
+    Window::DisableImGuiInputs();
+  } else {
+    Window::EnableImGuiInputs();
+  }
+  fps_camera_.first_mouse_ = true;
+}
+
 bool Player::OnEvent(const SDL_Event& event) {
   switch (event.type) {
     case SDL_KEYDOWN:
       if (event.key.keysym.sym == SDLK_f && event.key.keysym.mod & KMOD_ALT) {
-        camera_focused_ = !camera_focused_;
-        SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
-        fps_camera_.first_mouse_ = true;
+        OnCameraFocusChange();
         return true;
       }
   }
   return false;
 }
 
-void Player::Init() const { SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE); }
+void Player::Init() {
+  SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
+  if (camera_focused_) {
+    Window::DisableImGuiInputs();
+  } else {
+    Window::EnableImGuiInputs();
+  }
+}

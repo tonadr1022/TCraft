@@ -1,0 +1,8 @@
+{
+  "type": "block/top_bottom",
+  "textures": {
+    "top": "block/plains_grass",
+    "bottom": "block/dirt",
+    "side": "block/dirt"
+  }
+}

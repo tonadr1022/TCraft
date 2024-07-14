@@ -21,7 +21,8 @@ class Window {
   void PollEvents();
   void EndRenderFrame() const;
   void SetMouseGrab(bool state);
-
+  static void DisableImGuiInputs();
+  static void EnableImGuiInputs();
   static std::string GetEventTypeString(Uint32 eventType);
 
   [[nodiscard]] bool GetVsync() const;

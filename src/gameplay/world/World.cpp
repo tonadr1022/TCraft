@@ -10,7 +10,10 @@
 #include "gameplay/world/TerrainGenerator.hpp"
 #include "renderer/ChunkMesher.hpp"
 
-void World::Update(double dt) { player_.Update(dt); }
+void World::Update(double dt) {
+  ZoneScoped;
+  player_.Update(dt);
+}
 
 void World::Load(std::string_view /*path*/) {
   player_.GetCamera().Load();

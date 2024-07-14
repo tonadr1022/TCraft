@@ -1,0 +1,8 @@
+{
+  "name": "Unnamed Block",
+  "model": "block/empty",
+  "properties": {
+    "move_slow_multiplier": 1,
+    "emits_light": false
+  }
+}

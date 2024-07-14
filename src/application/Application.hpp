@@ -8,6 +8,7 @@ class ShaderManager;
 class Settings;
 class Renderer;
 class InternalSettings;
+class BlockDB;
 
 class Application {
  public:
@@ -22,6 +23,7 @@ class Application {
   Settings* settings_{nullptr};
   InternalSettings* internal_settings_{nullptr};
   Renderer* renderer_{nullptr};
+  BlockDB* block_db_{nullptr};
   Window window_;
   World world_;
   EventDispatcher event_dispatcher_;

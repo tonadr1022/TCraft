@@ -33,15 +33,19 @@ void Renderer::Render(World& world, const RenderInfo& render_info) {
   color->Bind();
   color->SetMat4("vp_matrix", render_info.vp_matrix);
 
-  // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
-  for (const auto& it : world.chunk_map_) {
-    auto& mesh = it.second->mesh;
-    glm::vec3 pos = it.first * ChunkLength;
+  {
+    ZoneScopedN("Chunk render");
 
-    color->SetVec3("color", {rand() % 1, rand() % 1, rand() % 1});
-    color->SetMat4("model_matrix", glm::translate(glm::mat4{1}, pos));
-    mesh.vao.Bind();
-    glDrawElements(GL_TRIANGLES, mesh.num_indices_, GL_UNSIGNED_INT, nullptr);
+    // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
+    for (const auto& it : world.chunk_map_) {
+      auto& mesh = it.second->mesh;
+      glm::vec3 pos = it.first * ChunkLength;
+
+      color->SetVec3("color", {rand() % 1, rand() % 1, rand() % 1});
+      color->SetMat4("model_matrix", glm::translate(glm::mat4{1}, pos));
+      mesh.vao.Bind();
+      glDrawElements(GL_TRIANGLES, mesh.num_indices_, GL_UNSIGNED_INT, nullptr);
+    }
   }
 }
 

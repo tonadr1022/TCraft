@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Dirt",
+    "model": "block/dirt",
+    "properties": {}
+  },
+  {
+    "name": "Plains Grass",
+    "model": "block/plains_grass",
+    "properties": {}
+  },
+  {
+    "name": "Water",
+    "model": "block/water",
+    "properties": {
+      "move_slow_multiplier": 2
+    }
+  }
+]

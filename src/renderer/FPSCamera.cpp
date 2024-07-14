@@ -33,6 +33,10 @@ void FPSCamera::Update(double /* dt */) {
   float mouse_multiplier = 0.1 * Settings::Get().mouse_sensitivity;
   yaw_ += cursor_offset.x * mouse_multiplier;
   pitch_ = glm::clamp(pitch_ - cursor_offset.y * mouse_multiplier, -89.0f, 89.0f);
+  CalculateFront();
+}
+
+void FPSCamera::CalculateFront() {
   glm::vec3 front;
   front.x = glm::cos(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
   front.y = glm::sin(glm::radians(pitch_));
@@ -55,4 +59,5 @@ void FPSCamera::Load() {
   auto settings = Settings::Get().LoadSetting("fps_cam");
   yaw_ = settings["yaw"].get<float>();
   pitch_ = settings["pitch"].get<float>();
+  CalculateFront();
 }

@@ -1,0 +1,6 @@
+{
+  "type": "block/all",
+  "textures": {
+    "all": "block/dirt"
+  }
+}

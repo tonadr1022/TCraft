@@ -17,8 +17,9 @@ find_package(GLEW REQUIRED)
 find_package(Tracy CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-# add_compile_definitions(TRACY_ENABLE)
+add_compile_definitions(TRACY_ENABLE)
 option ( TRACY_ENABLE "" ON)
+
 add_compile_definitions(SHADER_PATH="${CMAKE_SOURCE_DIR}/resources/shaders/")
 add_compile_definitions(TEXTURE_PATH="${CMAKE_SOURCE_DIR}/resources/textures/")
 add_compile_definitions(MODEL_PATH="${CMAKE_SOURCE_DIR}/resources/models/")

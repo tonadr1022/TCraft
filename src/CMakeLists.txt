@@ -26,6 +26,7 @@ set(SOURCES
     gameplay/world/TerrainGenerator.cpp
     gameplay/world/Chunk.cpp
     gameplay/world/ChunkData.cpp
+    gameplay/world/BlockDB.cpp
 
     EAssert.cpp
     pch.cpp
@@ -41,6 +42,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     imgui::imgui
     GLEW::GLEW
     glm::glm
+    Tracy::TracyClient
     spdlog::spdlog
     nlohmann_json::nlohmann_json
 )

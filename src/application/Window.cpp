@@ -145,9 +145,7 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
                              window_flags);
   gl_context = SDL_GL_CreateContext(window_);
   SDL_GL_MakeCurrent(window_, gl_context);
-  // Enable vsync
-  SDL_GL_SetSwapInterval(1);
-  vsync_on_ = true;
+  SetVsync(true);
 
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
@@ -174,6 +172,7 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
   spdlog::info("Using GLEW version: {}", version);
 }
 void Window::PollEvents() {
+  ZoneScoped;
   // Poll and handle events (inputs, window resize, etc.)
   // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants
   // to use your inputs.
@@ -183,7 +182,6 @@ void Window::PollEvents() {
   // application, or clear/overwrite your copy of the keyboard data. Generally you may always pass
   // all inputs to dear imgui, and hide them from your application based on those two flags.
   SDL_Event event;
-  auto& io = ImGui::GetIO();
   while (SDL_PollEvent(&event)) {
     ImGui_ImplSDL2_ProcessEvent(&event);
     switch (event.type) {
@@ -201,15 +199,15 @@ void Window::PollEvents() {
           Settings::Get().imgui_enabled = !Settings::Get().imgui_enabled;
           break;
         }
-        if (io.WantCaptureKeyboard) break;
+        if (ImGui::GetIO().WantCaptureKeyboard) break;
         event_callback_(event);
         break;
       case SDL_KEYUP:
-        if (io.WantCaptureKeyboard) break;
+        if (ImGui::GetIO().WantCaptureKeyboard) break;
         event_callback_(event);
         break;
       case SDL_MOUSEMOTION:
-        if (io.WantCaptureMouse) break;
+        if (ImGui::GetIO().WantCaptureMouse) break;
         event_callback_(event);
         break;
       default:
@@ -227,11 +225,17 @@ void Window::StartRenderFrame() {
 }
 
 void Window::EndRenderFrame() const {
-  if (Settings::Get().imgui_enabled) {
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  {
+    ZoneScopedN("ImGui render");
+    if (Settings::Get().imgui_enabled) {
+      ImGui::Render();
+      ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
   }
-  SDL_GL_SwapWindow(window_);
+  {
+    ZoneScopedN("Swap buffers");
+    SDL_GL_SwapWindow(window_);
+  }
 }
 
 void Window::Shutdown() {
@@ -255,7 +259,10 @@ void Window::SetMouseGrab(bool state) {
 
 bool Window::ShouldClose() const { return should_close_; }
 
-void Window::SetVsync(bool vsync) { vsync_on_ = vsync; }
+void Window::SetVsync(bool vsync) {
+  vsync_on_ = vsync;
+  SDL_GL_SetSwapInterval(vsync);
+}
 
 bool Window::GetVsync() const { return vsync_on_; }
 
@@ -330,3 +337,16 @@ glm::ivec2 Window::GetMousePosition() const {
 }
 
 glm::ivec2 Window::GetWindowCenter() const { return GetWindowSize() / 2; }
+
+void Window::DisableImGuiInputs() {
+  ImGuiIO& io = ImGui::GetIO();
+  io.ConfigFlags |= ImGuiConfigFlags_NoMouse;
+  io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
+}
+
+// Function to enable ImGui input handling
+void Window::EnableImGuiInputs() {
+  ImGuiIO& io = ImGui::GetIO();
+  io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+}

@@ -15,6 +15,7 @@
 #include "application/Input.hpp"
 #include "application/InternalSettings.hpp"
 #include "gameplay/Player.hpp"
+#include "gameplay/world/BlockDB.hpp"
 #include "renderer/Cube.hpp"
 #include "renderer/Renderer.hpp"
 #include "renderer/ShaderManager.hpp"
@@ -37,6 +38,8 @@ Application::Application(int width, int height, const char* title) {
   // load settings first
   settings_ = new Settings;
   internal_settings_ = new InternalSettings;
+  block_db_ = new BlockDB;
+  BlockDB::Get().LoadData();
 
   window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
 
@@ -57,6 +60,7 @@ Application::Application(int width, int height, const char* title) {
 
 RenderInfo render_info;
 void Application::Run() {
+  ZoneScoped;
   world_.Load(GET_PATH("resources/worlds/world_default"));
 
   Uint64 curr_time = SDL_GetPerformanceCounter();
@@ -64,6 +68,7 @@ void Application::Run() {
   double dt = 0;
   // create vao
   while (!window_.ShouldClose()) {
+    ZoneScopedN("main loop");
     //////////////////////////// DELTA TIME ///////////////////////////////
     prev_time = curr_time;
     curr_time = SDL_GetPerformanceCounter();
@@ -74,16 +79,23 @@ void Application::Run() {
     world_.Update(dt);
 
     ////////////////////////// RENDERING ///////////////////////////////////
-    window_.StartRenderFrame();
-    auto& player = world_.GetPlayer();
-    render_info.window_dims = window_.GetWindowSize();
-    float aspect_ratio = static_cast<float>(render_info.window_dims.y) /
-                         static_cast<float>(render_info.window_dims.x);
-    render_info.vp_matrix =
-        player.GetCamera().GetProjection(aspect_ratio) * player.GetCamera().GetView();
-    Renderer::Get().Render(world_, render_info);
-    if (Settings::Get().imgui_enabled) OnImGui();
-    window_.EndRenderFrame();
+    {
+      ZoneScopedN("Render");
+      window_.StartRenderFrame();
+      auto& player = world_.GetPlayer();
+      render_info.window_dims = window_.GetWindowSize();
+      float aspect_ratio = static_cast<float>(render_info.window_dims.x) /
+                           static_cast<float>(render_info.window_dims.y);
+      render_info.vp_matrix =
+          player.GetCamera().GetProjection(aspect_ratio) * player.GetCamera().GetView();
+      Renderer::Get().Render(world_, render_info);
+
+      {
+        ZoneScopedN("ImGui calls");
+        if (Settings::Get().imgui_enabled) OnImGui();
+      }
+      window_.EndRenderFrame();
+    }
   }
 
   /////////////////////////// SHUTDOWN ////////////////////////////////////////
@@ -116,6 +128,11 @@ void Application::OnImGui() {
   static int counter = 0;
   ImGui::Begin("App", nullptr, ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
   ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+  bool vsync = window_.GetVsync();
+  if (ImGui::Checkbox("Vsync", &vsync)) {
+    window_.SetVsync(vsync);
+  }
+
   Settings::Get().OnImGui();
   world_.OnImGui();
   ImGui::End();

@@ -24,4 +24,5 @@ class FPSCamera {
   glm::vec3 front_;
   float yaw_, pitch_;
   float near_plane_{0.1f}, far_plane_{1000.f};
+  void CalculateFront();
 };
