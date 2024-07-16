@@ -3,25 +3,18 @@
 #include <glm/common.hpp>
 #include <glm/exponential.hpp>
 
-#include "../../util/stbImageImpl.h"
 #include "pch.hpp"
+#include "util/LoadFile.hpp"
 
 Texture2D::Texture2D(const Texture2DCreateParams& params) {
-  stbi_set_flip_vertically_on_load(params.flip);
   glCreateTextures(GL_TEXTURE_2D, 1, &id_);
 
-  int comp;
-  int x;
-  int y;
-  void* pixels{nullptr};
+  Image image;
   if (!params.filepath.empty()) {
-    pixels = stbi_load(params.filepath.c_str(), &x, &y, &comp, 4);
-    if (pixels == nullptr) {
-      spdlog::error("Failed to load texture at path {}", params.filepath);
-    }
+    util::LoadImage(image, params.filepath, params.flip);
   }
-  dims_.x = x;
-  dims_.y = y;
+  dims_.x = image.width;
+  dims_.y = image.height;
 
   GLuint mip_levels = 0;
   if (params.generate_mipmaps) {
@@ -45,9 +38,8 @@ Texture2D::Texture2D(const Texture2DCreateParams& params) {
                       dims_.y,           // height
                       GL_RGBA,           // format
                       GL_UNSIGNED_BYTE,  // type
-                      pixels             // data
+                      image.pixels       // data
   );
-  stbi_image_free(pixels);
 
   if (params.generate_mipmaps) glGenerateTextureMipmap(id_);
 

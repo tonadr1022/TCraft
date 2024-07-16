@@ -1,6 +1,9 @@
 #pragma once
 
-struct BlockMeshData {};
+#include <array>
+struct BlockMeshData {
+  std::array<int, 6> texture_indices;
+};
 
 struct BlockData {};
 
@@ -10,6 +13,7 @@ class BlockDB {
 
  private:
   friend class Application;
+  friend class ResourceLoader;
   void LoadData();
   BlockDB();
   static BlockDB* instance_;
@@ -26,4 +30,5 @@ class BlockDB {
   std::vector<BlockMeshData> block_mesh_data_db_;
 
   void LoadDefaultData();
+  void LoadBlockModelData();
 };

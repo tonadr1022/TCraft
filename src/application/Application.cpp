@@ -21,6 +21,7 @@
 #include "renderer/ShaderManager.hpp"
 #include "renderer/opengl/Buffer.hpp"
 #include "renderer/opengl/VertexArray.hpp"
+#include "resource/ResourceLoader.hpp"
 #include "util/Paths.hpp"
 
 namespace {
@@ -49,6 +50,7 @@ Application::Application(int width, int height, const char* title) {
   InternalSettings::Get().Load(InternalSettingsPath);
   shader_manager_ = new ShaderManager;
   renderer_ = new Renderer;
+  ResourceLoader::LoadResources();
 
   // Add event listeners
   event_dispatcher_.AddListener(
