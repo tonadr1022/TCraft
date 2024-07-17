@@ -21,6 +21,7 @@ class Settings {
   bool imgui_enabled;
   bool wireframe_enabled;
   int load_distance;
+  ~Settings() = default;
 
  private:
   json settings_json_;

@@ -3,12 +3,9 @@
 #include "application/EventDispatcher.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/World.hpp"
+#include "renderer/Renderer.hpp"
 
-class ShaderManager;
 class Settings;
-class Renderer;
-class InternalSettings;
-class BlockDB;
 
 class Application {
  public:
@@ -19,11 +16,8 @@ class Application {
   void OnImGui();
 
  private:
-  ShaderManager* shader_manager_{nullptr};
   Settings* settings_{nullptr};
-  InternalSettings* internal_settings_{nullptr};
-  Renderer* renderer_{nullptr};
-  BlockDB* block_db_{nullptr};
+  Renderer renderer_;
   Window window_;
   World world_;
   EventDispatcher event_dispatcher_;

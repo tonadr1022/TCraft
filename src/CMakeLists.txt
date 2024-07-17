@@ -5,7 +5,6 @@ set(SOURCES
     application/Application.cpp
     application/Window.cpp
     application/Settings.cpp
-    application/InternalSettings.cpp
     application/EventDispatcher.cpp
 
     renderer/ShaderManager.cpp

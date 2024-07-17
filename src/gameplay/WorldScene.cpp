@@ -1,6 +1,10 @@
 #include "WorldScene.hpp"
 
-void WorldScene::Init() {}
+#include <memory>
+
+#include "gameplay/world/BlockDB.hpp"
+
+void WorldScene::Init() { block_db_ = std::make_unique<BlockDB>(); }
 
 void WorldScene::Update(double dt) {}
 

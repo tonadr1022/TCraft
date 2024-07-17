@@ -11,19 +11,13 @@ struct ShaderCreateInfo {
 
 class ShaderManager {
  public:
-  static ShaderManager& Get();
   std::optional<Shader> GetShader(const std::string& name);
   std::optional<Shader> AddShader(const std::string& name,
                                   const std::vector<ShaderCreateInfo>& create_info_vec);
-
   std::optional<Shader> RecompileShader(const std::string& name);
   void RecompileShaders();
 
  private:
-  friend class Application;
-  ShaderManager();
-  static ShaderManager* instance_;
-
   struct ShaderProgramData {
     std::string name;
     uint32_t program_id;

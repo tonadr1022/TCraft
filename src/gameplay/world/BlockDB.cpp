@@ -10,13 +10,6 @@
 
 using json = nlohmann::json;
 
-BlockDB* BlockDB::instance_ = nullptr;
-BlockDB& BlockDB::Get() { return *instance_; }
-BlockDB::BlockDB() {
-  EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
-  instance_ = this;
-}
-
 namespace {
 
 const std::unordered_map<std::string, BlockType> BlockMap = {
@@ -33,25 +26,41 @@ BlockType GetBlockTypeFromString(const std::string& blockName) {
   throw std::runtime_error("Unknown block type: " + blockName);
 }
 
-}  // namespace
-
-void BlockDB::LoadDefaultData() {
-  ZoneScoped;
-  std::ifstream f(GET_PATH("resources/data/block/block_defaults.json"));
-  json default_json = json::parse(f);
-  block_defaults_.name = default_json["name"].get<std::string>();
-  block_defaults_.model = default_json["model"].get<std::string>();
-  auto& properties = default_json["properties"];
-  block_defaults_.move_slow_multiplier = properties["move_slow_multiplier"].get<float>();
-  block_defaults_.emits_light = properties["emits_light"].get<bool>();
-}
-
 std::string GetStrAfterLastSlash(const std::string& str) {
   int idx = str.find_last_of('/');
   return str.substr(idx + 1);
 }
 
-void BlockDB::LoadBlockModelData(std::unordered_map<std::string, BlockMeshData>& mesh_data_map) {
+}  // namespace
+
+BlockDB::BlockDB() {
+  ZoneScoped;
+  block_data_db_.resize(BlockMap.size());
+  block_mesh_data_db_.resize(BlockMap.size());
+  LoadDefaultData();
+  LoadBlockModelData();
+
+  json block_data_arr = util::LoadJsonFile(GET_PATH("resources/data/block/block_data.json"));
+  for (auto& block_data : block_data_arr) {
+    auto name = block_data.value("name", block_defaults_.name);
+    BlockType type = GetBlockTypeFromString(name);
+    auto model = block_data.value("model", block_defaults_.model);
+    BlockMeshData mesh_data;
+  }
+};
+
+void BlockDB::LoadDefaultData() {
+  ZoneScoped;
+  json default_block_data =
+      util::LoadJsonFile(GET_PATH("resources/data/block/block_defaults.json"));
+  block_defaults_.name = default_block_data["name"].get<std::string>();
+  block_defaults_.model = default_block_data["model"].get<std::string>();
+  auto& properties = default_block_data["properties"];
+  block_defaults_.move_slow_multiplier = properties["move_slow_multiplier"].get<float>();
+  block_defaults_.emits_light = properties["emits_light"].get<bool>();
+}
+
+void BlockDB::LoadBlockModelData() {
   ZoneScoped;
   // Array of strings of block models to load
   json block_model_arr = util::LoadJsonFile(GET_PATH("resources/data/block/block_model_data.json"));
@@ -101,40 +110,10 @@ void BlockDB::LoadBlockModelData(std::unordered_map<std::string, BlockMeshData>&
       } else {
         spdlog::error("Block model {} contains invalid type: {}", block_model_filename,
                       block_model_type);
-        mesh_data_map.emplace(block_model_name, default_mesh_data);
+        model_name_to_mesh_data_.emplace(block_model_name, default_mesh_data);
         continue;
       }
-      mesh_data_map.emplace(block_model_name, block_mesh_data);
+      model_name_to_mesh_data_.emplace(block_model_name, block_mesh_data);
     }
-  }
-}
-
-void BlockDB::LoadData() {
-  ZoneScoped;
-  block_data_db_.resize(BlockMap.size());
-  block_mesh_data_db_.resize(BlockMap.size());
-  LoadDefaultData();
-  std::unordered_map<std::string, BlockMeshData> mesh_data_map;
-  LoadBlockModelData(mesh_data_map);
-  for (const auto& el : mesh_data_map) {
-    auto [a, b] = el;
-    spdlog::info("{} {}", a, b.texture_indices[2]);
-  }
-
-  std::vector<bool> processed_block_types(BlockMap.size());
-
-  std::ifstream block_file(GET_PATH("resources/data/block/block_data.json"));
-  json block_data_arr = json::parse(block_file);
-
-  for (auto& block_data : block_data_arr) {
-    auto name = block_data.value("name", block_defaults_.name);
-    BlockType type = GetBlockTypeFromString(name);
-    auto model = block_data.value("model", block_defaults_.model);
-    BlockMeshData mesh_data;
-
-    // Can't have multiple
-    EASSERT(!processed_block_types[static_cast<int>(type)]);
-    processed_block_types[static_cast<int>(type)] = true;
-    // block_data_db_[static_cast<int>(type)] = data;
   }
 }

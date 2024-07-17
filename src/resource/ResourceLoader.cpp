@@ -1,6 +1,5 @@
 #include "ResourceLoader.hpp"
 
-#include <fstream>
 #include <nlohmann/json.hpp>
 
 #include "renderer/opengl/Texture2dArray.hpp"
@@ -13,10 +12,10 @@ std::string GetBaseFilename(const std::string& filename) {
 }
 
 }  // namespace
+
 void ResourceLoader::LoadResources() {
   ZoneScoped;
-  std::ifstream f(GET_PATH("resources/data/block/textures.json"));
-  nlohmann::json textures = nlohmann::json::parse(f);
+  nlohmann::json textures = util::LoadJsonFile(GET_PATH("resources/data/block/textures.json"));
   std::vector<void*> all_pixels_data;
   int texture_res = 16;
   int i = 0;

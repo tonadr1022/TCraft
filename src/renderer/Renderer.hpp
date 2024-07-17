@@ -5,6 +5,8 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 
+#include "renderer/ShaderManager.hpp"
+
 struct DrawElementsIndirectCommand {
   uint32_t count;
   uint32_t instance_count;
@@ -30,13 +32,8 @@ class Renderer {
   void Init();
   bool OnEvent(const SDL_Event& event);
 
-  static Renderer& Get();
-  ~Renderer();
-
  private:
-  friend class Application;
-  Renderer();
-  static Renderer* instance_;
+  ShaderManager shader_manager_;
 
   std::unique_ptr<Buffer> vertex_buffer_{nullptr};
   std::unique_ptr<Buffer> element_buffer_{nullptr};

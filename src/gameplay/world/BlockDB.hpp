@@ -10,15 +10,9 @@ struct BlockData {};
 
 class BlockDB {
  public:
-  static BlockDB& Get();
+  BlockDB();
 
  private:
-  friend class Application;
-  friend class ResourceLoader;
-  void LoadData();
-  BlockDB();
-  static BlockDB* instance_;
-
   struct BlockDataDefaults {
     std::string name;
     std::string model;
@@ -29,7 +23,8 @@ class BlockDB {
 
   std::vector<BlockData> block_data_db_;
   std::vector<BlockMeshData> block_mesh_data_db_;
+  std::unordered_map<std::string, BlockMeshData> model_name_to_mesh_data_;
 
   void LoadDefaultData();
-  void LoadBlockModelData(std::unordered_map<std::string, BlockMeshData>& mesh_data_map);
+  void LoadBlockModelData();
 };
