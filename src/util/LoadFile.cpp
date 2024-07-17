@@ -1,6 +1,8 @@
 #include "LoadFile.hpp"
 
 #include <fstream>
+#include <nlohmann/json.hpp>
+#include <stdexcept>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image/stb_image.h>
@@ -29,6 +31,14 @@ void LoadImage(Image& image, std::string_view path, bool flip) {
       spdlog::error("Failed to load texture at path {}", path);
     }
   }
+}
+
+nlohmann::json LoadJsonFile(const std::string& path) {
+  std::ifstream file_stream(path);
+  if (!file_stream.is_open()) {
+    throw std::runtime_error("Failed to open json file: %s" + path);
+  }
+  return nlohmann::json::parse(file_stream);
 }
 
 }  // namespace util

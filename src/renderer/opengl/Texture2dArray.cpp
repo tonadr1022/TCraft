@@ -41,7 +41,6 @@ Texture2dArray::Texture2dArray(const Texture2dArrayCreateParams& params) {
   }
 
   if (params.generate_mipmaps) glGenerateTextureMipmap(id_);
-  spdlog::info("generated texture array");
 }
 
 bool Texture2dArray::IsValid() const { return id_ != 0; }

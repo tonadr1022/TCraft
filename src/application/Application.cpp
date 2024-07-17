@@ -40,9 +40,10 @@ Application::Application(int width, int height, const char* title) {
   settings_ = new Settings;
   internal_settings_ = new InternalSettings;
   block_db_ = new BlockDB;
-  BlockDB::Get().LoadData();
 
   window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
+  ResourceLoader::LoadResources();
+  BlockDB::Get().LoadData();
 
   // Create singletons
   // TODO(tony): implement config file
@@ -50,7 +51,6 @@ Application::Application(int width, int height, const char* title) {
   InternalSettings::Get().Load(InternalSettingsPath);
   shader_manager_ = new ShaderManager;
   renderer_ = new Renderer;
-  ResourceLoader::LoadResources();
 
   // Add event listeners
   event_dispatcher_.AddListener(

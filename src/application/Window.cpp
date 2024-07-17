@@ -168,8 +168,8 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
     spdlog::critical("GLEW initialization failed: {}", err_string);
   }
 
-  const char* version = reinterpret_cast<const char*>(glewGetString(GLEW_VERSION));
-  spdlog::info("Using GLEW version: {}", version);
+  // const char* version = reinterpret_cast<const char*>(glewGetString(GLEW_VERSION));
+  // spdlog::info("Using GLEW version: {}", version);
 }
 void Window::PollEvents() {
   ZoneScoped;

@@ -4,6 +4,7 @@
 
 #include "../renderer/opengl/Texture2dArray.hpp"
 
+// TODO: singleton
 using TextureHandle = uint32_t;
 class ResourceLoader {
  public:

@@ -2,6 +2,7 @@
 
 #include <array>
 struct BlockMeshData {
+  // pos x,neg x, pos y, neg y, pos z, neg z
   std::array<int, 6> texture_indices;
 };
 
@@ -30,5 +31,5 @@ class BlockDB {
   std::vector<BlockMeshData> block_mesh_data_db_;
 
   void LoadDefaultData();
-  void LoadBlockModelData();
+  void LoadBlockModelData(std::unordered_map<std::string, BlockMeshData>& mesh_data_map);
 };

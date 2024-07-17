@@ -6,8 +6,15 @@
 #include "renderer/opengl/Texture2dArray.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
+namespace {
 
+std::string GetBaseFilename(const std::string& filename) {
+  return filename.substr(0, filename.find_last_of('.'));
+}
+
+}  // namespace
 void ResourceLoader::LoadResources() {
+  ZoneScoped;
   std::ifstream f(GET_PATH("resources/data/block/textures.json"));
   nlohmann::json textures = nlohmann::json::parse(f);
   std::vector<void*> all_pixels_data;
@@ -15,7 +22,10 @@ void ResourceLoader::LoadResources() {
   int i = 0;
   for (auto& texture : textures) {
     auto texture_str = texture.get<std::string>();
-    block_texture_filename_to_tex_index_[texture_str] = i++;
+    block_texture_filename_to_tex_index_[GetBaseFilename(texture_str)] = i;
+    if (GetBaseFilename(texture_str) == "dirt") {
+      spdlog::info("name: {}, idx: {}", texture_str, i);
+    }
     auto path = GET_PATH("resources/textures/block/") + texture_str;
     Image image;
     util::LoadImage(image, path, true);
@@ -23,6 +33,7 @@ void ResourceLoader::LoadResources() {
       // spdlog::error("{} {} texture {} is  ", image.width, image.height, path);
     } else {
       all_pixels_data.emplace_back(image.pixels);
+      i++;
     }
   }
   texture_2d_array_map_.emplace("blocks", Texture2dArray{{

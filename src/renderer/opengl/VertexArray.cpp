@@ -7,7 +7,6 @@ void VertexArray::Bind() const { glBindVertexArray(id_); }
 VertexArray::VertexArray() { glCreateVertexArrays(1, &id_); }
 
 VertexArray::~VertexArray() {
-  spdlog::info("delete vao");
   if (id_) glDeleteVertexArrays(1, &id_);
 }
 

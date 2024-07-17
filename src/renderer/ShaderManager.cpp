@@ -24,7 +24,7 @@ std::optional<Shader> ShaderManager::AddShader(
   if (!result.has_value()) {
     return std::nullopt;
   }
-  spdlog::info("Compiled shader: {}, Id: {}", name, result->program_id);
+  // spdlog::info("Compiled shader: {}, Id: {}", name, result->program_id);
   shader_data_.emplace(name.data(), result.value());
   return Shader{result->program_id, result->uniform_locations};
 }
