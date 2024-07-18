@@ -24,27 +24,29 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 }  // namespace
 
 Application::Application(int width, int height, const char* title) {
+  // Settings is a singleton since only one instance should exist
   settings_ = new Settings;
 
-  window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
-  ResourceLoader::LoadResources();
+  Settings::Get().Init(SettingsPath);
 
-  Settings::Get().Load(SettingsPath);
+  window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
+  renderer_.Init();
+
+  // TODO: separate into scenes
+  ResourceLoader::LoadResources();
 
   // Add event listeners
   event_dispatcher_.AddListener(
       [this](const SDL_Event& event) { return renderer_.OnEvent(event); });
-  event_dispatcher_.AddListener([this](const SDL_Event& event) { return world_.OnEvent(event); });
-
-  renderer_.Init();
+  event_dispatcher_.AddListener(
+      [this](const SDL_Event& event) { return scene_manager_.GetActiveScene().OnEvent(event); });
 }
 
 void Application::Run() {
   ZoneScoped;
-  world_.Load(GET_PATH("resources/worlds/world_default"));
+  scene_manager_.LoadScene("main_menu");
 
   RenderInfo render_info;
-
   Uint64 curr_time = SDL_GetPerformanceCounter();
   Uint64 prev_time = 0;
   double dt = 0;
@@ -56,29 +58,23 @@ void Application::Run() {
     dt = ((curr_time - prev_time) * 1000 / static_cast<double>(SDL_GetPerformanceFrequency()));
 
     window_.PollEvents();
-    world_.Update(dt);
+    scene_manager_.GetActiveScene().Update(dt);
 
     {
       ZoneScopedN("Render");
+      scene_manager_.GetActiveScene().Render(renderer_, window_);
       window_.StartRenderFrame();
-      auto& player = world_.GetPlayer();
-      render_info.window_dims = window_.GetWindowSize();
-      float aspect_ratio = static_cast<float>(render_info.window_dims.x) /
-                           static_cast<float>(render_info.window_dims.y);
-      render_info.vp_matrix =
-          player.GetCamera().GetProjection(aspect_ratio) * player.GetCamera().GetView();
-      renderer_.Render(world_, render_info);
 
       if (Settings::Get().imgui_enabled) OnImGui();
       window_.EndRenderFrame();
     }
   }
 
-  world_.Save();
+  scene_manager_.Shutdown();
   window_.Shutdown();
 }
 
-Application::~Application() { Settings::Get().Save(SettingsPath); }
+Application::~Application() { Settings::Get().Shutdown(SettingsPath); }
 
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;
@@ -105,6 +101,6 @@ void Application::OnImGui() {
   }
 
   Settings::Get().OnImGui();
-  world_.OnImGui();
+  scene_manager_.GetActiveScene().OnImGui();
   ImGui::End();
 }

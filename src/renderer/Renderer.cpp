@@ -2,7 +2,7 @@
 
 #include "ShaderManager.hpp"
 #include "application/Settings.hpp"
-#include "gameplay/world/World.hpp"
+#include "gameplay/scene/WorldScene.hpp"
 #include "pch.hpp"
 #include "renderer/opengl/Buffer.hpp"
 #include "renderer/opengl/Debug.hpp"
@@ -14,7 +14,7 @@ void Renderer::Init() {
   LoadShaders();
 }
 
-void Renderer::Render(World& world, const RenderInfo& render_info) {
+void Renderer::RenderWorld(WorldScene& world, const RenderInfo& render_info) {
   // TODO: cleanup rendering
   glViewport(0, 0, render_info.window_dims.x, render_info.window_dims.y);
   glClearColor(1, 0.0, 0.6, 1.0);

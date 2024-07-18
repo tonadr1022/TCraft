@@ -6,6 +6,8 @@
 #include <glm/trigonometric.hpp>
 #include <nlohmann/json.hpp>
 
+#include "util/LoadFile.hpp"
+
 using json = nlohmann::json;
 Settings* Settings::instance_ = nullptr;
 Settings& Settings::Get() { return *instance_; }
@@ -14,9 +16,8 @@ Settings::Settings() {
   instance_ = this;
 }
 
-void Settings::Load(const std::string& path) {
-  std::ifstream f(path);
-  settings_json_ = json::parse(f);
+void Settings::Init(const std::string& path) {
+  settings_json_ = util::LoadJsonFile(path);
 
   // Main settings
   auto& main = settings_json_["main"];
@@ -26,7 +27,7 @@ void Settings::Load(const std::string& path) {
   wireframe_enabled = main["wireframe_enabled"].get<bool>();
 }
 
-void Settings::Save(const std::string& path) {
+void Settings::Shutdown(const std::string& path) {
   std::ofstream f(path);
 
   // save main settings

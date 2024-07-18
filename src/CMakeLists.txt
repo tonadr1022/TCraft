@@ -6,6 +6,7 @@ set(SOURCES
     application/Window.cpp
     application/Settings.cpp
     application/EventDispatcher.cpp
+    application/SceneManager.cpp
 
     renderer/ShaderManager.cpp
     renderer/Renderer.cpp
@@ -29,6 +30,9 @@ set(SOURCES
     gameplay/world/Chunk.cpp
     gameplay/world/ChunkData.cpp
     gameplay/world/BlockDB.cpp
+    gameplay/scene/WorldScene.cpp
+    gameplay/scene/MainMenuScene.cpp
+
 
     EAssert.cpp
     pch.cpp

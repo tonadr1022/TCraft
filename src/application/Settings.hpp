@@ -8,8 +8,8 @@ class Settings {
  public:
   static Settings& Get();
   void OnImGui();
-  void Load(const std::string& path);
-  void Save(const std::string& path);
+  void Init(const std::string& path);
+  void Shutdown(const std::string& path);
   // Must be called before main Save(path)
   void SaveSetting(json& j, std::string_view name);
   // Must be called after main Load(path)

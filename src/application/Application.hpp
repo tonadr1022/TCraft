@@ -1,6 +1,7 @@
 #pragma once
 
 #include "application/EventDispatcher.hpp"
+#include "application/SceneManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/World.hpp"
 #include "renderer/Renderer.hpp"
@@ -17,9 +18,9 @@ class Application {
 
  private:
   Settings* settings_{nullptr};
+  SceneManager scene_manager_;
   Renderer renderer_;
   Window window_;
-  World world_;
   EventDispatcher event_dispatcher_;
   void ImGuiTest();
 };

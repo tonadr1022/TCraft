@@ -1,20 +1,20 @@
-#include "World.hpp"
+#include "WorldScene.hpp"
 
 #include <imgui.h>
 
-#include <glm/vec3.hpp>
+#include <memory>
+#include <nlohmann/json.hpp>
 
 #include "application/Settings.hpp"
-#include "gameplay/Player.hpp"
+#include "application/Window.hpp"
+#include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/TerrainGenerator.hpp"
 #include "renderer/ChunkMesher.hpp"
+#include "renderer/Renderer.hpp"
 
-void World::Update(double dt) {
+WorldScene::WorldScene(SceneManager& scene_manager)
+    : Scene(scene_manager), block_db_(std::make_unique<BlockDB>()) {
   ZoneScoped;
-  player_.Update(dt);
-}
-
-void World::Load(std::string_view /*path*/) {
   player_.GetCamera().Load();
   player_.Init();
   auto settings = Settings::Get().LoadSetting("world");
@@ -42,16 +42,34 @@ void World::Load(std::string_view /*path*/) {
   chunk->mesh.Allocate();
 }
 
-bool World::OnEvent(const SDL_Event& event) { return player_.OnEvent(event); }
+void WorldScene::Update(double dt) {
+  ZoneScoped;
+  player_.Update(dt);
+}
 
-void World::Save() {
+bool WorldScene::OnEvent(const SDL_Event& event) { return player_.OnEvent(event); }
+
+void WorldScene::Render(Renderer& renderer, const Window& window) {
+  ZoneScoped;
+  RenderInfo render_info;
+  render_info.window_dims = window.GetWindowSize();
+  float aspect_ratio =
+      static_cast<float>(render_info.window_dims.x) / static_cast<float>(render_info.window_dims.y);
+  render_info.vp_matrix =
+      player_.GetCamera().GetProjection(aspect_ratio) * player_.GetCamera().GetView();
+  renderer.RenderWorld(*this, render_info);
+}
+
+WorldScene::~WorldScene() {
+  ZoneScoped;
   player_.GetCamera().Save();
   std::array<float, 3> player_pos = {player_.position_.x, player_.position_.y, player_.position_.z};
   nlohmann::json j = {{"load_distance", load_distance_}, {"player_position", player_pos}};
   Settings::Get().SaveSetting(j, "world");
 }
 
-void World::OnImGui() {
+void WorldScene::OnImGui() {
+  ZoneScoped;
   player_.OnImGui();
   if (ImGui::CollapsingHeader("World", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SliderInt("Load Distance", &load_distance_, 1, 32);

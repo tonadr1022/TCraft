@@ -1,7 +1,7 @@
 {
   "fps_cam": {
-    "pitch": -62.799564361572266,
-    "yaw": -162.30067443847656
+    "pitch": 0.0,
+    "yaw": 0.0
   },
   "main": {
     "fps_cam_fov_deg": 103.00000762939453,
@@ -11,11 +11,11 @@
     "wireframe_enabled": false
   },
   "world": {
-    "load_distance": 31,
+    "load_distance": 192,
     "player_position": [
-      25.094709396362305,
-      38.48966979980469,
-      19.855979919433594
+      0.0,
+      0.0,
+      0.0
     ]
   }
 }
