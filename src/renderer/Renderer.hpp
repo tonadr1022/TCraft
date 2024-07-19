@@ -17,6 +17,7 @@ struct DrawElementsIndirectCommand {
 
 class Buffer;
 class WorldScene;
+class Window;
 
 struct RenderInfo {
   glm::ivec2 window_dims;
@@ -29,6 +30,7 @@ class Renderer {
   bool render_chunks_{true};
 
   void RenderWorld(WorldScene& world, const RenderInfo& render_info);
+  void Render(const Window& window);
   void Init();
   bool OnEvent(const SDL_Event& event);
 

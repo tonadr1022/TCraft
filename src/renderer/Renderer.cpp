@@ -2,6 +2,7 @@
 
 #include "ShaderManager.hpp"
 #include "application/Settings.hpp"
+#include "application/Window.hpp"
 #include "gameplay/scene/WorldScene.hpp"
 #include "pch.hpp"
 #include "renderer/opengl/Buffer.hpp"
@@ -39,6 +40,13 @@ void Renderer::RenderWorld(WorldScene& world, const RenderInfo& render_info) {
       glDrawElements(GL_TRIANGLES, mesh.num_indices_, GL_UNSIGNED_INT, nullptr);
     }
   }
+}
+void Renderer::Render(const Window& window) {
+  auto dims = window.GetWindowSize();
+  glViewport(0, 0, dims.x, dims.y);
+  glClearColor(1, 0.0, 0.6, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glPolygonMode(GL_FRONT_AND_BACK, Settings::Get().wireframe_enabled ? GL_LINE : GL_FILL);
 }
 
 bool Renderer::OnEvent(const SDL_Event& event) {

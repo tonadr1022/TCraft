@@ -16,7 +16,6 @@ using ChunkMap = std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>>;
 class WorldScene : public Scene {
  public:
   explicit WorldScene(SceneManager& scene_manager);
-  void Init() override;
   void Update(double dt) override;
   void OnImGui() override;
   void Render(Renderer& renderer, const Window& window) override;

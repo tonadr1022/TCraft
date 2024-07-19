@@ -3,8 +3,7 @@
 #include <imgui.h>
 
 #include "application/SceneManager.hpp"
-
-void MainMenuScene::Init() {}
+#include "renderer/Renderer.hpp"
 
 MainMenuScene::MainMenuScene(SceneManager& scene_manager) : Scene(scene_manager) {}
 
@@ -27,4 +26,4 @@ bool MainMenuScene::OnEvent(const SDL_Event& event) {
   return false;
 }
 
-void MainMenuScene::Render(Renderer& renderer, const Window& window) {}
+void MainMenuScene::Render(Renderer& renderer, const Window& window) { renderer.Render(window); }

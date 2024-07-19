@@ -40,7 +40,7 @@ void ResourceLoader::LoadResources() {
                                               .dims = glm::ivec2{texture_res, texture_res},
                                               .generate_mipmaps = true,
                                               .internal_format = GL_RGBA8,
-                                              .filter_mode_min = GL_REPEAT,
-                                              .filter_mode_max = GL_REPEAT,
+                                              .filter_mode_min = GL_NEAREST,
+                                              .filter_mode_max = GL_NEAREST,
                                           }});
 }

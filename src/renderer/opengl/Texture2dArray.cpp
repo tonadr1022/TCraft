@@ -17,7 +17,7 @@ Texture2dArray::~Texture2dArray() {
   }
 }
 
-Texture2dArray::Texture2dArray(const Texture2dArrayCreateParams& params) {
+Texture2dArray::Texture2dArray(const Texture2dArrayCreateParams& params) : dims_(params.dims) {
   glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &id_);
 
   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
