@@ -85,6 +85,7 @@ void AddQuad(int face_idx, const glm::ivec3& block_pos, std::vector<ChunkVertex>
 
 void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
                                 std::vector<uint32_t>& indices) {
+  ZoneScoped;
   const auto& blocks = chunk_data.GetBlocks();
   glm::ivec3 pos;
   int idx = 0;

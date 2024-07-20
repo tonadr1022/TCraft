@@ -4,6 +4,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "application/SceneManager.hpp"
 #include "application/Settings.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
@@ -16,7 +17,6 @@
 
 WorldScene::WorldScene(SceneManager& scene_manager) : Scene(scene_manager) {
   ZoneScoped;
-
   std::unordered_map<std::string, uint32_t> name_to_idx;
   auto array_handle = TextureManager::Get().Create2dArray(
       GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
@@ -54,7 +54,19 @@ void WorldScene::Update(double dt) {
   player_.Update(dt);
 }
 
-bool WorldScene::OnEvent(const SDL_Event& event) { return player_.OnEvent(event); }
+bool WorldScene::OnEvent(const SDL_Event& event) {
+  if (player_.OnEvent(event)) {
+    return true;
+  }
+  switch (event.type) {
+    case SDL_KEYDOWN:
+      if (event.key.keysym.sym == SDLK_p && event.key.keysym.mod & KMOD_ALT) {
+        scene_manager_.LoadScene("main_menu");
+        return true;
+      }
+  }
+  return false;
+}
 
 void WorldScene::Render(Renderer& renderer, const Window& window) {
   ZoneScoped;

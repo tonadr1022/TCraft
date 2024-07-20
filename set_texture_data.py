@@ -46,6 +46,7 @@ def write_2d_array(
     obj["textures"] = texture_paths
     obj["filter_min"] = filter_min
     obj["filter_max"] = filter_max
+    obj["path"] = 
     write_json(obj, output_path)
 
 

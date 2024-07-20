@@ -8,7 +8,11 @@ struct BlockMeshData {
   std::array<int, 6> texture_indices;
 };
 
-struct BlockData {};
+struct BlockData {
+  std::string name;
+  float move_slow_multiplier;
+  bool emits_light;
+};
 
 class BlockDB {
  public:
@@ -20,6 +24,7 @@ class BlockDB {
     std::string model;
     float move_slow_multiplier;
     bool emits_light;
+    uint32_t model_tex_index;
   };
   BlockDataDefaults block_defaults_;
 

@@ -23,6 +23,7 @@ Texture2dArray::~Texture2dArray() {
 }
 
 void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
+  ZoneScoped;
   dims_ = params.dims;
   glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &id_);
 
@@ -53,6 +54,7 @@ Texture2dArray::Texture2dArray(const Texture2dArrayCreateParams& params) { LoadF
 
 Texture2dArray::Texture2dArray(const std::string& param_path,
                                std::unordered_map<std::string, uint32_t>& name_to_idx) {
+  ZoneScoped;
   nlohmann::json data = util::LoadJsonFile(param_path);
   std::vector<void*> all_pixels_data;
   int width = data["width"].get<int>();

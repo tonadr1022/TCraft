@@ -7,7 +7,7 @@
 
 MainMenuScene::MainMenuScene(SceneManager& scene_manager) : Scene(scene_manager) {}
 
-void MainMenuScene::Update(double dt) {}
+void MainMenuScene::Update(double dt) { scene_manager_.LoadScene("world"); }
 
 void MainMenuScene::OnImGui() {
   ImGui::Begin("Main Menu Scene");

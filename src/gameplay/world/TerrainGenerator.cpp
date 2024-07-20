@@ -10,6 +10,7 @@ void TerrainGenerator::GenerateSolid(ChunkData& chunk, BlockType block) {
 }
 
 void TerrainGenerator::GenerateChecker(ChunkData& chunk, BlockType block) {
+  ZoneScoped;
   glm::ivec3 iter;
   for (iter.y = 0; iter.y < ChunkLength; iter.y += 2) {
     for (iter.z = 0; iter.z < ChunkLength; iter.z += 2) {

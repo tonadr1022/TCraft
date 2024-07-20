@@ -12,4 +12,12 @@ std::optional<std::string> GetString(nlohmann::json& obj, const std::string& str
   return obj[str].get<std::string>();
 }
 
+std::optional<nlohmann::json> GetObject(nlohmann::json& obj, const std::string& str) {
+  if (!obj.contains(str)) {
+    spdlog::error("Data does not contain key {}", str);
+    return std::nullopt;
+  }
+  return obj[str];
+}
+
 }  // namespace json_util
