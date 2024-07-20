@@ -26,6 +26,7 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
   ZoneScoped;
   dims_ = params.dims;
   glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &id_);
+  spdlog::info("id {}", id_);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -45,10 +46,35 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
     glTextureSubImage3D(id_, 0, 0, 0, i, params.dims.x, params.dims.y, 1, GL_RGBA, GL_UNSIGNED_BYTE,
                         params.all_pixels_data[i]);
   }
-
   if (params.generate_mipmaps) glGenerateTextureMipmap(id_);
 }
 
+void Texture2dArray::LoadFromParams2(const Texture2dArrayCreateParams& params) {
+  glActiveTexture(GL_TEXTURE0);
+  glGenTextures(1, &id_);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, id_);
+
+  glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, params.dims.x, params.dims.y,
+               params.all_pixels_data.size(), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+  // configure sampler
+  // s = x-axis
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  // t = y-axis
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  // create sub images on GPU
+  for (int index = 0; index < params.all_pixels_data.size(); index++) {
+    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, index, static_cast<GLsizei>(params.dims.x),
+                    static_cast<GLsizei>(params.dims.y), 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                    params.all_pixels_data[index]);
+  }
+
+  glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+  glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+}
 Texture2dArray::Texture2dArray(const Texture2dArrayCreateParams& params) { LoadFromParams(params); }
 
 Texture2dArray::Texture2dArray(const std::string& param_path,

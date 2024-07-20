@@ -21,7 +21,6 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
   // TODO: cleanup rendering
   glViewport(0, 0, render_info.window_dims.x, render_info.window_dims.y);
   glClearColor(1, 0.0, 0.6, 1.0);
-  glEnable(GL_DEPTH_BUFFER_BIT);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   // TODO: separate wireframe into renderer
   glPolygonMode(GL_FRONT_AND_BACK, Settings::Get().wireframe_enabled ? GL_LINE : GL_FILL);
@@ -30,14 +29,15 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
   chunk_shader->Bind();
   chunk_shader->SetMat4("vp_matrix", render_info.vp_matrix);
   chunk_shader->SetInt("u_Texture", 0);
-
   {
     ZoneScopedN("Chunk render");
     auto& chunk_tex_arr =
         TextureManager::Get().GetTexture2dArray(world.world_render_params_.chunk_tex_array_handle);
-    // chunk_tex_arr.Bind(0);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, chunk_tex_arr.Id());
+    glBindTextureUnit(0, chunk_tex_arr.Id());
+    int bound_id;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D_ARRAY, &bound_id);
+    // spdlog::info("{} {}", chunk_tex_arr.Id(), bound_id);
+    // prints "1 0"
 
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
     for (const auto& it : world.chunk_map_) {
