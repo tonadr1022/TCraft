@@ -28,7 +28,7 @@ void LoadImage(Image& image, std::string_view path, bool flip) {
   if (!path.empty()) {
     image.pixels = stbi_load(path.data(), &image.width, &image.height, &image.channels, 4);
     if (!image.pixels) {
-      spdlog::error("Failed to load texture at path {}", path);
+      spdlog::error("Failed to load image at path {}", path);
     }
   }
 }

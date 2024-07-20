@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <nlohmann/json_fwd.hpp>
+
 struct BlockMeshData {
   // pos x,neg x, pos y, neg y, pos z, neg z
   std::array<int, 6> texture_indices;
@@ -10,7 +12,7 @@ struct BlockData {};
 
 class BlockDB {
  public:
-  BlockDB();
+  explicit BlockDB(std::unordered_map<std::string, uint32_t>& name_to_idx);
 
  private:
   struct BlockDataDefaults {
@@ -23,8 +25,12 @@ class BlockDB {
 
   std::vector<BlockData> block_data_db_;
   std::vector<BlockMeshData> block_mesh_data_db_;
-  std::unordered_map<std::string, BlockMeshData> model_name_to_mesh_data_;
 
-  void LoadDefaultData();
-  void LoadBlockModelData();
+  BlockMeshData default_mesh_data_;
+
+  void LoadDefaultData(std::unordered_map<std::string, uint32_t>& name_to_idx);
+  void LoadBlockModelData(std::unordered_map<std::string, uint32_t>& name_to_idx,
+                          std::unordered_map<std::string, BlockMeshData>& model_name_to_mesh_data);
+  std::optional<BlockMeshData> LoadBlockModel(
+      const std::string& model_filename, std::unordered_map<std::string, uint32_t>& name_to_idx);
 };

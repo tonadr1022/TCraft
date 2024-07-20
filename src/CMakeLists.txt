@@ -21,9 +21,9 @@ set(SOURCES
     renderer/opengl/VertexArray.cpp
     renderer/opengl/Buffer.cpp
 
-    resource/ResourceLoader.cpp
-
     util/LoadFile.cpp
+    util/StringUtil.cpp
+    util/JsonUtil.cpp
     gameplay/Player.cpp
     gameplay/world/World.cpp
     gameplay/world/TerrainGenerator.cpp
@@ -32,6 +32,8 @@ set(SOURCES
     gameplay/world/BlockDB.cpp
     gameplay/scene/WorldScene.cpp
     gameplay/scene/MainMenuScene.cpp
+
+    resource/TextureManager.cpp
 
 
     EAssert.cpp

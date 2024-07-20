@@ -1,0 +1,11 @@
+{
+  "width": 16,
+  "height": 16,
+  "textures": [
+    "block/grass_block_plains_top.png",
+    "block/water.png",
+    "block/dirt.png"
+  ],
+  "filter_min": "nearest",
+  "filter_max": "nearest"
+}

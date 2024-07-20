@@ -1,7 +1,7 @@
 {
   "type": "block/top_bottom",
   "textures": {
-    "top": "block/plains_grass",
+    "top": "block/grass_block_plains_top",
     "bottom": "block/dirt",
     "side": "block/dirt"
   }

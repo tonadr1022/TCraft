@@ -1,7 +1,5 @@
 #include "Application.hpp"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_events.h>
 #include <SDL2/SDL_timer.h>
 #include <imgui.h>
 
@@ -12,9 +10,7 @@
 #include "Settings.hpp"
 #include "Window.hpp"
 #include "application/Input.hpp"
-#include "gameplay/Player.hpp"
 #include "renderer/Renderer.hpp"
-#include "resource/ResourceLoader.hpp"
 #include "util/Paths.hpp"
 
 namespace {
@@ -31,9 +27,6 @@ Application::Application(int width, int height, const char* title) {
 
   window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
   renderer_.Init();
-
-  // TODO: separate into scenes
-  ResourceLoader::LoadResources();
 
   // Add event listeners
   event_dispatcher_.AddListener(

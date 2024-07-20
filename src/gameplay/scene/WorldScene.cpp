@@ -2,19 +2,26 @@
 
 #include <imgui.h>
 
-#include <memory>
 #include <nlohmann/json.hpp>
 
 #include "application/Settings.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/TerrainGenerator.hpp"
+#include "pch.hpp"
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
+#include "resource/TextureManager.hpp"
+#include "util/Paths.hpp"
 
-WorldScene::WorldScene(SceneManager& scene_manager)
-    : Scene(scene_manager), block_db_(std::make_unique<BlockDB>()) {
+WorldScene::WorldScene(SceneManager& scene_manager) : Scene(scene_manager) {
   ZoneScoped;
+
+  std::unordered_map<std::string, uint32_t> name_to_idx;
+  auto array_handle = TextureManager::Get().Create2dArray(
+      GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
+  block_db_ = std::make_unique<BlockDB>(name_to_idx);
+
   player_.GetCamera().Load();
   player_.Init();
   auto settings = Settings::Get().LoadSetting("world");

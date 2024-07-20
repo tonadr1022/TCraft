@@ -1,6 +1,6 @@
 {
-  "name": "Unnamed Block",
-  "model": "block/empty",
+  "name": "Default",
+  "model": "block/default.json",
   "properties": {
     "move_slow_multiplier": 1,
     "emits_light": false
