@@ -17,4 +17,11 @@ TextureHandle TextureManager::Create2dArray(
   return handle;
 }
 
+Texture2dArray& TextureManager::GetTexture2dArray(TextureHandle handle) {
+  // TODO: handle gracefully
+  if (!texture_2d_array_map_.contains(handle)) {
+    exit(1);
+  }
+  return texture_2d_array_map_.at(handle);
+}
 TextureManager::TextureManager() = default;

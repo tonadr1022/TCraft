@@ -10,7 +10,8 @@ class SceneManager {
 
  private:
   friend class Application;
-  SceneManager() = default;
+  SceneManager();
 
+  std::unordered_map<std::string, std::function<std::unique_ptr<Scene>()>> scene_creators_;
   std::unique_ptr<Scene> active_scene_{nullptr};
 };

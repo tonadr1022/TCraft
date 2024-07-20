@@ -26,9 +26,9 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
   ZoneScoped;
   dims_ = params.dims;
   glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &id_);
-
   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTextureParameteri(id_, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
   glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, params.filter_mode_min);
   glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, params.filter_mode_max);
 
@@ -41,7 +41,6 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
   glTextureStorage3D(id_, mip_levels, params.internal_format, dims_.x, dims_.y,
                      params.all_pixels_data.size());
 
-  int i = 0;
   for (int i = 0; i < params.all_pixels_data.size(); i++) {
     glTextureSubImage3D(id_, 0, 0, 0, i, params.dims.x, params.dims.y, 1, GL_RGBA, GL_UNSIGNED_BYTE,
                         params.all_pixels_data[i]);
@@ -60,8 +59,11 @@ Texture2dArray::Texture2dArray(const std::string& param_path,
   int width = data["width"].get<int>();
   int height = data["height"].get<int>();
 
-  static const std::unordered_map<std::string, uint32_t> FilterModeMap = {{"nearest", GL_NEAREST},
-                                                                          {"linear", GL_LINEAR}};
+  static const std::unordered_map<std::string, uint32_t> FilterModeMap = {
+      {"nearest", GL_NEAREST},
+      {"linear", GL_LINEAR},
+      {"nearest_mipmap_linear", GL_NEAREST_MIPMAP_LINEAR}};
+
   auto filter_max = data["filter_max"].get<std::string>();
   if (!FilterModeMap.contains(filter_max)) {
     spdlog::error("Invalid filter mode {} in 2d array {}", filter_max, param_path);
@@ -94,9 +96,11 @@ Texture2dArray::Texture2dArray(const std::string& param_path,
       .dims = glm::ivec2{width, height},
       .generate_mipmaps = true,
       .internal_format = GL_RGBA8,
-      .filter_mode_min = GL_NEAREST,
-      .filter_mode_max = GL_NEAREST,
+      .filter_mode_min = filter_mode_min,
+      .filter_mode_max = filter_mode_max,
   });
 }
 
 bool Texture2dArray::IsValid() const { return id_ != 0; }
+
+void Texture2dArray::Bind(int unit) const { glBindTextureUnit(unit, id_); }

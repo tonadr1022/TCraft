@@ -7,6 +7,7 @@
 #include "pch.hpp"
 #include "renderer/opengl/Buffer.hpp"
 #include "renderer/opengl/Debug.hpp"
+#include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
 
 void Renderer::Init() {
@@ -15,27 +16,34 @@ void Renderer::Init() {
   LoadShaders();
 }
 
-void Renderer::RenderWorld(WorldScene& world, const RenderInfo& render_info) {
+void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info,
+                           const BlockDB& db) {
   // TODO: cleanup rendering
   glViewport(0, 0, render_info.window_dims.x, render_info.window_dims.y);
   glClearColor(1, 0.0, 0.6, 1.0);
+  glEnable(GL_DEPTH_BUFFER_BIT);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // TODO: separate wireframe into renderer
   glPolygonMode(GL_FRONT_AND_BACK, Settings::Get().wireframe_enabled ? GL_LINE : GL_FILL);
 
-  auto color = shader_manager_.GetShader("color");
-  color->Bind();
-  color->SetMat4("vp_matrix", render_info.vp_matrix);
+  auto chunk_shader = shader_manager_.GetShader("chunk");
+  chunk_shader->Bind();
+  chunk_shader->SetMat4("vp_matrix", render_info.vp_matrix);
+  chunk_shader->SetInt("u_Texture", 0);
 
   {
     ZoneScopedN("Chunk render");
+    auto& chunk_tex_arr =
+        TextureManager::Get().GetTexture2dArray(world.world_render_params_.chunk_tex_array_handle);
+    // chunk_tex_arr.Bind(0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, chunk_tex_arr.Id());
 
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
     for (const auto& it : world.chunk_map_) {
       auto& mesh = it.second->mesh;
       glm::vec3 pos = it.first * ChunkLength;
-
-      color->SetVec3("color", {rand() % 1, rand() % 1, rand() % 1});
-      color->SetMat4("model_matrix", glm::translate(glm::mat4{1}, pos));
+      chunk_shader->SetMat4("model_matrix", glm::translate(glm::mat4{1}, pos));
       mesh.vao.Bind();
       glDrawElements(GL_TRIANGLES, mesh.num_indices_, GL_UNSIGNED_INT, nullptr);
     }
@@ -44,7 +52,7 @@ void Renderer::RenderWorld(WorldScene& world, const RenderInfo& render_info) {
 void Renderer::Render(const Window& window) {
   auto dims = window.GetWindowSize();
   glViewport(0, 0, dims.x, dims.y);
-  glClearColor(1, 0.0, 0.6, 1.0);
+  glClearColor(1, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPolygonMode(GL_FRONT_AND_BACK, Settings::Get().wireframe_enabled ? GL_LINE : GL_FILL);
 }
@@ -63,4 +71,6 @@ bool Renderer::OnEvent(const SDL_Event& event) {
 void Renderer::LoadShaders() {
   shader_manager_.AddShader("color", {{GET_SHADER_PATH("color.vs.glsl"), ShaderType::Vertex},
                                       {GET_SHADER_PATH("color.fs.glsl"), ShaderType::Fragment}});
+  shader_manager_.AddShader("chunk", {{GET_SHADER_PATH("chunk.vs.glsl"), ShaderType::Vertex},
+                                      {GET_SHADER_PATH("chunk.fs.glsl"), ShaderType::Fragment}});
 }

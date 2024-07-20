@@ -24,6 +24,11 @@ class WorldScene : public Scene {
 
   std::unique_ptr<BlockDB> block_db_{nullptr};
 
+  struct WorldRenderParams {
+    uint32_t chunk_tex_array_handle{0};
+  };
+  WorldRenderParams world_render_params_;
+
  private:
   Player player_;
   friend class Renderer;

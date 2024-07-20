@@ -46,7 +46,6 @@ def write_2d_array(
     obj["textures"] = texture_paths
     obj["filter_min"] = filter_min
     obj["filter_max"] = filter_max
-    obj["path"] = 
     write_json(obj, output_path)
 
 
@@ -62,7 +61,7 @@ def generate_block_texture_array(model_names):
         "resources/data/block/texture_2d_array.json",
         16,
         16,
-        "nearest",
+        "nearest_mipmap_linear",
         "nearest",
     )
 

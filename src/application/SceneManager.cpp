@@ -4,14 +4,14 @@
 #include "gameplay/scene/MainMenuScene.hpp"
 #include "gameplay/scene/WorldScene.hpp"
 
+SceneManager::SceneManager()
+    : scene_creators_(
+          {{"world", [this]() { return std::make_unique<WorldScene>(*this); }},
+           {"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }}}) {}
+
 void SceneManager::LoadScene(const std::string& name) {
-  if (name == "world") {
-    active_scene_ = std::make_unique<WorldScene>(*this);
-  } else if (name == "main_menu") {
-    active_scene_ = std::make_unique<MainMenuScene>(*this);
-  } else {
-    EASSERT_MSG(false, "Scene does not exist");
-  }
+  EASSERT_MSG(scene_creators_.count(name), "Scene not found");
+  active_scene_ = scene_creators_.at(name)();
 }
 
 Scene& SceneManager::GetActiveScene() {

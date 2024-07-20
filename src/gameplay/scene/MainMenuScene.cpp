@@ -5,12 +5,14 @@
 #include "application/SceneManager.hpp"
 #include "renderer/Renderer.hpp"
 
-MainMenuScene::MainMenuScene(SceneManager& scene_manager) : Scene(scene_manager) {}
+MainMenuScene::MainMenuScene(SceneManager& scene_manager) : Scene(scene_manager) {
+  name_ = "Main Menu";
+}
 
-void MainMenuScene::Update(double dt) { scene_manager_.LoadScene("world"); }
+void MainMenuScene::Update(double dt) {}
 
 void MainMenuScene::OnImGui() {
-  ImGui::Begin("Main Menu Scene");
+  ImGui::Begin("Main Menu Scene", nullptr, ImGuiWindowFlags_NoFocusOnAppearing);
   ImGui::Text("test");
   ImGui::End();
 }

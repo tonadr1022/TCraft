@@ -37,7 +37,7 @@ Application::Application(int width, int height, const char* title) {
 
 void Application::Run() {
   ZoneScoped;
-  scene_manager_.LoadScene("main_menu");
+  scene_manager_.LoadScene("world");
 
   RenderInfo render_info;
   Uint64 curr_time = SDL_GetPerformanceCounter();

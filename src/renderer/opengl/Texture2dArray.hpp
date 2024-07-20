@@ -36,7 +36,7 @@ class Texture2dArray {
   void MakeNonResident() const;
   [[nodiscard]] bool IsValid() const;
 
-  void Bind() const;
+  void Bind(int unit = 0) const;
 
  private:
   void LoadFromParams(const Texture2dArrayCreateParams& params);

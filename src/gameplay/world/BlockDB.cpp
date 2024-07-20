@@ -50,13 +50,8 @@ BlockDB::BlockDB(std::unordered_map<std::string, uint32_t>& name_to_idx) {
     block_data_db_[static_cast<int>(type)] = data;
 
     auto model = json_util::GetString(block_data, "model");
-    spdlog::info("model {}", model.value());
     block_mesh_data_db_[static_cast<int>(type)] =
         model_name_to_mesh_data[model.value_or(block_defaults_.model)];
-  }
-  for (auto& el : model_name_to_mesh_data) {
-    spdlog::info("{} {} {} {}", el.first, el.second.texture_indices[0],
-                 el.second.texture_indices[1], el.second.texture_indices[2]);
   }
 };
 
@@ -91,7 +86,7 @@ std::optional<BlockMeshData> BlockDB::LoadBlockModel(
     return std::nullopt;
   }
   if (!tex_obj.value().is_object()) {
-    spdlog::info("textures key of model must be an object: {}", relative_path);
+    spdlog::error("textures key of model must be an object: {}", relative_path);
   }
 
   auto get_tex_idx = [this, &tex_obj, &name_to_idx,
@@ -147,7 +142,6 @@ void BlockDB::LoadBlockModelData(
     std::string model_filename = item.get<std::string>();
     auto block_mesh_data = LoadBlockModel(model_filename, name_to_idx);
     std::string model_name = model_filename.substr(0, model_filename.find_last_of('.'));
-    spdlog::info("model name in load {}", model_name);
     model_name_to_mesh_data.emplace("block/" + model_name,
                                     block_mesh_data.value_or(default_mesh_data));
   }

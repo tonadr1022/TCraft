@@ -17,8 +17,9 @@
 
 WorldScene::WorldScene(SceneManager& scene_manager) : Scene(scene_manager) {
   ZoneScoped;
+  name_ = "World";
   std::unordered_map<std::string, uint32_t> name_to_idx;
-  auto array_handle = TextureManager::Get().Create2dArray(
+  world_render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(
       GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
   block_db_ = std::make_unique<BlockDB>(name_to_idx);
 
@@ -76,7 +77,7 @@ void WorldScene::Render(Renderer& renderer, const Window& window) {
       static_cast<float>(render_info.window_dims.x) / static_cast<float>(render_info.window_dims.y);
   render_info.vp_matrix =
       player_.GetCamera().GetProjection(aspect_ratio) * player_.GetCamera().GetView();
-  renderer.RenderWorld(*this, render_info);
+  renderer.RenderWorld(*this, render_info, *block_db_);
 }
 
 WorldScene::~WorldScene() {

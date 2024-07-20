@@ -7,7 +7,6 @@ layout(location = 0) in vec3 v_Position;
     vec3 cam_pos;
 }
     */
-
 uniform mat4 model_matrix;
 uniform mat4 vp_matrix;
 

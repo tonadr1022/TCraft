@@ -14,6 +14,7 @@ class Scene {
   virtual void OnImGui() = 0;
   virtual void Render(Renderer& renderer, const Window& window) = 0;
   virtual bool OnEvent(const SDL_Event& event) = 0;
+  std::string name_;
 
  protected:
   SceneManager& scene_manager_;
