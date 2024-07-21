@@ -43,7 +43,7 @@ void MainMenuScene::OnImGui() {
     if (ImGui::Button("Create")) {
       if (world_manager_->WorldExists(world_name)) {
       } else {
-        world_manager_->CreateWorld({.name = world_name, .seed = seed});
+        world_manager_->CreateWorldStructure({.name = world_name, .seed = seed});
       }
     }
     ImGui::EndDisabled();

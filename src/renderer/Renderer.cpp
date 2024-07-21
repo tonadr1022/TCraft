@@ -5,7 +5,6 @@
 #include "application/Window.hpp"
 #include "gameplay/scene/WorldScene.hpp"
 #include "pch.hpp"
-#include "renderer/opengl/Buffer.hpp"
 #include "renderer/opengl/Debug.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
@@ -17,6 +16,7 @@ void Renderer::Init() {
   LoadShaders();
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
 }
+
 void Renderer::Shutdown() {
   nlohmann::json settings;
   settings["wireframe_enabled"] = wireframe_enabled_;
@@ -56,6 +56,7 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
     }
   }
 }
+
 void Renderer::Render(const Window& window) {
   auto dims = window.GetWindowSize();
   glViewport(0, 0, dims.x, dims.y);
@@ -85,3 +86,5 @@ void Renderer::LoadShaders() {
   shader_manager_.AddShader("chunk", {{GET_SHADER_PATH("chunk.vs.glsl"), ShaderType::Vertex},
                                       {GET_SHADER_PATH("chunk.fs.glsl"), ShaderType::Fragment}});
 }
+
+Renderer::~Renderer() = default;

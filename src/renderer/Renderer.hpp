@@ -6,6 +6,7 @@
 #include <glm/vec2.hpp>
 
 #include "renderer/ShaderManager.hpp"
+#include "renderer/opengl/Buffer.hpp"
 
 struct DrawElementsIndirectCommand {
   uint32_t count;
@@ -15,7 +16,6 @@ struct DrawElementsIndirectCommand {
   uint32_t base_instance;
 };
 
-class Buffer;
 class WorldScene;
 class Window;
 class BlockDB;
@@ -36,6 +36,7 @@ class Renderer {
   void Init();
   bool OnEvent(const SDL_Event& event);
   void Shutdown();
+  ~Renderer();
 
  private:
   ShaderManager shader_manager_;
