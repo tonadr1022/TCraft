@@ -15,9 +15,12 @@
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
 
-WorldScene::WorldScene(SceneManager& scene_manager) : Scene(scene_manager) {
+WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_name)
+    : Scene(scene_manager) {
   ZoneScoped;
-  name_ = "World";
+  EASSERT_MSG(!world_name.empty(), "Can't load world scene without a loaded world name");
+  name_ = "World Scene";
+
   std::unordered_map<std::string, uint32_t> name_to_idx;
   world_render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(
       GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
@@ -30,8 +33,6 @@ WorldScene::WorldScene(SceneManager& scene_manager) : Scene(scene_manager) {
 
   std::array<float, 3> player_pos = settings["player_position"].get<std::array<float, 3>>();
   player_.position_ = {player_pos[0], player_pos[1], player_pos[2]};
-
-  // TODO(tony): load from files
 
   // TODO(tony): make spiral
   // glm::ivec3 iter;

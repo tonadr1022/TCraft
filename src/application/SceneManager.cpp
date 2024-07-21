@@ -6,8 +6,7 @@
 
 SceneManager::SceneManager()
     : scene_creators_(
-          {{"world", [this]() { return std::make_unique<WorldScene>(*this); }},
-           {"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }}}) {}
+          {{"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }}}) {}
 
 void SceneManager::LoadScene(const std::string& name) {
   EASSERT_MSG(scene_creators_.count(name), "Scene not found");
@@ -20,3 +19,7 @@ Scene& SceneManager::GetActiveScene() {
 }
 
 void SceneManager::Shutdown() { active_scene_ = nullptr; }
+
+void SceneManager::LoadWorld(const std::string& world_name) {
+  active_scene_ = std::make_unique<WorldScene>(*this, world_name);
+}

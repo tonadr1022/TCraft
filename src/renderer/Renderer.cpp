@@ -11,9 +11,16 @@
 #include "util/Paths.hpp"
 
 void Renderer::Init() {
+  auto settings = Settings::Get().LoadSetting("renderer");
   glEnable(GL_DEBUG_OUTPUT);
   glDebugMessageCallback(MessageCallback, nullptr);
   LoadShaders();
+  wireframe_enabled_ = settings.value("wireframe_enabled", false);
+}
+void Renderer::Shutdown() {
+  nlohmann::json settings;
+  settings["wireframe_enabled"] = wireframe_enabled_;
+  Settings::Get().SaveSetting(settings, "renderer");
 }
 
 void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info,
@@ -23,7 +30,7 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
   glClearColor(1, 0.0, 0.6, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   // TODO: separate wireframe into renderer
-  glPolygonMode(GL_FRONT_AND_BACK, Settings::Get().wireframe_enabled ? GL_LINE : GL_FILL);
+  glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 
   auto chunk_shader = shader_manager_.GetShader("chunk");
   chunk_shader->Bind();
@@ -54,7 +61,7 @@ void Renderer::Render(const Window& window) {
   glViewport(0, 0, dims.x, dims.y);
   glClearColor(1, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glPolygonMode(GL_FRONT_AND_BACK, Settings::Get().wireframe_enabled ? GL_LINE : GL_FILL);
+  glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 }
 
 bool Renderer::OnEvent(const SDL_Event& event) {
@@ -62,6 +69,10 @@ bool Renderer::OnEvent(const SDL_Event& event) {
     case SDL_KEYDOWN:
       if (event.key.keysym.sym == SDLK_r && event.key.keysym.mod & KMOD_ALT) {
         shader_manager_.RecompileShaders();
+        return true;
+      }
+      if (event.key.keysym.sym == SDLK_w && event.key.keysym.mod & KMOD_ALT) {
+        wireframe_enabled_ = !wireframe_enabled_;
         return true;
       }
   }

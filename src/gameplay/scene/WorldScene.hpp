@@ -15,13 +15,15 @@ using ChunkMap = std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>>;
 
 class WorldScene : public Scene {
  public:
-  explicit WorldScene(SceneManager& scene_manager);
+  explicit WorldScene(SceneManager& scene_manager, const std::string& world_name);
+
   void Update(double dt) override;
   void OnImGui() override;
   void Render(Renderer& renderer, const Window& window) override;
   bool OnEvent(const SDL_Event& event) override;
   ~WorldScene() override;
 
+  // Using unique ptr to avoid includes
   std::unique_ptr<BlockDB> block_db_{nullptr};
 
   struct WorldRenderParams {

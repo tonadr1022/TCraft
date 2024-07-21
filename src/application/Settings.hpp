@@ -8,7 +8,7 @@ class Settings {
  public:
   static Settings& Get();
   void OnImGui();
-  void Init(const std::string& path);
+  void Load(const std::string& path);
   void Shutdown(const std::string& path);
   // Must be called before main Save(path)
   void SaveSetting(json& j, std::string_view name);
@@ -18,8 +18,6 @@ class Settings {
   // main settings in the settings object
   float mouse_sensitivity;
   float fps_cam_fov_deg;
-  bool imgui_enabled;
-  bool wireframe_enabled;
   int load_distance;
   ~Settings() = default;
 

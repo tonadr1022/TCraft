@@ -1,19 +1,25 @@
 {
+  "application": {
+    "imgui_enabled": true
+  },
   "fps_cam": {
-    "pitch": -42.69995880126953,
-    "yaw": 181.4998321533203
+    "pitch": -8.199980735778809,
+    "yaw": 112.69979095458984
   },
   "main": {
     "fps_cam_fov_deg": 103.00000762939453,
-    "imgui_enabled": true,
     "load_distance": 0,
-    "mouse_sensitivity": 1.0,
+    "mouse_sensitivity": 1.0
+  },
+  "renderer": {
     "wireframe_enabled": false
   },
   "world": {
     "load_distance": 192,
     "player_position": [
-      30.351083755493164, 32.60490036010742, 3.470715045928955
+      22.42706871032715,
+      33.723419189453125,
+      3.320801258087158
     ]
   }
 }

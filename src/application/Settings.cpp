@@ -6,6 +6,7 @@
 #include <glm/trigonometric.hpp>
 #include <nlohmann/json.hpp>
 
+#include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 
 using json = nlohmann::json;
@@ -16,31 +17,31 @@ Settings::Settings() {
   instance_ = this;
 }
 
-void Settings::Init(const std::string& path) {
+void Settings::Load(const std::string& path) {
   settings_json_ = util::LoadJsonFile(path);
 
   // Main settings
   auto& main = settings_json_["main"];
   mouse_sensitivity = main["mouse_sensitivity"].get<float>();
   fps_cam_fov_deg = main["fps_cam_fov_deg"].get<float>();
-  imgui_enabled = main["imgui_enabled"].get<bool>();
-  wireframe_enabled = main["wireframe_enabled"].get<bool>();
 }
 
 void Settings::Shutdown(const std::string& path) {
-  std::ofstream f(path);
-
   // save main settings
   settings_json_["main"] = {
-      {"mouse_sensitivity", mouse_sensitivity}, {"fps_cam_fov_deg", fps_cam_fov_deg},
-      {"imgui_enabled", imgui_enabled},         {"wireframe_enabled", wireframe_enabled},
+      {"mouse_sensitivity", mouse_sensitivity},
+      {"fps_cam_fov_deg", fps_cam_fov_deg},
       {"load_distance", load_distance},
   };
-  std::ofstream o(path);
-  o << std::setw(2) << settings_json_ << std::endl;
+  json_util::WriteJson(settings_json_, path);
 }
 
-json Settings::LoadSetting(std::string_view name) const { return settings_json_[name]; }
+json Settings::LoadSetting(std::string_view name) const {
+  if (settings_json_.contains(name)) {
+    return settings_json_[name];
+  }
+  return json::object();
+}
 
 void Settings::SaveSetting(json& j, std::string_view name) { settings_json_[name] = j; }
 

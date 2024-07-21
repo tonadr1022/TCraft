@@ -3,7 +3,6 @@
 #include "application/EventDispatcher.hpp"
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
-#include "gameplay/world/World.hpp"
 #include "renderer/Renderer.hpp"
 
 class Settings;
@@ -17,6 +16,7 @@ class Application {
   void OnImGui();
 
  private:
+  bool imgui_enabled_;
   Settings* settings_{nullptr};
   SceneManager scene_manager_;
   Renderer renderer_;

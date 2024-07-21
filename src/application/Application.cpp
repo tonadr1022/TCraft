@@ -22,8 +22,9 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 Application::Application(int width, int height, const char* title) {
   // Settings is a singleton since only one instance should exist
   settings_ = new Settings;
-
-  Settings::Get().Init(SettingsPath);
+  Settings::Get().Load(SettingsPath);
+  auto app_settings_json = Settings::Get().LoadSetting("application");
+  imgui_enabled_ = app_settings_json.value("imgui_enabled", true);
 
   window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
   renderer_.Init();
@@ -37,7 +38,8 @@ Application::Application(int width, int height, const char* title) {
 
 void Application::Run() {
   ZoneScoped;
-  scene_manager_.LoadScene("world");
+  scene_manager_.LoadScene("main_menu");
+  // scene_manager_.LoadWorld("default");
 
   RenderInfo render_info;
   Uint64 curr_time = SDL_GetPerformanceCounter();
@@ -55,14 +57,18 @@ void Application::Run() {
 
     {
       ZoneScopedN("Render");
+      window_.StartRenderFrame(imgui_enabled_);
       scene_manager_.GetActiveScene().Render(renderer_, window_);
-      window_.StartRenderFrame();
 
-      if (Settings::Get().imgui_enabled) OnImGui();
-      window_.EndRenderFrame();
+      if (imgui_enabled_) OnImGui();
+      window_.EndRenderFrame(imgui_enabled_);
     }
   }
 
+  nlohmann::json app_settings_json = {{"imgui_enabled", imgui_enabled_}};
+  Settings::Get().SaveSetting(app_settings_json, "application");
+
+  renderer_.Shutdown();
   scene_manager_.Shutdown();
   window_.Shutdown();
 }
@@ -71,6 +77,11 @@ Application::~Application() { Settings::Get().Shutdown(SettingsPath); }
 
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;
+
+  if (event.key.keysym.sym == SDLK_g && event.key.keysym.mod & KMOD_ALT) {
+    imgui_enabled_ = !imgui_enabled_;
+    return;
+  }
   if (event_dispatcher_.Dispatch(event)) return;
   switch (event.type) {
     case SDL_KEYDOWN:

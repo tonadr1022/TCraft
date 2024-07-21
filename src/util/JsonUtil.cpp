@@ -1,5 +1,6 @@
 #include "JsonUtil.hpp"
 
+#include <fstream>
 #include <nlohmann/json.hpp>
 
 namespace json_util {
@@ -20,4 +21,8 @@ std::optional<nlohmann::json> GetObject(nlohmann::json& obj, const std::string& 
   return obj[str];
 }
 
+void WriteJson(nlohmann::json& obj, const std::string& path) {
+  std::ofstream f(path);
+  f << std::setw(2) << obj << std::endl;
+}
 }  // namespace json_util

@@ -195,13 +195,6 @@ void Window::PollEvents() {
         }
         break;
       case SDL_KEYDOWN:
-        if (event.key.keysym.sym == SDLK_g && event.key.keysym.mod & KMOD_ALT) {
-          Settings::Get().imgui_enabled = !Settings::Get().imgui_enabled;
-          break;
-        }
-        if (ImGui::GetIO().WantCaptureKeyboard) break;
-        event_callback_(event);
-        break;
       case SDL_KEYUP:
         if (ImGui::GetIO().WantCaptureKeyboard) break;
         event_callback_(event);
@@ -216,18 +209,18 @@ void Window::PollEvents() {
   }
 }
 
-void Window::StartRenderFrame() {
-  if (Settings::Get().imgui_enabled) {
+void Window::StartRenderFrame(bool imgui_enabled) {
+  if (imgui_enabled) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
   }
 }
 
-void Window::EndRenderFrame() const {
+void Window::EndRenderFrame(bool imgui_enabled) const {
   {
     ZoneScopedN("ImGui render");
-    if (Settings::Get().imgui_enabled) {
+    if (imgui_enabled) {
       ImGui::Render();
       ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }

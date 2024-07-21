@@ -29,11 +29,13 @@ class Renderer {
  public:
   bool render_gui_{true};
   bool render_chunks_{true};
+  bool wireframe_enabled_{false};
 
   void RenderWorld(const WorldScene& world, const RenderInfo& render_info, const BlockDB& db);
   void Render(const Window& window);
   void Init();
   bool OnEvent(const SDL_Event& event);
+  void Shutdown();
 
  private:
   ShaderManager shader_manager_;

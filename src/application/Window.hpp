@@ -17,9 +17,9 @@ class Window {
   void SetCursorVisible(bool cursor_visible);
   void CenterCursor();
   void SetUserPointer(void* ptr);
-  void StartRenderFrame();
+  void StartRenderFrame(bool imgui_enabled);
+  void EndRenderFrame(bool imgui_enabled) const;
   void PollEvents();
-  void EndRenderFrame() const;
   void SetMouseGrab(bool state);
   static void DisableImGuiInputs();
   static void EnableImGuiInputs();

@@ -7,6 +7,7 @@ set(SOURCES
     application/Settings.cpp
     application/EventDispatcher.cpp
     application/SceneManager.cpp
+    application/WorldManager.cpp
 
     renderer/ShaderManager.cpp
     renderer/Renderer.cpp
@@ -25,7 +26,6 @@ set(SOURCES
     util/StringUtil.cpp
     util/JsonUtil.cpp
     gameplay/Player.cpp
-    gameplay/world/World.cpp
     gameplay/world/TerrainGenerator.cpp
     gameplay/world/Chunk.cpp
     gameplay/world/ChunkData.cpp
@@ -34,7 +34,6 @@ set(SOURCES
     gameplay/scene/MainMenuScene.cpp
 
     resource/TextureManager.cpp
-
 
     EAssert.cpp
     pch.cpp

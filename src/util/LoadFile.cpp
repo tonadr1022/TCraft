@@ -38,7 +38,11 @@ nlohmann::json LoadJsonFile(const std::string& path) {
   if (!file_stream.is_open()) {
     throw std::runtime_error("Failed to open json file: %s" + path);
   }
-  return nlohmann::json::parse(file_stream);
+  try {
+    return nlohmann::json::parse(file_stream);
+  } catch (const nlohmann::json::parse_error& e) {
+    return nlohmann::json();
+  }
 }
 
 }  // namespace util
