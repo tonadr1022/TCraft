@@ -11,13 +11,13 @@ namespace {
 constexpr int VertexLookup[120] = {
     // front (pos x)
     1, 0, 0, 0, 0,  // bottom left
-    1, 1, 0, 1, 0,  // bottom right
-    1, 0, 1, 0, 1,  // top left
+    1, 1, 0, 0, 1,  // bottom right
+    1, 0, 1, 1, 0,  // top left
     1, 1, 1, 1, 1,  // top right
     // back (neg x)
     0, 0, 0, 0, 0, 
-    0, 0, 1, 0, 1, 
-    0, 1, 0, 1, 0, 
+    0, 0, 1, 1, 0, 
+    0, 1, 0, 0, 1, 
     0, 1, 1, 1, 1,
     // right (pos y)
     0, 1, 0, 0, 0, 
