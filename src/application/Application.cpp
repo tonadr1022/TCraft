@@ -11,6 +11,7 @@
 #include "Window.hpp"
 #include "application/Input.hpp"
 #include "renderer/Renderer.hpp"
+#include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
 
 namespace {
@@ -22,6 +23,8 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 Application::Application(int width, int height, const char* title) {
   // Settings is a singleton since only one instance should exist
   settings_ = new Settings;
+  texture_manager_ = new TextureManager;
+
   Settings::Get().Load(SettingsPath);
   auto app_settings_json = Settings::Get().LoadSetting("application");
   imgui_enabled_ = app_settings_json.value("imgui_enabled", true);

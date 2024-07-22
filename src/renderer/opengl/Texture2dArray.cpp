@@ -9,14 +9,16 @@
 #include "util/StringUtil.hpp"
 
 Texture2dArray::Texture2dArray(Texture2dArray&& other) noexcept
-    : id_(other.id_), dims_(other.dims_) {}
+    : id_(std::exchange(other.id_, 0)), dims_(other.dims_) {}
 
 Texture2dArray& Texture2dArray::operator=(Texture2dArray&& other) noexcept {
   this->id_ = std::exchange(other.id_, 0);
   this->dims_ = other.dims_;
   return *this;
 }
+
 Texture2dArray::~Texture2dArray() {
+  spdlog::info("delete tex array");
   if (id_) {
     glDeleteTextures(1, &id_);
   }

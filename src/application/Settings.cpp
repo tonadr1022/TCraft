@@ -2,7 +2,6 @@
 
 #include <imgui.h>
 
-#include <fstream>
 #include <glm/trigonometric.hpp>
 #include <nlohmann/json.hpp>
 
@@ -13,7 +12,7 @@ using json = nlohmann::json;
 Settings* Settings::instance_ = nullptr;
 Settings& Settings::Get() { return *instance_; }
 Settings::Settings() {
-  EASSERT_MSG(instance_ == nullptr, "Cannot create two settings instances.");
+  EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
   instance_ = this;
 }
 

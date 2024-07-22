@@ -14,6 +14,8 @@ class TextureManager {
                               std::unordered_map<std::string, uint32_t>& name_to_idx);
 
  private:
+  friend class Application;
+  static TextureManager* instance_;
   TextureManager();
 
   std::unordered_map<uint32_t, Texture2dArray> texture_2d_array_map_;

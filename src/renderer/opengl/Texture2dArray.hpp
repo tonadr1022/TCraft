@@ -38,11 +38,10 @@ class Texture2dArray {
   void MakeNonResident() const;
   [[nodiscard]] bool IsValid() const;
 
-  void Bind(int unit = 0) const;
-
-  void LoadFromParams(const Texture2dArrayCreateParams& params);
+  void Bind(int unit) const;
 
  private:
+  void LoadFromParams(const Texture2dArrayCreateParams& params);
   glm::ivec2 dims_{};
   uint32_t id_{0};
 };

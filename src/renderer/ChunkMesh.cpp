@@ -17,4 +17,6 @@ void ChunkMesh::Allocate() {
   num_indices_ = indices.size();
   indices.clear();
   indices.shrink_to_fit();
+
+  gpu_allocated = true;
 }

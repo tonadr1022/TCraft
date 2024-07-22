@@ -6,6 +6,7 @@
 #include "renderer/Renderer.hpp"
 
 class Settings;
+class TextureManager;
 
 class Application {
  public:
@@ -18,6 +19,7 @@ class Application {
  private:
   bool imgui_enabled_;
   Settings* settings_{nullptr};
+  TextureManager* texture_manager_{nullptr};
   SceneManager scene_manager_;
   Renderer renderer_;
   Window window_;

@@ -9,5 +9,7 @@ class Chunk {
   ChunkData data;
   ChunkMesh mesh;
 
+  bool meshed_{false};
+
  private:
 };
