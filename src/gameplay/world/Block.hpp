@@ -6,5 +6,6 @@ enum class BlockType {
   PlainsGrass,
   Stone,
   Water,
+  DiamondOre,
 
 };

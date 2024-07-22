@@ -6,14 +6,19 @@
   },
   {
     "name": "Plains Grass",
-    "model": "block/plains_grass",
+    "model": "block/dirt",
     "properties": {}
   },
   {
     "name": "Water",
-    "model": "block/water",
+    "model": "block/dirt",
     "properties": {
       "move_slow_multiplier": 2
     }
+  },
+  {
+    "name": "Diamond Ore",
+    "model": "block/diamond_ore",
+    "properties": {}
   }
 ]

@@ -38,7 +38,14 @@ def set_block_texture_json():
 
 
 def write_2d_array(
-    texture_paths, output_path, width, height, filter_min="linear", filter_max="linear"
+    texture_paths,
+    output_path,
+    width,
+    height,
+    internal_format,
+    format,
+    filter_min="linear",
+    filter_max="linear",
 ):
     obj = {}
     obj["width"] = width
@@ -46,6 +53,8 @@ def write_2d_array(
     obj["textures"] = texture_paths
     obj["filter_min"] = filter_min
     obj["filter_max"] = filter_max
+    obj["internal_format"] = internal_format
+    obj["format"] = format
     write_json(obj, output_path)
 
 
@@ -59,8 +68,10 @@ def generate_block_texture_array(model_names):
     write_2d_array(
         list(textures),
         "resources/data/block/texture_2d_array.json",
-        16,
-        16,
+        32,
+        32,
+        "rgba8",
+        "rgba",
         "nearest_mipmap_linear",
         "nearest",
     )

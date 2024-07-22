@@ -10,6 +10,7 @@
 struct ChunkVertex {
   glm::vec3 position;
   glm::vec2 tex_coords;
+  int index;
 };
 
 class ChunkMesh {

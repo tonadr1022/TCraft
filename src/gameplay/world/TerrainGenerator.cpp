@@ -20,3 +20,14 @@ void TerrainGenerator::GenerateChecker(ChunkData& chunk, BlockType block) {
     }
   }
 }
+void TerrainGenerator::GenerateChecker(ChunkData& chunk, std::vector<BlockType>& blocks) {
+  ZoneScoped;
+  glm::ivec3 iter;
+  for (iter.y = 0; iter.y < ChunkLength; iter.y += 2) {
+    for (iter.z = 0; iter.z < ChunkLength; iter.z += 2) {
+      for (iter.x = 0; iter.x < ChunkLength; iter.x += 2) {
+        chunk.blocks_[ChunkData::GetIndex(iter)] = blocks[rand() % blocks.size()];
+      }
+    }
+  }
+}

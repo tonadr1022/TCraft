@@ -2,6 +2,7 @@
 
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec2 aTexCoord;
+layout(location = 2) in int index;
 
 /* layout(std140, binding = 0) uniform Matrices {
     mat4 vp_matrix;
@@ -21,5 +22,5 @@ void main() {
     vec4 pos_world_space = model_matrix * vec4(aPosition, 1.0);
     gl_Position = vp_matrix * pos_world_space;
     vs_out.pos_world_space = vec3(pos_world_space);
-    vs_out.tex_coords = vec3(aTexCoord, 0);
+    vs_out.tex_coords = vec3(aTexCoord, index);
 }

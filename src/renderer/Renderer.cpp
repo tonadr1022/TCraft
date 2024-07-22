@@ -4,15 +4,36 @@
 #include "application/Settings.hpp"
 #include "application/Window.hpp"
 #include "gameplay/scene/WorldScene.hpp"
+#include "gameplay/world/BlockDB.hpp"
 #include "pch.hpp"
 #include "renderer/opengl/Debug.hpp"
+#include "renderer/opengl/Texture2dArray.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
+
+namespace {
+
+Texture2dArray arr;
+// uint32_t handle;
+BlockDB* blockdb;
+void MakeTest() {
+  std::unordered_map<std::string, uint32_t> name_to_idx;
+  arr = Texture2dArray(GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
+  blockdb = new BlockDB{name_to_idx};
+  // handle = TextureManager::Get().Create2dArray(
+  //     GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
+}
+}  // namespace
 
 void Renderer::Init() {
   auto settings = Settings::Get().LoadSetting("renderer");
   glEnable(GL_DEBUG_OUTPUT);
   glDebugMessageCallback(MessageCallback, nullptr);
+  glEnable(GL_CULL_FACE);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_STENCIL_TEST);
+  MakeTest();
+
   LoadShaders();
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
 }
@@ -38,13 +59,14 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
   chunk_shader->SetInt("u_Texture", 0);
   {
     ZoneScopedN("Chunk render");
-    auto& chunk_tex_arr =
-        TextureManager::Get().GetTexture2dArray(world.world_render_params_.chunk_tex_array_handle);
-    glBindTextureUnit(0, chunk_tex_arr.Id());
-    int bound_id;
-    glGetIntegerv(GL_TEXTURE_BINDING_2D_ARRAY, &bound_id);
-    // spdlog::info("{} {}", chunk_tex_arr.Id(), bound_id);
-    // prints "1 0"
+    // const auto& chunk_tex_arr =
+    //     TextureManager::Get().GetTexture2dArray(world.world_render_params_.chunk_tex_array_handle);
+    // const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(handle);
+    // glBindTextureUnit(0, chunk_tex_arr.Id());
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, arr.Id());
+    // glBindTexture(GL_TEXTURE_2D_ARRAY, chunk_tex_arr.Id());
+    // glBindTextureUnit(0, arr.Id());
 
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
     for (const auto& it : world.chunk_map_) {

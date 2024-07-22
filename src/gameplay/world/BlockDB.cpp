@@ -13,7 +13,7 @@ namespace {
 const std::unordered_map<std::string, BlockType> BlockMap = {
     {"Air", BlockType::Air},     {"Plains Grass", BlockType::PlainsGrass},
     {"Dirt", BlockType::Dirt},   {"Stone", BlockType::Stone},
-    {"Water", BlockType::Water},
+    {"Water", BlockType::Water}, {"Diamond Ore", BlockType::DiamondOre},
 };
 
 BlockType GetBlockTypeFromString(const std::string& blockName) {

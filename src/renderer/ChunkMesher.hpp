@@ -2,13 +2,21 @@
 
 #include <glm/fwd.hpp>
 
+#include "gameplay/world/Block.hpp"
+
 struct ChunkVertex;
 class ChunkData;
+class BlockDB;
 
 class ChunkMesher {
  public:
-  static void GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
-                            std::vector<uint32_t>& indices);
-  static void GetIndexPadded(const glm::ivec3& pos);
-  static void GetIndexPadded(int x, int y, int z);
+  void GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
+                     std::vector<uint32_t>& indices);
+  void GetIndexPadded(const glm::ivec3& pos);
+  void GetIndexPadded(int x, int y, int z);
+  const BlockDB& block_db_;
+
+ private:
+  void AddQuad(int face_idx, const glm::ivec3& block_pos, std::vector<ChunkVertex>& vertices,
+               std::vector<uint32_t>& indices, BlockType block);
 };

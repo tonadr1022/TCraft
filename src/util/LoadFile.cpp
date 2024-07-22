@@ -27,6 +27,7 @@ void LoadImage(Image& image, std::string_view path, bool flip) {
   int comp;
   if (!path.empty()) {
     image.pixels = stbi_load(path.data(), &image.width, &image.height, &image.channels, 4);
+    spdlog::info("{} {} {} {} {}", path, image.width, image.height, image.channels, image.pixels);
     if (!image.pixels) {
       spdlog::error("Failed to load image at path {}", path);
     }
@@ -41,7 +42,7 @@ nlohmann::json LoadJsonFile(const std::string& path) {
   try {
     return nlohmann::json::parse(file_stream);
   } catch (const nlohmann::json::parse_error& e) {
-    return nlohmann::json();
+    return {};
   }
 }
 

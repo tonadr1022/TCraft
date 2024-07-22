@@ -7,6 +7,7 @@
 #include "application/SceneManager.hpp"
 #include "application/Settings.hpp"
 #include "application/Window.hpp"
+#include "gameplay/world/Block.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/TerrainGenerator.hpp"
 #include "pch.hpp"
@@ -22,8 +23,8 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
   name_ = "World Scene";
 
   std::unordered_map<std::string, uint32_t> name_to_idx;
-  world_render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(
-      GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
+  // world_render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(
+  //     GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
   block_db_ = std::make_unique<BlockDB>(name_to_idx);
 
   player_.GetCamera().Load();
@@ -46,8 +47,10 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
   glm::ivec3 pos{0, 0, 0};
   chunk_map_.emplace(pos, std::make_unique<Chunk>());
   Chunk* chunk = chunk_map_.at(pos).get();
-  TerrainGenerator::GenerateChecker(chunk->data, BlockType::Dirt);
-  ChunkMesher::GenerateNaive(chunk->data, chunk->mesh.vertices, chunk->mesh.indices);
+  std::vector<BlockType> blocks = {BlockType::Dirt, BlockType::DiamondOre};
+  TerrainGenerator::GenerateChecker(chunk->data, blocks);
+  ChunkMesher mesher{*block_db_};
+  mesher.GenerateNaive(chunk->data, chunk->mesh.vertices, chunk->mesh.indices);
   chunk->mesh.Allocate();
 }
 

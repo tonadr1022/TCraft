@@ -17,6 +17,9 @@ struct BlockData {
 class BlockDB {
  public:
   explicit BlockDB(std::unordered_map<std::string, uint32_t>& name_to_idx);
+  [[nodiscard]] const std::vector<BlockMeshData>& GetMeshData() const {
+    return block_mesh_data_db_;
+  };
 
  private:
   struct BlockDataDefaults {

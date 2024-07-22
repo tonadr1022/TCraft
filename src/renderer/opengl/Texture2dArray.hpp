@@ -7,6 +7,7 @@ struct Texture2dArrayCreateParams {
   glm::ivec2 dims;
   bool generate_mipmaps{true};
   uint32_t internal_format;
+  uint32_t format;
   uint32_t filter_mode_min;
   uint32_t filter_mode_max;
 
@@ -25,6 +26,7 @@ class Texture2dArray {
   explicit Texture2dArray(const Texture2dArrayCreateParams& params);
   explicit Texture2dArray(const std::string& param_path,
                           std::unordered_map<std::string, uint32_t>& name_to_idx);
+  Texture2dArray() = default;
   Texture2dArray(const Texture2dArray& other) = delete;
   Texture2dArray operator=(const Texture2dArray& other) = delete;
   Texture2dArray(Texture2dArray&& other) noexcept;
@@ -38,9 +40,9 @@ class Texture2dArray {
 
   void Bind(int unit = 0) const;
 
- private:
   void LoadFromParams(const Texture2dArrayCreateParams& params);
-  void LoadFromParams2(const Texture2dArrayCreateParams& params);
+
+ private:
   glm::ivec2 dims_{};
   uint32_t id_{0};
 };

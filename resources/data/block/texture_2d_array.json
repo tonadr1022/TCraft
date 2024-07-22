@@ -1,11 +1,12 @@
 {
-  "width": 16,
-  "height": 16,
+  "width": 32,
+  "height": 32,
   "textures": [
-    "block/grass_block_plains_top.png",
-    "block/water.png",
+    "block/diamond_ore.png",
     "block/dirt.png"
   ],
-  "filter_min": "nearest",
-  "filter_max": "nearest"
+  "filter_min": "nearest_mipmap_linear",
+  "filter_max": "nearest",
+  "internal_format": "rgba8",
+  "format": "rgba"
 }
