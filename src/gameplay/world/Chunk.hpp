@@ -5,11 +5,14 @@
 
 class Chunk {
  public:
-  [[nodiscard]] const ChunkArray& GetBlocks() const { return data.GetBlocks(); }
-  ChunkData data;
-  ChunkMesh mesh;
+  explicit Chunk(const glm::ivec3& pos);
 
-  bool meshed_{false};
+  [[nodiscard]] const glm::ivec3& GetPos() const;
+  ChunkData& GetData();
+  ChunkMesh& GetMesh();
 
  private:
+  ChunkData data_;
+  ChunkMesh mesh_;
+  glm::ivec3 pos_;
 };

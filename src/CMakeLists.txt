@@ -30,6 +30,8 @@ set(SOURCES
     gameplay/world/Chunk.cpp
     gameplay/world/ChunkData.cpp
     gameplay/world/BlockDB.cpp
+    gameplay/world/ChunkManager.cpp
+    gameplay/world/ChunkUtil.cpp
     gameplay/scene/WorldScene.cpp
     gameplay/scene/MainMenuScene.cpp
 

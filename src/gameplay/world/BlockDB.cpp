@@ -31,7 +31,7 @@ std::string GetStrAfterLastSlash(const std::string& str) {
 
 }  // namespace
 
-BlockDB::BlockDB(std::unordered_map<std::string, uint32_t>& name_to_idx) {
+void BlockDB::Init(std::unordered_map<std::string, uint32_t>& name_to_idx) {
   ZoneScoped;
   block_data_db_.resize(BlockMap.size());
   block_mesh_data_db_.resize(BlockMap.size());

@@ -4,9 +4,7 @@
 #include "application/SettingsManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/scene/WorldScene.hpp"
-#include "gameplay/world/BlockDB.hpp"
 #include "pch.hpp"
-#include "renderer/ChunkMesher.hpp"
 #include "renderer/opengl/Debug.hpp"
 #include "renderer/opengl/Texture2dArray.hpp"
 #include "resource/TextureManager.hpp"
@@ -18,7 +16,6 @@ void Renderer::Init() {
   glDebugMessageCallback(MessageCallback, nullptr);
   glEnable(GL_CULL_FACE);
   glEnable(GL_DEPTH_TEST);
-  glEnable(GL_STENCIL_TEST);
 
   LoadShaders();
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
@@ -30,8 +27,7 @@ void Renderer::Shutdown() {
   SettingsManager::Get().SaveSetting(settings, "renderer");
 }
 
-void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info,
-                           const BlockDB& db) {
+void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info) {
   // TODO: cleanup rendering
   glViewport(0, 0, render_info.window_dims.x, render_info.window_dims.y);
   glClearColor(1, 0.0, 0.6, 1.0);
@@ -50,8 +46,8 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
     glBindTextureUnit(0, chunk_tex_arr.Id());
 
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
-    for (const auto& it : world.chunk_map_) {
-      auto& mesh = it.second->mesh;
+    for (const auto& it : world.chunk_manager_.GetVisibleChunks()) {
+      auto& mesh = it.second->GetMesh();
 
       glm::vec3 pos = it.first * ChunkLength;
       chunk_shader->SetMat4("model_matrix", glm::translate(glm::mat4{1}, pos));
@@ -61,7 +57,7 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
   }
 }
 
-void Renderer::Render(const Window& window) {
+void Renderer::Render(const Window& window) const {
   auto dims = window.GetWindowSize();
   glViewport(0, 0, dims.x, dims.y);
   glClearColor(1, 0.0, 0.0, 1.0);

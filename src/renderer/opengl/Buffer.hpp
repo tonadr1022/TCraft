@@ -6,10 +6,10 @@ class Buffer {
   void Init(uint32_t size_bytes, GLbitfield flags, void* data = nullptr);
   [[nodiscard]] inline uint32_t Id() const { return id_; }
 
-  // Buffer(Buffer& other) = delete;
-  // Buffer& operator=(Buffer& other) = delete;
-  // Buffer(Buffer&& other) noexcept;
-  // Buffer& operator=(Buffer&& other) noexcept;
+  Buffer(Buffer& other) = delete;
+  Buffer& operator=(Buffer& other) = delete;
+  Buffer(Buffer&& other) noexcept;
+  Buffer& operator=(Buffer&& other) noexcept;
 
   /** @brief returns the index of the allocation on the gpu */
   uint32_t SubData(size_t size_bytes, void* data);

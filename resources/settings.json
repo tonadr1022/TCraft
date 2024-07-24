@@ -2,6 +2,9 @@
   "application": {
     "imgui_enabled": true
   },
+  "chunk_manager": {
+    "load_distance": 18
+  },
   "fps_cam": {
     "pitch": -21.100013732910156,
     "yaw": 454.4991149902344
@@ -15,11 +18,10 @@
     "wireframe_enabled": false
   },
   "world": {
-    "load_distance": 5,
     "player_position": [
-      29.29656410217285,
-      27.903587341308594,
-      -3.7398228645324707
+      9.147300720214844,
+      29.19194984436035,
+      -8.674488067626953
     ]
   }
 }

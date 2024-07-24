@@ -1,15 +1,9 @@
 #pragma once
 
 #include "gameplay/Player.hpp"
-#include "gameplay/world/Chunk.hpp"
-
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
-#include <glm/vec3.hpp>
-#include <unordered_map>
+#include "gameplay/world/ChunkManager.hpp"
 
 class BlockDB;
-using ChunkMap = std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>>;
 
 #include "application/Scene.hpp"
 
@@ -30,10 +24,9 @@ class WorldScene : public Scene {
     uint32_t chunk_tex_array_handle{0};
   };
   WorldRenderParams world_render_params_;
+  ChunkManager chunk_manager_;
 
  private:
   Player player_;
   friend class Renderer;
-  ChunkMap chunk_map_;
-  int load_distance_;
 };

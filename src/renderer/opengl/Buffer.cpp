@@ -9,15 +9,15 @@ void Buffer::Init(uint32_t size_bytes, GLbitfield flags, void* data) {
   glNamedBufferStorage(id_, size_bytes, data, flags);
 }
 
-// Buffer::Buffer(Buffer&& other) noexcept { *this = std::move(other); }
-//
-// Buffer& Buffer::operator=(Buffer&& other) noexcept {
-//   if (&other == this) return *this;
-//   this->~Buffer();
-//   id_ = std::exchange(other.id_, 0);
-//   offset_ = std::exchange(other.offset_, 0);
-//   return *this;
-// }
+Buffer::Buffer(Buffer&& other) noexcept { *this = std::move(other); }
+
+Buffer& Buffer::operator=(Buffer&& other) noexcept {
+  if (&other == this) return *this;
+  this->~Buffer();
+  id_ = std::exchange(other.id_, 0);
+  offset_ = std::exchange(other.offset_, 0);
+  return *this;
+}
 
 Buffer::~Buffer() {
   EASSERT_MSG(!mapped_, "buffer can't be mapped on deletion");
