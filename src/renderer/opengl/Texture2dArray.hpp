@@ -10,15 +10,6 @@ struct Texture2dArrayCreateParams {
   uint32_t format;
   uint32_t filter_mode_min;
   uint32_t filter_mode_max;
-
-  // Texture2dArrayCreateParams(const std::vector<void*>& data, glm::ivec2 dim, bool mipmaps,
-  //                            uint32_t format, uint32_t min_filter, uint32_t max_filter)
-  //     : all_pixels_data(data),
-  //       dims(dim),
-  //       generate_mipmaps(mipmaps),
-  //       internal_format(format),
-  //       filter_mode_min(min_filter),
-  //       filter_mode_max(max_filter) {}
 };
 
 class Texture2dArray {
