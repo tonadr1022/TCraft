@@ -1,6 +1,7 @@
 #include "Application.hpp"
 
 #include <SDL2/SDL_timer.h>
+#include <SDL_events.h>
 #include <imgui.h>
 
 #include <glm/mat4x4.hpp>
@@ -81,10 +82,13 @@ Application::~Application() { SettingsManager::Get().Shutdown(SettingsPath); }
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;
 
-  if (event.key.keysym.sym == SDLK_g && event.key.keysym.mod & KMOD_ALT) {
-    imgui_enabled_ = !imgui_enabled_;
-    return;
+  if (event.type == SDL_KEYDOWN) {
+    if (event.key.keysym.sym == SDLK_g && event.key.keysym.mod & KMOD_ALT) {
+      imgui_enabled_ = !imgui_enabled_;
+      return;
+    }
   }
+
   if (event_dispatcher_.Dispatch(event)) return;
   switch (event.type) {
     case SDL_KEYDOWN:
