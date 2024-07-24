@@ -1,6 +1,6 @@
 {
   "application": {
-    "imgui_enabled": false
+    "imgui_enabled": true
   },
   "fps_cam": {
     "pitch": -21.100013732910156,
@@ -15,7 +15,7 @@
     "wireframe_enabled": false
   },
   "world": {
-    "load_distance": 192,
+    "load_distance": 5,
     "player_position": [
       29.29656410217285,
       27.903587341308594,
