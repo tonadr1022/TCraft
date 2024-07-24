@@ -57,13 +57,15 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
   }
 }
 
-void Renderer::Render(const Window& window) const {
+void Renderer::StartFrame(const Window& window) const {
   auto dims = window.GetWindowSize();
   glViewport(0, 0, dims.x, dims.y);
   glClearColor(1, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 }
+
+void Renderer::Render(const Window& window) const {}
 
 bool Renderer::OnEvent(const SDL_Event& event) {
   switch (event.type) {

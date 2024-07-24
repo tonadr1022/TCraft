@@ -1,6 +1,6 @@
 {
   "application": {
-    "imgui_enabled": false
+    "imgui_enabled": true
   },
   "chunk_manager": {
     "load_distance": 18

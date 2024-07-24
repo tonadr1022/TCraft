@@ -34,6 +34,7 @@ class Renderer {
   void RenderWorld(const WorldScene& world, const RenderInfo& render_info);
   void Render(const Window& window) const;
   void Init();
+  void StartFrame(const Window& window) const;
   bool OnEvent(const SDL_Event& event);
   void Shutdown();
   ~Renderer();

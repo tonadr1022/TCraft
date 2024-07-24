@@ -8,6 +8,7 @@ set(SOURCES
     application/EventDispatcher.cpp
     application/SceneManager.cpp
     application/WorldManager.cpp
+    application/Scene.cpp
 
     renderer/ShaderManager.cpp
     renderer/Renderer.cpp
@@ -33,6 +34,7 @@ set(SOURCES
     gameplay/world/ChunkManager.cpp
     gameplay/world/ChunkUtil.cpp
     gameplay/scene/WorldScene.cpp
+    gameplay/scene/BlockEditorScene.cpp
     gameplay/scene/MainMenuScene.cpp
 
     resource/TextureManager.cpp

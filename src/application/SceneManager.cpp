@@ -1,12 +1,14 @@
 #include "SceneManager.hpp"
 
 #include "EAssert.hpp"
+#include "gameplay/scene/BlockEditorScene.hpp"
 #include "gameplay/scene/MainMenuScene.hpp"
 #include "gameplay/scene/WorldScene.hpp"
 
 SceneManager::SceneManager()
     : scene_creators_(
-          {{"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }}}) {}
+          {{"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }},
+           {"block_editor", [this]() { return std::make_unique<BlockEditorScene>(*this); }}}) {}
 
 void SceneManager::LoadScene(const std::string& name) {
   EASSERT_MSG(scene_creators_.count(name), "Scene not found");
