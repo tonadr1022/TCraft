@@ -27,5 +27,5 @@ class ChunkData {
   friend class Chunk;
   friend class TerrainGenerator;
   int non_air_block_count_{0};
-  ChunkArray blocks_;
+  ChunkArray blocks_{BlockType::Air};
 };
