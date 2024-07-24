@@ -3,6 +3,8 @@
 #include <array>
 #include <nlohmann/json_fwd.hpp>
 
+#include "gameplay/world/Block.hpp"
+
 struct BlockMeshData {
   // pos x,neg x, pos y, neg y, pos z, neg z
   std::array<int, 6> texture_indices;
@@ -10,6 +12,7 @@ struct BlockMeshData {
 
 struct BlockData {
   std::string name;
+  BlockType id;
   float move_slow_multiplier;
   bool emits_light;
 };

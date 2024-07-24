@@ -53,7 +53,7 @@ void ChunkManager::Init() {
   for (pos.x = 0; pos.x < 10; pos.x++) {
     chunk_map_.emplace(pos, std::make_unique<Chunk>(pos));
     Chunk* chunk = chunk_map_.at(pos).get();
-    std::vector<BlockType> blocks = {BlockType::Dirt, BlockType::DiamondOre};
+    std::vector<BlockType> blocks = {1, 2};
     TerrainGenerator::GenerateChecker(chunk->GetData(), blocks);
     ChunkMesher mesher{block_db_};
     mesher.GenerateNaive(chunk->GetData(), chunk->GetMesh().vertices, chunk->GetMesh().indices);

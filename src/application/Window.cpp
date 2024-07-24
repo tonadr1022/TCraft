@@ -342,3 +342,8 @@ void Window::EnableImGuiInputs() {
   io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 }
+
+float Window::GetAspectRatio() const {
+  auto dims = GetWindowSize();
+  return static_cast<float>(dims.x) / static_cast<float>(dims.y);
+}

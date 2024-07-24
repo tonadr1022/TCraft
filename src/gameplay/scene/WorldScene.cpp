@@ -33,15 +33,6 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
 
   std::array<float, 3> player_pos = settings["player_position"].get<std::array<float, 3>>();
   player_.position_ = {player_pos[0], player_pos[1], player_pos[2]};
-
-  // TODO(tony): make spiral
-  // glm::ivec3 iter;
-  // for (iter.z = -load_distance_; iter.z <= load_distance_; iter.z++) {
-  //   for (iter.y = -load_distance_; iter.y <= load_distance_; iter.y++) {
-  //     for (iter.x = -load_distance_; iter.x <= load_distance_; iter.x++) {
-  //     }
-  //   }
-  // }
 }
 
 void WorldScene::Update(double dt) {
@@ -65,12 +56,8 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
 
 void WorldScene::Render(Renderer& renderer, const Window& window) {
   ZoneScoped;
-  RenderInfo render_info;
-  render_info.window_dims = window.GetWindowSize();
-  float aspect_ratio =
-      static_cast<float>(render_info.window_dims.x) / static_cast<float>(render_info.window_dims.y);
-  render_info.vp_matrix =
-      player_.GetCamera().GetProjection(aspect_ratio) * player_.GetCamera().GetView();
+  RenderInfo render_info{.vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
+                                      player_.GetCamera().GetView()};
   renderer.RenderWorld(*this, render_info);
 }
 

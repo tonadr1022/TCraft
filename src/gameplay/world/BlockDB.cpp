@@ -1,7 +1,6 @@
 #include "BlockDB.hpp"
 
 #include "application/SettingsManager.hpp"
-#include "gameplay/world/Block.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -9,20 +8,6 @@
 using json = nlohmann::json;
 
 namespace {
-
-const std::unordered_map<std::string, BlockType> BlockMap = {
-    {"Air", BlockType::Air},     {"Plains Grass", BlockType::PlainsGrass},
-    {"Dirt", BlockType::Dirt},   {"Stone", BlockType::Stone},
-    {"Water", BlockType::Water}, {"Diamond Ore", BlockType::DiamondOre},
-};
-
-BlockType GetBlockTypeFromString(const std::string& blockName) {
-  auto it = BlockMap.find(blockName);
-  if (it != BlockMap.end()) {
-    return it->second;
-  }
-  throw std::runtime_error("Unknown block type: " + blockName);
-}
 
 std::string GetStrAfterLastSlash(const std::string& str) {
   int idx = str.find_last_of('/');
@@ -33,25 +18,36 @@ std::string GetStrAfterLastSlash(const std::string& str) {
 
 void BlockDB::Init(std::unordered_map<std::string, uint32_t>& name_to_idx) {
   ZoneScoped;
-  block_data_db_.resize(BlockMap.size());
-  block_mesh_data_db_.resize(BlockMap.size());
   std::unordered_map<std::string, BlockMeshData> model_name_to_mesh_data;
   LoadDefaultData(name_to_idx);
   LoadBlockModelData(name_to_idx, model_name_to_mesh_data);
 
   json block_data_arr = util::LoadJsonFile(GET_PATH("resources/data/block/block_data.json"));
+  // plus 1 due to air block
+  int num_block_types = block_data_arr.size() + 1;
+  block_data_db_.resize(num_block_types);
+  block_mesh_data_db_.resize(num_block_types);
+
+  // ensures that multiple IDs cannot exist
+  std::vector<bool> processed(num_block_types);
+
   for (auto& block_data : block_data_arr) {
     BlockData data;
     data.name = block_data.value("name", block_defaults_.name);
-    data.move_slow_multiplier =
-        block_data.value("move_slow_multiplier", block_defaults_.move_slow_multiplier);
-    data.emits_light = block_data.value("emits_light", block_defaults_.emits_light);
-    BlockType type = GetBlockTypeFromString(data.name);
-    block_data_db_[static_cast<int>(type)] = data;
+    data.id = block_data.value("id", 0);
+    if (block_data.contains("properties")) {
+      auto properties = block_data["properties"];
+      data.move_slow_multiplier =
+          properties.value("move_slow_multiplier", block_defaults_.move_slow_multiplier);
+      data.emits_light = properties.value("emits_light", block_defaults_.emits_light);
+    }
+    EASSERT_MSG(data.id <= num_block_types && data.id > 0, "Invalid data id");
+    EASSERT_MSG(!processed[data.id], "Duplicate Data id");
+    processed[data.id] = true;
+    block_data_db_[data.id] = data;
 
     auto model = json_util::GetString(block_data, "model");
-    block_mesh_data_db_[static_cast<int>(type)] =
-        model_name_to_mesh_data[model.value_or(block_defaults_.model)];
+    block_mesh_data_db_[data.id] = model_name_to_mesh_data[model.value_or(block_defaults_.model)];
   }
 };
 

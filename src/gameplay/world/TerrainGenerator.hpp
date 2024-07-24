@@ -1,7 +1,7 @@
 #pragma once
 
+#include "gameplay/world/Block.hpp"
 class ChunkData;
-enum class BlockType;
 
 class TerrainGenerator {
  public:

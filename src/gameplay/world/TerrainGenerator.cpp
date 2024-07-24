@@ -20,6 +20,7 @@ void TerrainGenerator::GenerateChecker(ChunkData& chunk, BlockType block) {
     }
   }
 }
+
 void TerrainGenerator::GenerateChecker(ChunkData& chunk, std::vector<BlockType>& blocks) {
   ZoneScoped;
   glm::ivec3 iter;

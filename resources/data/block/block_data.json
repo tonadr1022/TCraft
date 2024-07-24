@@ -1,15 +1,18 @@
 [
   {
+    "id": 1,
     "name": "Dirt",
     "model": "block/dirt",
     "properties": {}
   },
   {
+    "id": 4,
     "name": "Plains Grass",
     "model": "block/dirt",
     "properties": {}
   },
   {
+    "id": 3,
     "name": "Water",
     "model": "block/dirt",
     "properties": {
@@ -17,6 +20,7 @@
     }
   },
   {
+    "id": 2,
     "name": "Diamond Ore",
     "model": "block/diamond_ore",
     "properties": {}

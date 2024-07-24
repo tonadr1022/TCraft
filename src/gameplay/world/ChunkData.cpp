@@ -11,8 +11,8 @@ int ChunkData::GetIndex(int x, int y, int z) { return x + ChunkLength * (z + Chu
 void ChunkData::SetBlock(const glm::ivec3& pos, BlockType block) {
   int index = GetIndex(pos);
   BlockType curr = blocks_[index];
-  non_air_block_count_ += (curr == BlockType::Air && block != BlockType::Air);
-  non_air_block_count_ -= (curr != BlockType::Air && block == BlockType::Air);
+  non_air_block_count_ += (curr == 0 && block != 0);
+  non_air_block_count_ -= (curr != 0 && block == 0);
   blocks_[index] = block;
 }
 

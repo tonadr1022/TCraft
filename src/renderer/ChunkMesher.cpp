@@ -96,7 +96,7 @@ void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVe
     for (int z = 0; z < ChunkLength; z++) {
       for (int x = 0; x < ChunkLength; x++, idx++) {
         BlockType block = blocks[ChunkData::GetIndex(x, y, z)];
-        if (block == BlockType::Air) continue;
+        if (block == 0) continue;
         // 1, 0, 0
         // -1, 0, 0
         // 0, 1, 0
@@ -108,8 +108,7 @@ void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVe
           int adj_block_pos_arr[3] = {x, y, z};
           adj_block_pos_arr[face_idx >> 1] += 1 - ((face_idx & 1) << 1);
           glm::ivec3 adj_pos = {adj_block_pos_arr[0], adj_block_pos_arr[1], adj_block_pos_arr[2]};
-          if (ChunkData::IsOutOfBounds(adj_pos) ||
-              blocks[ChunkData::GetIndex(adj_pos)] == BlockType::Air) {
+          if (ChunkData::IsOutOfBounds(adj_pos) || blocks[ChunkData::GetIndex(adj_pos)] == 0) {
             AddQuad(face_idx, {x, y, z}, vertices, indices, block);
           }
         }

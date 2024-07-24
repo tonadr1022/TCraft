@@ -17,6 +17,7 @@ struct DrawElementsIndirectCommand {
 };
 
 class WorldScene;
+class BlockEditorScene;
 class Window;
 class BlockDB;
 
@@ -32,6 +33,7 @@ class Renderer {
   bool wireframe_enabled_{false};
 
   void RenderWorld(const WorldScene& world, const RenderInfo& render_info);
+  void RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info);
   void Render(const Window& window) const;
   void Init();
   void StartFrame(const Window& window) const;

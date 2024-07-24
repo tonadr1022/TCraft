@@ -15,7 +15,7 @@ class FPSCamera {
   void Save();
   void Load();
 
-  glm::vec3 position_;
+  glm::vec3 position_{0, 0, 0};
   [[nodiscard]] const glm::vec3& GetFront() const { return front_; }
 
   bool first_mouse_{true};

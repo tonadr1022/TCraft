@@ -25,6 +25,7 @@ class Window {
   static void EnableImGuiInputs();
   static std::string GetEventTypeString(Uint32 eventType);
 
+  [[nodiscard]] float GetAspectRatio() const;
   [[nodiscard]] bool GetVsync() const;
   [[nodiscard]] bool ShouldClose() const;
   [[nodiscard]] glm::ivec2 GetWindowSize() const;

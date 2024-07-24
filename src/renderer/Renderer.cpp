@@ -28,13 +28,6 @@ void Renderer::Shutdown() {
 }
 
 void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info) {
-  // TODO: cleanup rendering
-  glViewport(0, 0, render_info.window_dims.x, render_info.window_dims.y);
-  glClearColor(1, 0.0, 0.6, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  // TODO: separate wireframe into renderer
-  glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
-
   auto chunk_shader = shader_manager_.GetShader("chunk");
   chunk_shader->Bind();
   chunk_shader->SetMat4("vp_matrix", render_info.vp_matrix);
@@ -56,6 +49,8 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
     }
   }
 }
+
+void Renderer::RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info) {}
 
 void Renderer::StartFrame(const Window& window) const {
   auto dims = window.GetWindowSize();
