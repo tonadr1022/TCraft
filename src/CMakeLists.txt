@@ -4,7 +4,7 @@ set(SOURCES
     application/main.cpp
     application/Application.cpp
     application/Window.cpp
-    application/Settings.cpp
+    application/SettingsManager.cpp
     application/EventDispatcher.cpp
     application/SceneManager.cpp
     application/WorldManager.cpp

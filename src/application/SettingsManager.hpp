@@ -4,9 +4,9 @@
 
 using json = nlohmann::json;
 
-class Settings {
+class SettingsManager {
  public:
-  static Settings& Get();
+  static SettingsManager& Get();
   void OnImGui();
   void Load(const std::string& path);
   void Shutdown(const std::string& path);
@@ -19,11 +19,11 @@ class Settings {
   float mouse_sensitivity;
   float fps_cam_fov_deg;
   int load_distance;
-  ~Settings() = default;
+  ~SettingsManager() = default;
 
  private:
   json settings_json_;
   friend class Application;
-  Settings();
-  static Settings* instance_;
+  SettingsManager();
+  static SettingsManager* instance_;
 };

@@ -1,6 +1,6 @@
 #include "BlockDB.hpp"
 
-#include "application/Settings.hpp"
+#include "application/SettingsManager.hpp"
 #include "gameplay/world/Block.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"

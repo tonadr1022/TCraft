@@ -7,12 +7,12 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 
-#include "application/Settings.hpp"
+#include "application/SettingsManager.hpp"
 #include "application/Window.hpp"
 
 glm::mat4 FPSCamera::GetProjection(float aspect_ratio) const {
-  return glm::perspective(glm::radians(Settings::Get().fps_cam_fov_deg), aspect_ratio, near_plane_,
-                          far_plane_);
+  return glm::perspective(glm::radians(SettingsManager::Get().fps_cam_fov_deg), aspect_ratio,
+                          near_plane_, far_plane_);
 }
 
 glm::mat4 FPSCamera::GetView() const {
@@ -30,7 +30,7 @@ void FPSCamera::Update(double /* dt */) {
   }
   Window::Get().CenterCursor();
 
-  float mouse_multiplier = 0.1 * Settings::Get().mouse_sensitivity;
+  float mouse_multiplier = 0.1 * SettingsManager::Get().mouse_sensitivity;
   yaw_ += cursor_offset.x * mouse_multiplier;
   pitch_ = glm::clamp(pitch_ - cursor_offset.y * mouse_multiplier, -89.0f, 89.0f);
   CalculateFront();
@@ -52,11 +52,11 @@ void FPSCamera::OnImGui() const {
 
 void FPSCamera::Save() {
   nlohmann::json j = {{"yaw", yaw_}, {"pitch", pitch_}};
-  Settings::Get().SaveSetting(j, "fps_cam");
+  SettingsManager::Get().SaveSetting(j, "fps_cam");
 }
 
 void FPSCamera::Load() {
-  auto settings = Settings::Get().LoadSetting("fps_cam");
+  auto settings = SettingsManager::Get().LoadSetting("fps_cam");
   yaw_ = settings["yaw"].get<float>();
   pitch_ = settings["pitch"].get<float>();
   CalculateFront();

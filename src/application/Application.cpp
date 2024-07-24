@@ -7,7 +7,7 @@
 #include <glm/vec3.hpp>
 #include <string>
 
-#include "Settings.hpp"
+#include "SettingsManager.hpp"
 #include "Window.hpp"
 #include "application/Input.hpp"
 #include "renderer/Renderer.hpp"
@@ -22,11 +22,11 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 
 Application::Application(int width, int height, const char* title) {
   // Settings is a singleton since only one instance should exist
-  settings_ = new Settings;
+  settings_ = new SettingsManager;
   texture_manager_ = new TextureManager;
 
-  Settings::Get().Load(SettingsPath);
-  auto app_settings_json = Settings::Get().LoadSetting("application");
+  SettingsManager::Get().Load(SettingsPath);
+  auto app_settings_json = SettingsManager::Get().LoadSetting("application");
   imgui_enabled_ = app_settings_json.value("imgui_enabled", true);
 
   window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
@@ -69,14 +69,14 @@ void Application::Run() {
   }
 
   nlohmann::json app_settings_json = {{"imgui_enabled", imgui_enabled_}};
-  Settings::Get().SaveSetting(app_settings_json, "application");
+  SettingsManager::Get().SaveSetting(app_settings_json, "application");
 
   renderer_.Shutdown();
   scene_manager_.Shutdown();
   window_.Shutdown();
 }
 
-Application::~Application() { Settings::Get().Shutdown(SettingsPath); }
+Application::~Application() { SettingsManager::Get().Shutdown(SettingsPath); }
 
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;
@@ -107,7 +107,7 @@ void Application::OnImGui() {
     window_.SetVsync(vsync);
   }
 
-  Settings::Get().OnImGui();
+  SettingsManager::Get().OnImGui();
   scene_manager_.GetActiveScene().OnImGui();
   ImGui::End();
 }

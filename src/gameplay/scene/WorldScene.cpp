@@ -6,7 +6,7 @@
 #include <nlohmann/json.hpp>
 
 #include "application/SceneManager.hpp"
-#include "application/Settings.hpp"
+#include "application/SettingsManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/Block.hpp"
 #include "gameplay/world/BlockDB.hpp"
@@ -30,31 +30,11 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
 
   player_.GetCamera().Load();
   player_.Init();
-  auto settings = Settings::Get().LoadSetting("world");
+  auto settings = SettingsManager::Get().LoadSetting("world");
   load_distance_ = settings["load_distance"].get<int>();
 
   std::array<float, 3> player_pos = settings["player_position"].get<std::array<float, 3>>();
   player_.position_ = {player_pos[0], player_pos[1], player_pos[2]};
-
-  // Spiral iteration from 0,0
-  constexpr static int Dx[] = {1, 0, -1, 0};
-  constexpr static int Dy[] = {0, 1, 0, -1};
-  int direction = 0;
-  int step_radius = 1;
-  int direction_steps_counter = 0;
-  int turn_counter = 0;
-  int load_len = load_distance_ * 2 + 1;
-  glm::ivec2 iter{0, 0};
-  for (int i = 0; i < load_len * load_len - 1; i++) {
-    direction_steps_counter++;
-    iter.x += Dx[direction];
-    iter.y += Dy[direction];
-    bool change_dir = direction_steps_counter == step_radius;
-    direction = (direction + change_dir) % 4;
-    direction_steps_counter *= !change_dir;
-    turn_counter += change_dir;
-    step_radius += change_dir * (1 - (turn_counter % 2));
-  }
 
   // TODO(tony): make spiral
   // glm::ivec3 iter;
@@ -110,7 +90,7 @@ WorldScene::~WorldScene() {
   player_.GetCamera().Save();
   std::array<float, 3> player_pos = {player_.position_.x, player_.position_.y, player_.position_.z};
   nlohmann::json j = {{"load_distance", load_distance_}, {"player_position", player_pos}};
-  Settings::Get().SaveSetting(j, "world");
+  SettingsManager::Get().SaveSetting(j, "world");
 }
 
 void WorldScene::OnImGui() {

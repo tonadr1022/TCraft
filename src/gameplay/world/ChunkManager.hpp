@@ -18,4 +18,5 @@ class ChunkManager {
 
  private:
   ChunkMap chunk_map_;
+  int load_distance_;
 };

@@ -1,7 +1,7 @@
 #include "Renderer.hpp"
 
 #include "ShaderManager.hpp"
-#include "application/Settings.hpp"
+#include "application/SettingsManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/scene/WorldScene.hpp"
 #include "gameplay/world/BlockDB.hpp"
@@ -13,7 +13,7 @@
 #include "util/Paths.hpp"
 
 void Renderer::Init() {
-  auto settings = Settings::Get().LoadSetting("renderer");
+  auto settings = SettingsManager::Get().LoadSetting("renderer");
   glEnable(GL_DEBUG_OUTPUT);
   glDebugMessageCallback(MessageCallback, nullptr);
   glEnable(GL_CULL_FACE);
@@ -27,7 +27,7 @@ void Renderer::Init() {
 void Renderer::Shutdown() {
   nlohmann::json settings;
   settings["wireframe_enabled"] = wireframe_enabled_;
-  Settings::Get().SaveSetting(settings, "renderer");
+  SettingsManager::Get().SaveSetting(settings, "renderer");
 }
 
 void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info,

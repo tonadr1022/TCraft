@@ -1,4 +1,4 @@
-#include "Settings.hpp"
+#include "SettingsManager.hpp"
 
 #include <imgui.h>
 
@@ -9,14 +9,14 @@
 #include "util/LoadFile.hpp"
 
 using json = nlohmann::json;
-Settings* Settings::instance_ = nullptr;
-Settings& Settings::Get() { return *instance_; }
-Settings::Settings() {
+SettingsManager* SettingsManager::instance_ = nullptr;
+SettingsManager& SettingsManager::Get() { return *instance_; }
+SettingsManager::SettingsManager() {
   EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
   instance_ = this;
 }
 
-void Settings::Load(const std::string& path) {
+void SettingsManager::Load(const std::string& path) {
   settings_json_ = util::LoadJsonFile(path);
 
   // Main settings
@@ -25,7 +25,7 @@ void Settings::Load(const std::string& path) {
   fps_cam_fov_deg = main["fps_cam_fov_deg"].get<float>();
 }
 
-void Settings::Shutdown(const std::string& path) {
+void SettingsManager::Shutdown(const std::string& path) {
   // save main settings
   settings_json_["main"] = {
       {"mouse_sensitivity", mouse_sensitivity},
@@ -35,16 +35,16 @@ void Settings::Shutdown(const std::string& path) {
   json_util::WriteJson(settings_json_, path);
 }
 
-json Settings::LoadSetting(std::string_view name) const {
+json SettingsManager::LoadSetting(std::string_view name) const {
   if (settings_json_.contains(name)) {
     return settings_json_[name];
   }
   return json::object();
 }
 
-void Settings::SaveSetting(json& j, std::string_view name) { settings_json_[name] = j; }
+void SettingsManager::SaveSetting(json& j, std::string_view name) { settings_json_[name] = j; }
 
-void Settings::OnImGui() {
+void SettingsManager::OnImGui() {
   if (ImGui::CollapsingHeader("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SliderFloat("Mouse Sensitivity", &mouse_sensitivity, 0.2, 1.0);
     float fps_cam_fov_rad = glm::radians(fps_cam_fov_deg);
