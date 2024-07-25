@@ -1,5 +1,6 @@
 #include "BlockDB.hpp"
 
+#include "EAssert.hpp"
 #include "application/SettingsManager.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
@@ -16,6 +17,9 @@ std::string GetStrAfterLastSlash(const std::string& str) {
 
 }  // namespace
 
+const std::vector<BlockMeshData>& BlockDB::GetMeshData() const { return block_mesh_data_; };
+const std::vector<BlockData>& BlockDB::GetBlockData() const { return block_data_arr_; };
+
 void BlockDB::Init(std::unordered_map<std::string, uint32_t>& name_to_idx) {
   ZoneScoped;
   std::unordered_map<std::string, BlockMeshData> model_name_to_mesh_data;
@@ -25,8 +29,9 @@ void BlockDB::Init(std::unordered_map<std::string, uint32_t>& name_to_idx) {
   json block_data_arr = util::LoadJsonFile(GET_PATH("resources/data/block/block_data.json"));
   // plus 1 due to air block
   int num_block_types = block_data_arr.size() + 1;
-  block_data_db_.resize(num_block_types);
-  block_mesh_data_db_.resize(num_block_types);
+  block_data_arr_.resize(num_block_types);
+  block_mesh_data_.resize(num_block_types);
+  block_model_names_.resize(num_block_types);
 
   // ensures that multiple IDs cannot exist
   std::vector<bool> processed(num_block_types);
@@ -44,12 +49,43 @@ void BlockDB::Init(std::unordered_map<std::string, uint32_t>& name_to_idx) {
     EASSERT_MSG(data.id <= num_block_types && data.id > 0, "Invalid data id");
     EASSERT_MSG(!processed[data.id], "Duplicate Data id");
     processed[data.id] = true;
-    block_data_db_[data.id] = data;
+    block_data_arr_[data.id] = data;
 
     auto model = json_util::GetString(block_data, "model");
-    block_mesh_data_db_[data.id] = model_name_to_mesh_data[model.value_or(block_defaults_.model)];
+    block_mesh_data_[data.id] = model_name_to_mesh_data[model.value_or(block_defaults_.model)];
+    block_model_names_[data.id] = block_data.value("model", block_defaults_.model);
   }
+
+  // Set air data
+  block_data_arr_[0] = {.id = 0,
+                        .name = "Air",
+                        .move_slow_multiplier = block_defaults_.move_slow_multiplier,
+                        .emits_light = false};
+  loaded_ = true;
 };
+
+void BlockDB::WriteBlockData() const {
+  EASSERT_MSG(loaded_, "Cannot write block data without having loaded it first");
+  json block_data_arr_json = json::array();
+  for (size_t i = 1; i < block_data_arr_.size(); i++) {
+    json block_data_json = json::object();
+    const auto& block_data = block_data_arr_[i];
+    const auto& block_mesh_data = block_mesh_data_[i];
+    block_data_json["id"] = block_data.id;
+    block_data_json["model"] = block_model_names_[i];
+    block_data_json["name"] = block_data.name;
+    auto properties = json::object();
+    if (block_data.move_slow_multiplier != block_defaults_.move_slow_multiplier) {
+      properties["move_slow_multiplier"] = block_data.move_slow_multiplier;
+    }
+    if (block_data.emits_light != block_defaults_.emits_light) {
+      properties["emits_light"] = block_data.emits_light;
+    }
+    block_data_json["properties"] = properties;
+    block_data_arr_json.emplace_back(block_data_json);
+  }
+  json_util::WriteJson(block_data_arr_json, GET_PATH("resources/data/test_block_data_write.json"));
+}
 
 void BlockDB::LoadDefaultData(std::unordered_map<std::string, uint32_t>& name_to_idx) {
   ZoneScoped;

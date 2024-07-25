@@ -19,7 +19,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
     : Scene(scene_manager), block_db_(std::make_unique<BlockDB>()), chunk_manager_(*block_db_) {
   ZoneScoped;
   EASSERT_MSG(!world_name.empty(), "Can't load world scene without a loaded world name");
-  name_ = "World Scene";
+  name_ = "World";
 
   std::unordered_map<std::string, uint32_t> name_to_idx;
   world_render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(

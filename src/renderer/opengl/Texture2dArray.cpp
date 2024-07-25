@@ -29,6 +29,7 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
 
   dims_ = params.dims;
   glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &id_);
+  spdlog::info("create tex array {}", id_);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);

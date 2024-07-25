@@ -1,28 +1,28 @@
 [
   {
     "id": 1,
-    "name": "Dirt",
     "model": "block/dirt",
+    "name": "Dirt",
     "properties": {}
   },
   {
     "id": 2,
-    "name": "Diamond Ore",
     "model": "block/diamond_ore",
+    "name": "Diamond Ore",
     "properties": {}
   },
   {
     "id": 3,
-    "name": "Water",
     "model": "block/dirt",
+    "name": "Water",
     "properties": {
-      "move_slow_multiplier": 2
+      "move_slow_multiplier": 2.0
     }
   },
   {
     "id": 4,
-    "name": "Plains Grass",
     "model": "block/dirt",
+    "name": "Plains Grass",
     "properties": {}
   }
 ]
