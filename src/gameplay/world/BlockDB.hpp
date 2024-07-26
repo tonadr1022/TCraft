@@ -22,8 +22,10 @@ class BlockDB {
   [[nodiscard]] const std::vector<BlockMeshData>& GetMeshData() const;
   [[nodiscard]] const std::vector<BlockData>& GetBlockData() const;
 
-  void Init(std::unordered_map<std::string, uint32_t>& name_to_idx);
+  void Init(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
+            bool load_all_block_model_data);
   void WriteBlockData() const;
+  [[nodiscard]] static std::vector<std::string> GetAllBlockTexturesFromAllModels();
 
  private:
   // only the editor has full access to adding and changing data at runtime
@@ -35,10 +37,6 @@ class BlockDB {
 
   std::vector<std::string> all_block_model_names_;
 
-  void LoadAllBlockModels(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
-  void LoadDefaultData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
-  void LoadBlockModelData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
-                          std::unordered_map<std::string, BlockMeshData>& model_name_to_mesh_data);
   std::optional<BlockMeshData> LoadBlockModel(
       const std::string& model_name, std::unordered_map<std::string, uint32_t>& name_to_idx);
 

@@ -1,0 +1,12 @@
+{
+  "width": 32,
+  "height": 32,
+  "textures": [
+    "block/dirt.png",
+    "block/diamond_ore.png"
+  ],
+  "filter_min": "nearest_mipmap_linear",
+  "filter_max": "nearest",
+  "internal_format": "rgba8",
+  "format": "rgba"
+}

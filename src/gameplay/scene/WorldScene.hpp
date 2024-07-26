@@ -1,9 +1,9 @@
 #pragma once
 
 #include "gameplay/Player.hpp"
+#include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 
-class BlockDB;
 class Renderer;
 
 #include "application/Scene.hpp"
@@ -18,8 +18,7 @@ class WorldScene : public Scene {
   bool OnEvent(const SDL_Event& event) override;
   ~WorldScene() override;
 
-  // Using unique ptr to avoid includes
-  std::unique_ptr<BlockDB> block_db_{nullptr};
+  BlockDB block_db_;
 
   struct WorldRenderParams {
     uint32_t chunk_tex_array_handle{0};

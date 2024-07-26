@@ -8,7 +8,9 @@
 #include "gameplay/world/BlockDB.hpp"
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
+#include "resource/Image.hpp"
 #include "resource/TextureManager.hpp"
+#include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
 BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_manager) {
@@ -16,10 +18,29 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
   name_ = "Block Editor";
 
   std::unordered_map<std::string, uint32_t> name_to_idx;
-  render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(
-      GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
-  block_db_.Init(name_to_idx);
-  block_db_.LoadAllBlockModels(name_to_idx);
+
+  {
+    ZoneScopedN("Load texture data");
+    auto all_texture_names = BlockDB::GetAllBlockTexturesFromAllModels();
+    std::vector<void*> all_texture_pixel_data;
+    Image image;
+    int tex_idx = 0;
+    // TODO: handle diff sizes?
+    for (const auto& tex_name : all_texture_names) {
+      name_to_idx[tex_name] = tex_idx++;
+      util::LoadImage(image, GET_PATH("resources/textures/" + tex_name + ".png"), true);
+      all_texture_pixel_data.emplace_back(image.pixels);
+    }
+    render_params_.chunk_tex_array_handle =
+        TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
+                                             .dims = glm::ivec2{32, 32},
+                                             .generate_mipmaps = true,
+                                             .internal_format = GL_RGBA8,
+                                             .format = GL_RGBA,
+                                             .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
+                                             .filter_mode_max = GL_NEAREST});
+  }
+  block_db_.Init(name_to_idx, true);
   // add_model_tex_indexes_.fill(block_db_.block_defaults_.model_tex_index);
   ChunkMesher mesher{block_db_};
   for (int block = 0; block < 10; block++) {
@@ -145,4 +166,7 @@ bool BlockEditorScene::OnEvent(const SDL_Event& event) {
   return false;
 }
 
-BlockEditorScene::~BlockEditorScene() { block_db_.WriteBlockData(); };
+BlockEditorScene::~BlockEditorScene() {
+  block_db_.WriteBlockData();
+  TextureManager::Get().Remove2dArray(render_params_.chunk_tex_array_handle);
+};

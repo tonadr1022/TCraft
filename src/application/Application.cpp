@@ -44,7 +44,7 @@ Application::Application(int width, int height, const char* title) : scene_manag
 void Application::Run() {
   ZoneScoped;
   // scene_manager_.LoadScene("main_menu");
-  // scene_manager_.LoadScene("block_editor");
+  scene_manager_.LoadScene("block_editor");
   scene_manager_.LoadWorld("default");
 
   RenderInfo render_info;

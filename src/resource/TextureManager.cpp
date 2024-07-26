@@ -19,7 +19,15 @@ TextureHandle TextureManager::Create2dArray(
   return handle;
 }
 
+TextureHandle TextureManager::Create2dArray(const Texture2dArrayCreateParams& params) {
+  uint32_t handle = next_tex_array_handle_++;
+  texture_2d_array_map_.try_emplace(handle, params);
+  return handle;
+}
+
 const Texture2dArray& TextureManager::GetTexture2dArray(TextureHandle handle) {
   EASSERT_MSG(texture_2d_array_map_.contains(handle), "Texture not found");
   return texture_2d_array_map_.at(handle);
 }
+
+void TextureManager::Remove2dArray(uint32_t handle) { texture_2d_array_map_.erase(handle); }

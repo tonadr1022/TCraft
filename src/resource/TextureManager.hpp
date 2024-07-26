@@ -12,11 +12,13 @@ class TextureManager {
   TextureHandle Create2dArray(const Texture2dArrayCreateParams& params);
   TextureHandle Create2dArray(const std::string& param_path,
                               std::unordered_map<std::string, uint32_t>& name_to_idx);
+  void Remove2dArray(uint32_t handle);
 
  private:
   friend class Application;
   static TextureManager* instance_;
   TextureManager();
+  uint32_t next_tex_array_handle_{1};
 
   std::unordered_map<uint32_t, Texture2dArray> texture_2d_array_map_;
 };

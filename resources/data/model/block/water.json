@@ -1,6 +1,6 @@
 {
   "type": "block/all",
   "textures": {
-    "all": "block/water"
+    "all": "block/water_still"
   }
 }

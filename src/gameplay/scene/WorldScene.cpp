@@ -16,17 +16,15 @@
 #include "util/Paths.hpp"
 
 WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_name)
-    : Scene(scene_manager),
-      block_db_(std::make_unique<BlockDB>()),
-      chunk_manager_(*block_db_, scene_manager.GetRenderer()) {
+    : Scene(scene_manager), chunk_manager_(block_db_, scene_manager.GetRenderer()) {
   ZoneScoped;
   EASSERT_MSG(!world_name.empty(), "Can't load world scene without a loaded world name");
   name_ = "World";
 
-  std::unordered_map<std::string, uint32_t> name_to_idx;
+  std::unordered_map<std::string, uint32_t> tex_name_to_idx;
   world_render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(
-      GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
-  block_db_->Init(name_to_idx);
+      GET_PATH("resources/data/block/texture_2d_array.json"), tex_name_to_idx);
+  block_db_.Init(tex_name_to_idx, false);
   chunk_manager_.Init();
 
   player_.GetCamera().Load();
