@@ -1,6 +1,6 @@
 {
   "name": "Default",
-  "model": "block/default.json",
+  "model": "block/default",
   "properties": {
     "move_slow_multiplier": 1,
     "emits_light": false

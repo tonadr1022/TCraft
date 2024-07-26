@@ -1,7 +1,7 @@
 #include "BlockDB.hpp"
 
-#include "EAssert.hpp"
 #include "application/SettingsManager.hpp"
+#include "pch.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -51,9 +51,9 @@ void BlockDB::Init(std::unordered_map<std::string, uint32_t>& name_to_idx) {
     processed[data.id] = true;
     block_data_arr_[data.id] = data;
 
-    auto model = json_util::GetString(block_data, "model");
-    block_mesh_data_[data.id] = model_name_to_mesh_data[model.value_or(block_defaults_.model)];
-    block_model_names_[data.id] = block_data.value("model", block_defaults_.model);
+    std::string model_name = block_data.value("model", block_defaults_.model);
+    block_mesh_data_[data.id] = model_name_to_mesh_data[model_name];
+    block_model_names_[data.id] = model_name;
   }
 
   // Set air data
@@ -91,7 +91,6 @@ void BlockDB::LoadDefaultData(std::unordered_map<std::string, uint32_t>& name_to
   ZoneScoped;
   json default_block_data = util::LoadJsonFile(GET_PATH("resources/data/block/default_block.json"));
   block_defaults_.name = default_block_data["name"].get<std::string>();
-  // TODO: not necessary or use it, one or the other
   block_defaults_.model = default_block_data["model"].get<std::string>();
   auto default_mesh_data = LoadBlockModel("default.json", name_to_idx);
   EASSERT_MSG(default_mesh_data.has_value(), "Default mesh data failed to load");
@@ -103,7 +102,7 @@ void BlockDB::LoadDefaultData(std::unordered_map<std::string, uint32_t>& name_to
 }
 
 std::optional<BlockMeshData> BlockDB::LoadBlockModel(
-    const std::string& model_filename, std::unordered_map<std::string, uint32_t>& name_to_idx) {
+    const std::string& model_filename, std::unordered_map<std::string, uint32_t>& tex_name_to_idx) {
   ZoneScoped;
   std::string relative_path = GET_PATH("resources/data/block/model/" + model_filename);
   json model_obj = util::LoadJsonFile(relative_path);
@@ -121,11 +120,11 @@ std::optional<BlockMeshData> BlockDB::LoadBlockModel(
     spdlog::error("textures key of model must be an object: {}", relative_path);
   }
 
-  auto get_tex_idx = [this, &tex_obj, &name_to_idx,
+  auto get_tex_idx = [this, &tex_obj, &tex_name_to_idx,
                       &relative_path](const std::string& type) -> uint32_t {
     auto tex_name = json_util::GetString(tex_obj.value(), type);
     if (tex_name.has_value()) {
-      return name_to_idx[tex_name.value()];
+      return tex_name_to_idx[tex_name.value()];
     }
     spdlog::error("model of type {} does not have required texture fields: {}", type,
                   relative_path);
@@ -160,7 +159,7 @@ std::optional<BlockMeshData> BlockDB::LoadBlockModel(
 }
 
 void BlockDB::LoadBlockModelData(
-    std::unordered_map<std::string, uint32_t>& name_to_idx,
+    std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
     std::unordered_map<std::string, BlockMeshData>& model_name_to_mesh_data) {
   ZoneScoped;
   // Array of strings of block models to load
@@ -172,9 +171,17 @@ void BlockDB::LoadBlockModelData(
 
   for (auto& item : block_model_arr) {
     std::string model_filename = item.get<std::string>();
-    auto block_mesh_data = LoadBlockModel(model_filename, name_to_idx);
+    auto block_mesh_data = LoadBlockModel(model_filename, tex_name_to_idx);
     std::string model_name = model_filename.substr(0, model_filename.find_last_of('.'));
     model_name_to_mesh_data.emplace("block/" + model_name,
                                     block_mesh_data.value_or(default_mesh_data));
+  }
+}
+
+void BlockDB::LoadAllBlockModelNames() {
+  for (const auto& file :
+       std::filesystem::directory_iterator(GET_PATH("resources/data/block/model"))) {
+    all_block_model_names_.emplace_back("block/" + file.path().stem().string());
+    spdlog::info("{}", file.path().stem().string());
   }
 }

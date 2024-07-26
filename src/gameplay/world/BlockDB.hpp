@@ -2,6 +2,7 @@
 
 #include <array>
 #include <nlohmann/json_fwd.hpp>
+#include <unordered_set>
 
 #include "gameplay/world/Block.hpp"
 
@@ -24,6 +25,7 @@ class BlockDB {
 
   void Init(std::unordered_map<std::string, uint32_t>& name_to_idx);
   void WriteBlockData() const;
+  void LoadAllBlockModelNames();
 
  private:
   // only the editor has full access to adding and changing data at runtime
@@ -40,6 +42,8 @@ class BlockDB {
   std::vector<BlockData> block_data_arr_;
   std::vector<BlockMeshData> block_mesh_data_;
   std::vector<std::string> block_model_names_;
+
+  std::vector<std::string> all_block_model_names_;
 
   BlockMeshData default_mesh_data_;
 
