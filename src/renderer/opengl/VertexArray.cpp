@@ -4,7 +4,9 @@
 
 void VertexArray::Bind() const { glBindVertexArray(id_); }
 
-VertexArray::VertexArray() { glCreateVertexArrays(1, &id_); }
+void VertexArray::Init() { glCreateVertexArrays(1, &id_); }
+
+VertexArray::VertexArray() = default;
 
 VertexArray::~VertexArray() {
   if (id_) glDeleteVertexArrays(1, &id_);

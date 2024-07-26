@@ -3,6 +3,7 @@
 class VertexArray {
  public:
   VertexArray();
+  void Init();
   ~VertexArray();
   void Bind() const;
 

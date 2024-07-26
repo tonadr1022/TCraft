@@ -7,12 +7,13 @@
 
 #include "renderer/ShaderManager.hpp"
 #include "renderer/opengl/Buffer.hpp"
+#include "renderer/opengl/VertexArray.hpp"
 
 struct DrawElementsIndirectCommand {
   uint32_t count;
   uint32_t instance_count;
   uint32_t first_index;
-  int base_vertex;
+  uint32_t base_vertex;
   uint32_t base_instance;
 };
 
@@ -20,6 +21,7 @@ class WorldScene;
 class BlockEditorScene;
 class Window;
 class BlockDB;
+struct ChunkVertex;
 
 struct RenderInfo {
   glm::ivec2 window_dims;
@@ -35,16 +37,37 @@ class Renderer {
   void RenderWorld(const WorldScene& world, const RenderInfo& render_info);
   void RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info);
   void Render(const Window& window) const;
+  void SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle);
+  [[nodiscard]] uint32_t AllocateChunk(std::vector<ChunkVertex>& vertices,
+                                       std::vector<uint32_t>& indices);
+  void FreeChunk(uint32_t handle);
   void Init();
-  void StartFrame(const Window& window) const;
+  void StartFrame(const Window& window);
   bool OnEvent(const SDL_Event& event);
   void Shutdown();
   ~Renderer();
 
  private:
+  constexpr const static uint32_t MaxDrawCmds{1'000'000};
   ShaderManager shader_manager_;
+
+  struct ChunkDrawCmdUniform {
+    glm::mat4 model;
+  };
 
   std::unique_ptr<Buffer> vertex_buffer_{nullptr};
   std::unique_ptr<Buffer> element_buffer_{nullptr};
+
+  VertexArray chunk_vao_;
+  Buffer chunk_vbo_;
+  Buffer chunk_ebo_;
+  Buffer chunk_uniform_ssbo_;
+  Buffer chunk_draw_indirect_buffer_;
+
+  std::vector<uint32_t> frame_draw_cmd_mesh_ids_;
+  std::vector<ChunkDrawCmdUniform> frame_chunk_draw_cmd_uniforms_;
+  std::vector<DrawElementsIndirectCommand> frame_dei_cmds_;
+  std::vector<DrawElementsIndirectCommand> dei_cmds_;
+
   void LoadShaders();
 };

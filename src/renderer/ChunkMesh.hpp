@@ -24,4 +24,6 @@ class ChunkMesh {
   Buffer ebo;
   uint32_t num_vertices_;
   uint32_t num_indices_;
+
+  uint32_t handle_{UINT32_MAX};
 };

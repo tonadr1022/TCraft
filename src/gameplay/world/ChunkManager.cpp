@@ -57,7 +57,7 @@ void ChunkManager::Init() {
     TerrainGenerator::GenerateChecker(chunk->GetData(), blocks);
     ChunkMesher mesher{block_db_};
     mesher.GenerateNaive(chunk->GetData(), chunk->GetMesh().vertices, chunk->GetMesh().indices);
-    chunk->GetMesh().Allocate();
+    // chunk->GetMesh().Allocate();
   }
 }
 
