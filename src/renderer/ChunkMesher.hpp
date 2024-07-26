@@ -16,6 +16,9 @@ class ChunkMesher {
   void GetIndexPadded(int x, int y, int z);
   const BlockDB& block_db_;
 
+  void GenerateBlock(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
+                     BlockType block);
+
  private:
   void AddQuad(int face_idx, const glm::ivec3& block_pos, std::vector<ChunkVertex>& vertices,
                std::vector<uint32_t>& indices, BlockType block);

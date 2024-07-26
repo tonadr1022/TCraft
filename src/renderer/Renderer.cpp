@@ -42,6 +42,13 @@ void Renderer::Shutdown() {
   SettingsManager::Get().SaveSetting(settings, "renderer");
 }
 
+void Renderer::Reset() {
+  chunk_uniform_ssbo_.ResetOffset();
+  chunk_draw_indirect_buffer_.ResetOffset();
+  chunk_ebo_.ResetOffset();
+  chunk_vbo_.ResetOffset();
+}
+
 void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info) {
   ZoneScoped;
   {
@@ -52,11 +59,9 @@ void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_inf
       // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
       for (const auto& it : world.chunk_manager_.GetVisibleChunks()) {
         auto& mesh = it.second->GetMesh();
-        if (mesh.handle_ == UINT32_MAX) {
-          mesh.handle_ = AllocateChunk(mesh.vertices, mesh.indices);
-          mesh.vertices = {};
-          mesh.indices = {};
-        }
+        // if (mesh.handle_ == UINT32_MAX) {
+        //   mesh.handle_ = AllocateChunk(mesh.vertices, mesh.indices);
+        // }
         glm::vec3 pos = it.first * ChunkLength;
         SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.handle_);
       }

@@ -4,12 +4,13 @@
 #include "gameplay/world/ChunkManager.hpp"
 
 class BlockDB;
+class Renderer;
 
 #include "application/Scene.hpp"
 
 class WorldScene : public Scene {
  public:
-  explicit WorldScene(SceneManager& scene_manager, const std::string& world_name);
+  WorldScene(SceneManager& scene_manager, const std::string& world_name);
 
   void Update(double dt) override;
   void OnImGui() override;

@@ -8,20 +8,23 @@
 #include <unordered_map>
 
 class BlockDB;
+class Renderer;
 using ChunkMap = std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>>;
 
 class ChunkManager {
  public:
+  ChunkManager(BlockDB& block_db, Renderer& renderer);
+  ~ChunkManager();
+
   void Update(double dt);
   void Init();
   const ChunkMap& GetVisibleChunks() const { return chunk_map_; }
   void SetBlock(const glm::ivec3& pos, BlockType block);
   BlockType GetBlock(const glm::ivec3& pos);
-  explicit ChunkManager(BlockDB& block_db);
-  ~ChunkManager();
   void OnImGui();
 
  private:
+  Renderer& renderer_;
   BlockDB& block_db_;
   ChunkMap chunk_map_;
   int load_distance_;

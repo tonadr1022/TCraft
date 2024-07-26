@@ -2,7 +2,6 @@
 
 #include <array>
 #include <nlohmann/json_fwd.hpp>
-#include <unordered_set>
 
 #include "gameplay/world/Block.hpp"
 

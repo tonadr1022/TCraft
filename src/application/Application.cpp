@@ -11,6 +11,7 @@
 #include "SettingsManager.hpp"
 #include "Window.hpp"
 #include "application/Input.hpp"
+#include "application/SceneManager.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
@@ -21,7 +22,7 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 
 }  // namespace
 
-Application::Application(int width, int height, const char* title) {
+Application::Application(int width, int height, const char* title) : scene_manager_(renderer_) {
   // Settings is a singleton since only one instance should exist
   settings_ = new SettingsManager;
   texture_manager_ = new TextureManager;

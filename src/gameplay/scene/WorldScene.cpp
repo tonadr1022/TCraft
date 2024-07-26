@@ -16,7 +16,9 @@
 #include "util/Paths.hpp"
 
 WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_name)
-    : Scene(scene_manager), block_db_(std::make_unique<BlockDB>()), chunk_manager_(*block_db_) {
+    : Scene(scene_manager),
+      block_db_(std::make_unique<BlockDB>()),
+      chunk_manager_(*block_db_, scene_manager.GetRenderer()) {
   ZoneScoped;
   EASSERT_MSG(!world_name.empty(), "Can't load world scene without a loaded world name");
   name_ = "World";

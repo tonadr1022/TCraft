@@ -37,6 +37,7 @@ class Renderer {
   void RenderWorld(const WorldScene& world, const RenderInfo& render_info);
   void RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info);
   void Render(const Window& window) const;
+  void Reset();
   void SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle);
   [[nodiscard]] uint32_t AllocateChunk(std::vector<ChunkVertex>& vertices,
                                        std::vector<uint32_t>& indices);

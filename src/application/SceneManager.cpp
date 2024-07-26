@@ -4,14 +4,17 @@
 #include "gameplay/scene/BlockEditorScene.hpp"
 #include "gameplay/scene/MainMenuScene.hpp"
 #include "gameplay/scene/WorldScene.hpp"
+#include "renderer/Renderer.hpp"
 
-SceneManager::SceneManager()
-    : scene_creators_(
+SceneManager::SceneManager(Renderer& renderer)
+    : renderer_(renderer),
+      scene_creators_(
           {{"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }},
            {"block_editor", [this]() { return std::make_unique<BlockEditorScene>(*this); }}}) {}
 
 void SceneManager::LoadScene(const std::string& name) {
   EASSERT_MSG(scene_creators_.count(name), "Scene not found");
+  renderer_.Reset();
   active_scene_ = scene_creators_.at(name)();
 }
 
@@ -21,7 +24,9 @@ Scene& SceneManager::GetActiveScene() {
 }
 
 void SceneManager::Shutdown() { active_scene_ = nullptr; }
+Renderer& SceneManager::GetRenderer() { return renderer_; }
 
 void SceneManager::LoadWorld(const std::string& world_name) {
+  renderer_.Reset();
   active_scene_ = std::make_unique<WorldScene>(*this, world_name);
 }

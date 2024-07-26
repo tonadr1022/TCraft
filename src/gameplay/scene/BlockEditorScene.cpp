@@ -6,21 +6,28 @@
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
+#include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
 
-BlockEditorScene::BlockEditorScene(SceneManager& scene_manager)
-    : Scene(scene_manager), block_db_(std::make_unique<BlockDB>()) {
+BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_manager) {
   ZoneScoped;
   name_ = "Block Editor";
 
   std::unordered_map<std::string, uint32_t> name_to_idx;
   render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(
       GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
-  block_db_->Init(name_to_idx);
-  block_db_->LoadAllBlockModelNames();
-  add_model_tex_indexes_.fill(block_db_->block_defaults_.model_tex_index);
+  block_db_.Init(name_to_idx);
+  block_db_.LoadAllBlockModelNames();
+  add_model_tex_indexes_.fill(block_db_.block_defaults_.model_tex_index);
+  ChunkMesher mesher{block_db_};
+  for (int block = 0; block < 10; block++) {
+    std::vector<ChunkVertex> vertices;
+    std::vector<uint32_t> indices;
+    mesher.GenerateBlock(vertices, indices, block);
+    // scene_manager.GetRenderer().AllocateChunk(vertices, indices);
+  }
 }
 
 void BlockEditorScene::Render(Renderer& renderer, const Window& window) {
@@ -81,8 +88,8 @@ void BlockEditorScene::OnImGui() {
   }
 
   if (ImGui::CollapsingHeader("Blocks", ImGuiTreeNodeFlags_DefaultOpen)) {
-    auto& block_data_arr = block_db_->block_data_arr_;
-    auto& block_model_names = block_db_->block_model_names_;
+    auto& block_data_arr = block_db_.block_data_arr_;
+    auto& block_model_names = block_db_.block_model_names_;
 
     static int edit_block_idx = -1;
     for (uint32_t i = 1; i < block_data_arr.size(); i++) {
@@ -107,7 +114,7 @@ void BlockEditorScene::OnImGui() {
       ImGui::Checkbox("Emits Light", &block_data_arr[edit_block_idx].emits_light);
 
       if (ImGui::BeginCombo("##Model", ("Model: " + block_model_names[edit_block_idx]).c_str())) {
-        for (const auto& model : block_db_->all_block_model_names_) {
+        for (const auto& model : block_db_.all_block_model_names_) {
           if (model == block_model_names[edit_block_idx]) continue;
           if (ImGui::Selectable(model.data())) {
             block_model_names[edit_block_idx] = model;
@@ -138,4 +145,4 @@ bool BlockEditorScene::OnEvent(const SDL_Event& event) {
   return false;
 }
 
-BlockEditorScene::~BlockEditorScene() { block_db_->WriteBlockData(); };
+BlockEditorScene::~BlockEditorScene() { block_db_.WriteBlockData(); };

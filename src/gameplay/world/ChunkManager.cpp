@@ -3,12 +3,15 @@
 #include <imgui.h>
 
 #include "application/SettingsManager.hpp"
+#include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkData.hpp"
 #include "gameplay/world/ChunkUtil.hpp"
 #include "gameplay/world/TerrainGenerator.hpp"
 #include "renderer/ChunkMesher.hpp"
+#include "renderer/Renderer.hpp"
 
-ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {}
+ChunkManager::ChunkManager(BlockDB& block_db, Renderer& renderer)
+    : block_db_(block_db), renderer_(renderer) {}
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
@@ -56,8 +59,11 @@ void ChunkManager::Init() {
     std::vector<BlockType> blocks = {1, 2};
     TerrainGenerator::GenerateChecker(chunk->GetData(), blocks);
     ChunkMesher mesher{block_db_};
-    mesher.GenerateNaive(chunk->GetData(), chunk->GetMesh().vertices, chunk->GetMesh().indices);
-    // chunk->GetMesh().Allocate();
+    // TODO: separate  vertices and indices from here so multithreading is possible
+    std::vector<ChunkVertex> vertices;
+    std::vector<uint32_t> indices;
+    mesher.GenerateNaive(chunk->GetData(), vertices, indices);
+    chunk->GetMesh().handle_ = renderer_.AllocateChunk(vertices, indices);
   }
 }
 
