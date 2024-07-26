@@ -19,8 +19,8 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
   render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(
       GET_PATH("resources/data/block/texture_2d_array.json"), name_to_idx);
   block_db_.Init(name_to_idx);
-  block_db_.LoadAllBlockModelNames();
-  add_model_tex_indexes_.fill(block_db_.block_defaults_.model_tex_index);
+  block_db_.LoadAllBlockModels(name_to_idx);
+  // add_model_tex_indexes_.fill(block_db_.block_defaults_.model_tex_index);
   ChunkMesher mesher{block_db_};
   for (int block = 0; block < 10; block++) {
     std::vector<ChunkVertex> vertices;

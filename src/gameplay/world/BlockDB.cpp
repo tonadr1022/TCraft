@@ -8,15 +8,6 @@
 
 using json = nlohmann::json;
 
-namespace {
-
-std::string GetStrAfterLastSlash(const std::string& str) {
-  int idx = str.find_last_of('/');
-  return str.substr(idx + 1);
-}
-
-}  // namespace
-
 const std::vector<BlockMeshData>& BlockDB::GetMeshData() const { return block_mesh_data_; };
 const std::vector<BlockData>& BlockDB::GetBlockData() const { return block_data_arr_; };
 
@@ -24,6 +15,7 @@ void BlockDB::Init(std::unordered_map<std::string, uint32_t>& name_to_idx) {
   ZoneScoped;
   std::unordered_map<std::string, BlockMeshData> model_name_to_mesh_data;
   LoadDefaultData(name_to_idx);
+  block_defaults_loaded_ = true;
   LoadBlockModelData(name_to_idx, model_name_to_mesh_data);
 
   json block_data_arr = util::LoadJsonFile(GET_PATH("resources/data/block/block_data.json"));
@@ -100,6 +92,16 @@ void BlockDB::LoadDefaultData(std::unordered_map<std::string, uint32_t>& name_to
   block_defaults_.move_slow_multiplier = properties["move_slow_multiplier"].get<float>();
   block_defaults_.emits_light = properties["emits_light"].get<bool>();
 }
+void BlockDB::LoadAllBlockModels(std::unordered_map<std::string, uint32_t>& tex_name_to_idx) {
+  EASSERT_MSG(block_defaults_loaded_, "Default block data must be loaded first");
+  for (const auto& file :
+       std::filesystem::directory_iterator(GET_PATH("resources/data/model/block"))) {
+    std::string model_name = "block/" + file.path().stem().string();
+    all_block_model_names_.emplace_back(model_name);
+    auto block_mesh_data = LoadBlockModel(model_name, tex_name_to_idx);
+    // model_name_to_mesh_data.emplace(model_name, block_mesh_data.value_or(default_mesh_data));
+  }
+}
 
 std::optional<BlockMeshData> BlockDB::LoadBlockModel(
     const std::string& model_name, std::unordered_map<std::string, uint32_t>& tex_name_to_idx) {
@@ -128,7 +130,7 @@ std::optional<BlockMeshData> BlockDB::LoadBlockModel(
     }
     spdlog::error("model of type {} does not have required texture fields: {}", type,
                   relative_path);
-    return block_defaults_.model_tex_index;
+    return default_mesh_data_.texture_indices[0];
   };
 
   if (block_model_type == "block/all") {
@@ -161,24 +163,14 @@ void BlockDB::LoadBlockModelData(
     std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
     std::unordered_map<std::string, BlockMeshData>& model_name_to_mesh_data) {
   ZoneScoped;
+  EASSERT_MSG(block_defaults_loaded_, "Default block data must be loaded first");
   // Array of strings of block models to load
   json block_model_arr = util::LoadJsonFile(GET_PATH("resources/data/block/block_model_data.json"));
   // Load each block model file
 
-  // TODO: use default texture index instead of 0 index
-  BlockMeshData default_mesh_data{.texture_indices = {0, 0, 0, 0, 0, 0}};
-
   for (auto& item : block_model_arr) {
     std::string model_name = item.get<std::string>();
     auto block_mesh_data = LoadBlockModel(model_name, tex_name_to_idx);
-    model_name_to_mesh_data.emplace(model_name, block_mesh_data.value_or(default_mesh_data));
-  }
-}
-
-void BlockDB::LoadAllBlockModelNames() {
-  for (const auto& file :
-       std::filesystem::directory_iterator(GET_PATH("resources/data/model/block"))) {
-    all_block_model_names_.emplace_back("block/" + file.path().stem().string());
-    spdlog::info("{}", file.path().stem().string());
+    model_name_to_mesh_data.emplace(model_name, block_mesh_data.value_or(default_mesh_data_));
   }
 }

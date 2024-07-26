@@ -24,19 +24,10 @@ class BlockDB {
 
   void Init(std::unordered_map<std::string, uint32_t>& name_to_idx);
   void WriteBlockData() const;
-  void LoadAllBlockModelNames();
 
  private:
   // only the editor has full access to adding and changing data at runtime
   friend class BlockEditorScene;
-  struct BlockDataDefaults {
-    std::string name;
-    std::string model;
-    float move_slow_multiplier;
-    bool emits_light;
-    uint32_t model_tex_index;
-  };
-  BlockDataDefaults block_defaults_;
 
   std::vector<BlockData> block_data_arr_;
   std::vector<BlockMeshData> block_mesh_data_;
@@ -44,13 +35,22 @@ class BlockDB {
 
   std::vector<std::string> all_block_model_names_;
 
-  BlockMeshData default_mesh_data_;
-
-  void LoadDefaultData(std::unordered_map<std::string, uint32_t>& name_to_idx);
-  void LoadBlockModelData(std::unordered_map<std::string, uint32_t>& name_to_idx,
+  void LoadAllBlockModels(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
+  void LoadDefaultData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
+  void LoadBlockModelData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
                           std::unordered_map<std::string, BlockMeshData>& model_name_to_mesh_data);
   std::optional<BlockMeshData> LoadBlockModel(
       const std::string& model_name, std::unordered_map<std::string, uint32_t>& name_to_idx);
 
   bool loaded_{false};
+
+  struct BlockDataDefaults {
+    std::string name;
+    std::string model;
+    float move_slow_multiplier;
+    bool emits_light;
+  };
+  BlockDataDefaults block_defaults_;
+  BlockMeshData default_mesh_data_;
+  bool block_defaults_loaded_{false};
 };
