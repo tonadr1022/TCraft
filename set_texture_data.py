@@ -59,10 +59,9 @@ def write_2d_array(
 
 
 def generate_block_texture_array(model_names):
-    model_names = [s.rsplit("/", 1)[-1] for s in model_names]
     textures = set()
     for model in model_names:
-        j = read_json(f"resources/data/block/model/{model}.json")
+        j = read_json(f"resources/data/model/{model}.json")
         for texVals in j["textures"].values():
             textures.add(f"{texVals}.png")
     write_2d_array(
@@ -89,7 +88,6 @@ def main():
     set_block_texture_json()
     used = used_tex_models_from_block_data("resources/data/block/block_data.json")
     generate_block_texture_array(used)
-    used = [f'{val.rsplit("/", 1)[-1]}.json' for val in used]
     write_json(used, "resources/data/block/block_model_data.json")
 
 

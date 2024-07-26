@@ -1,4 +1,4 @@
 [
-  "diamond_ore.json",
-  "dirt.json"
+  "block/dirt",
+  "block/diamond_ore"
 ]

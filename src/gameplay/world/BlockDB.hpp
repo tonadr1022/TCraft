@@ -50,7 +50,7 @@ class BlockDB {
   void LoadBlockModelData(std::unordered_map<std::string, uint32_t>& name_to_idx,
                           std::unordered_map<std::string, BlockMeshData>& model_name_to_mesh_data);
   std::optional<BlockMeshData> LoadBlockModel(
-      const std::string& model_filename, std::unordered_map<std::string, uint32_t>& name_to_idx);
+      const std::string& model_name, std::unordered_map<std::string, uint32_t>& name_to_idx);
 
   bool loaded_{false};
 };

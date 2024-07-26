@@ -92,7 +92,7 @@ void BlockDB::LoadDefaultData(std::unordered_map<std::string, uint32_t>& name_to
   json default_block_data = util::LoadJsonFile(GET_PATH("resources/data/block/default_block.json"));
   block_defaults_.name = default_block_data["name"].get<std::string>();
   block_defaults_.model = default_block_data["model"].get<std::string>();
-  auto default_mesh_data = LoadBlockModel("default.json", name_to_idx);
+  auto default_mesh_data = LoadBlockModel("block/default", name_to_idx);
   EASSERT_MSG(default_mesh_data.has_value(), "Default mesh data failed to load");
   default_mesh_data_ = default_mesh_data.value();
 
@@ -102,9 +102,9 @@ void BlockDB::LoadDefaultData(std::unordered_map<std::string, uint32_t>& name_to
 }
 
 std::optional<BlockMeshData> BlockDB::LoadBlockModel(
-    const std::string& model_filename, std::unordered_map<std::string, uint32_t>& tex_name_to_idx) {
+    const std::string& model_name, std::unordered_map<std::string, uint32_t>& tex_name_to_idx) {
   ZoneScoped;
-  std::string relative_path = GET_PATH("resources/data/block/model/" + model_filename);
+  std::string relative_path = GET_PATH("resources/data/model/" + model_name + ".json");
   json model_obj = util::LoadJsonFile(relative_path);
   auto block_model_type = json_util::GetString(model_obj, "type");
   if (!block_model_type.has_value()) {
@@ -151,8 +151,7 @@ std::optional<BlockMeshData> BlockDB::LoadBlockModel(
       block_mesh_data.texture_indices[i] = get_tex_idx(SideStrs[i]);
     }
   } else {
-    spdlog::error("Block model {} contains invalid type: {}", model_filename,
-                  block_model_type.value());
+    spdlog::error("Block model {} contains invalid type: {}", model_name, block_model_type.value());
     return std::nullopt;
   }
   return block_mesh_data;
@@ -170,17 +169,15 @@ void BlockDB::LoadBlockModelData(
   BlockMeshData default_mesh_data{.texture_indices = {0, 0, 0, 0, 0, 0}};
 
   for (auto& item : block_model_arr) {
-    std::string model_filename = item.get<std::string>();
-    auto block_mesh_data = LoadBlockModel(model_filename, tex_name_to_idx);
-    std::string model_name = model_filename.substr(0, model_filename.find_last_of('.'));
-    model_name_to_mesh_data.emplace("block/" + model_name,
-                                    block_mesh_data.value_or(default_mesh_data));
+    std::string model_name = item.get<std::string>();
+    auto block_mesh_data = LoadBlockModel(model_name, tex_name_to_idx);
+    model_name_to_mesh_data.emplace(model_name, block_mesh_data.value_or(default_mesh_data));
   }
 }
 
 void BlockDB::LoadAllBlockModelNames() {
   for (const auto& file :
-       std::filesystem::directory_iterator(GET_PATH("resources/data/block/model"))) {
+       std::filesystem::directory_iterator(GET_PATH("resources/data/model/block"))) {
     all_block_model_names_.emplace_back("block/" + file.path().stem().string());
     spdlog::info("{}", file.path().stem().string());
   }
