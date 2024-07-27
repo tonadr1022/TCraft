@@ -1,5 +1,7 @@
 #include "BlockDB.hpp"
 
+#include <filesystem>
+
 #include "application/SettingsManager.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
@@ -40,7 +42,6 @@ void BlockDB::Init(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
     for (const auto& file :
          std::filesystem::directory_iterator(GET_PATH("resources/data/model/block"))) {
       std::string model_name = "block/" + file.path().stem().string();
-      all_block_model_names_.emplace_back(model_name);
       auto block_mesh_data = LoadBlockModel(model_name, tex_name_to_idx);
       model_name_to_mesh_data.emplace(model_name, block_mesh_data.value_or(default_mesh_data_));
     }
@@ -260,4 +261,13 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::str
 
 std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromName(const std::string& model_name) {
   return LoadBlockModelDataFromPath(GET_PATH("resources/data/model/" + model_name + ".json"));
+}
+
+std::vector<std::string> BlockDB::GetAllModelNames() {
+  std::vector<std::string> ret;
+  for (const auto& file :
+       std::filesystem::directory_iterator(GET_PATH("resources/data/model/block"))) {
+    ret.emplace_back("block/" + file.path().stem().string());
+  }
+  return ret;
 }
