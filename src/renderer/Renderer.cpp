@@ -43,6 +43,7 @@ void Renderer::Shutdown() {
 }
 
 void Renderer::Reset() {
+  spdlog::info("resetting renderer buffers");
   chunk_ebo_.ResetOffset();
   chunk_vbo_.ResetOffset();
 }
