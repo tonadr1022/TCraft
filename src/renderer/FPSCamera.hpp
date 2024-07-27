@@ -21,8 +21,8 @@ class FPSCamera {
   bool first_mouse_{true};
 
  private:
-  glm::vec3 front_;
-  float yaw_, pitch_;
+  glm::vec3 front_{0, 0, -1};
+  float yaw_{0}, pitch_{0};
   float near_plane_{0.1f}, far_plane_{1000.f};
   void CalculateFront();
 };

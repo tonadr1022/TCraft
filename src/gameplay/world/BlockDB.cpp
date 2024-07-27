@@ -1,7 +1,6 @@
 #include "BlockDB.hpp"
 
 #include "application/SettingsManager.hpp"
-#include "pch.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -14,7 +13,7 @@ const std::vector<BlockMeshData>& BlockDB::GetMeshData() const { return block_me
 const std::vector<BlockData>& BlockDB::GetBlockData() const { return block_data_arr_; };
 
 void BlockDB::Init(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
-                   bool load_all_block_model_data) {
+                   bool load_all_block_model_data, bool load_all_texture_names) {
   ZoneScoped;
   std::unordered_map<std::string, BlockMeshData> model_name_to_mesh_data;
   {
@@ -23,6 +22,10 @@ void BlockDB::Init(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
         util::LoadJsonFile(GET_PATH("resources/data/block/default_block.json"));
     block_defaults_.name = default_block_data["name"].get<std::string>();
     block_defaults_.model = default_block_data["model"].get<std::string>();
+    // TODO: refactor block model loading
+    auto block_model_data = LoadBlockModelDataFromName("block/default");
+    block_defaults_.tex_name = std::get<BlockModelDataAll>(block_model_data.value()).tex_all;
+    spdlog::info("{}", block_defaults_.tex_name);
     auto default_mesh_data = LoadBlockModel("block/default", tex_name_to_idx);
     EASSERT_MSG(default_mesh_data.has_value(), "Default mesh data failed to load");
     default_mesh_data_ = default_mesh_data.value();
@@ -93,6 +96,8 @@ void BlockDB::Init(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
                           .emits_light = false};
     loaded_ = true;
   }
+
+  if (load_all_texture_names) ReloadTextureNames();
 };
 
 void BlockDB::WriteBlockData() const {
@@ -188,4 +193,71 @@ std::vector<std::string> BlockDB::GetAllBlockTexturesFromAllModels() {
   }
 
   return {tex_names_set.begin(), tex_names_set.end()};
+}
+
+void BlockDB::ReloadTextureNames() {
+  all_block_texture_names_.clear();
+  for (const auto& file :
+       std::filesystem::directory_iterator(GET_PATH("resources/textures/block"))) {
+    all_block_texture_names_.emplace_back("block/" + file.path().stem().string());
+  }
+  std::sort(all_block_texture_names_.begin(), all_block_texture_names_.end());
+}
+
+std::optional<BlockModelType> BlockDB::StringToBlockModelType(const std::string& model_type) {
+  static const std::unordered_map<std::string, BlockModelType> ModelTypeMap = {
+      {"block/all", BlockModelType::All},
+      {"block/top_bottom", BlockModelType::TopBottom},
+      {"block/unique", BlockModelType::Unique},
+  };
+  auto it = ModelTypeMap.find(model_type);
+  if (it == ModelTypeMap.end()) return std::nullopt;
+  return it->second;
+}
+
+std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::string& path) {
+  json model_obj = util::LoadJsonFile(path);
+  auto tex_obj = json_util::GetObject(model_obj, "textures");
+  auto type_str = json_util::GetString(model_obj, "type");
+  if (!tex_obj.has_value() || !tex_obj.value().is_object() || !type_str.has_value()) {
+    return std::nullopt;
+  }
+  auto type = StringToBlockModelType(type_str.value());
+  if (!type.has_value()) {
+    return std::nullopt;
+  }
+
+  if (type == BlockModelType::All) {
+    auto tex_name = json_util::GetString(tex_obj.value(), "all");
+    if (!tex_name.has_value()) {
+      return std::nullopt;
+    }
+    return BlockModelDataAll{tex_name.value()};
+  }
+
+  if (type == BlockModelType::TopBottom) {
+    auto tex_name_top = json_util::GetString(tex_obj.value(), "top");
+    auto tex_name_bot = json_util::GetString(tex_obj.value(), "bottom");
+    if (!tex_name_bot.has_value() || !tex_name_top.has_value()) {
+      return std::nullopt;
+    }
+    return BlockModelDataTopBot{tex_name_top.value(), tex_name_bot.value()};
+  }
+
+  auto tex_name_posx = json_util::GetString(tex_obj.value(), "posx");
+  auto tex_name_negx = json_util::GetString(tex_obj.value(), "negx");
+  auto tex_name_posy = json_util::GetString(tex_obj.value(), "posy");
+  auto tex_name_negy = json_util::GetString(tex_obj.value(), "negy");
+  auto tex_name_posz = json_util::GetString(tex_obj.value(), "posz");
+  auto tex_name_negz = json_util::GetString(tex_obj.value(), "negz");
+  if (!tex_name_posx.has_value() || !tex_name_negx.has_value() || !tex_name_posy.has_value() ||
+      !tex_name_negy.has_value() || !tex_name_posz.has_value() || !tex_name_negz.has_value()) {
+    return std::nullopt;
+  }
+  return BlockModelDataUnique{tex_name_posx.value(), tex_name_negx.value(), tex_name_posy.value(),
+                              tex_name_negy.value(), tex_name_posz.value(), tex_name_negz.value()};
+}
+
+std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromName(const std::string& model_name) {
+  return LoadBlockModelDataFromPath(GET_PATH("resources/data/model/" + model_name + ".json"));
 }

@@ -7,7 +7,7 @@
 
 struct SingleBlock {
   ChunkMesh mesh;
-  glm::ivec3 pos;
+  glm::vec3 pos;
   BlockType block;
 };
 
@@ -33,7 +33,19 @@ class BlockEditorScene : public Scene {
   // TODO: refactor
   std::vector<SingleBlock> blocks_;
 
+  std::vector<BlockData> block_data_;
+  std::vector<BlockMeshData> block_mesh_data_;
+  std::unordered_map<std::string, uint32_t> tex_name_to_idx_;
+
+  std::array<SingleBlock, 3> add_model_blocks_;
+
  private:
+  void Reload();
+  void HandleAddModelTextureChange();
   bool add_model_editor_open_{false};
-  std::array<int, 6> add_model_tex_indexes_;
+  uint32_t add_model_tex_type_idx_{0};
+
+  BlockModelDataAll edit_model_type_all_;
+  BlockModelDataTopBot edit_model_type_top_bot_;
+  BlockModelDataUnique edit_model_type_unique_;
 };

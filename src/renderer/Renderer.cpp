@@ -1,7 +1,6 @@
 #include "Renderer.hpp"
 
 #include <cstdint>
-#include <iostream>
 
 #include "ShaderManager.hpp"
 #include "application/SettingsManager.hpp"
@@ -44,19 +43,12 @@ void Renderer::Shutdown() {
 }
 
 void Renderer::Reset() {
-  chunk_uniform_ssbo_.ResetOffset();
-  chunk_draw_indirect_buffer_.ResetOffset();
   chunk_ebo_.ResetOffset();
   chunk_vbo_.ResetOffset();
 }
 
 void Renderer::RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info) {
   ZoneScoped;
-  // TODO: refactor into either render params or have scenes call submit functions themselves
-  for (const auto& block : scene.blocks_) {
-    // TODO: store model matrix and only update on change position
-    SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, glm::vec3(block.pos)), block.mesh.handle_);
-  }
   SetFrameDrawCommands();
 
   auto shader = shader_manager_.GetShader("chunk_batch");
@@ -117,7 +109,7 @@ void Renderer::SetFrameDrawCommands() {
   EASSERT_MSG(frame_chunk_draw_cmd_uniforms_.size() == frame_draw_cmd_mesh_ids_.size(),
               "Per frame draw cmd size must equal mesh cmd size");
   for (uint32_t i = 0; i < frame_draw_cmd_mesh_ids_.size(); i++) {
-    auto& draw_cmd_info = dei_cmds_[frame_draw_cmd_mesh_ids_[i]];
+    const auto& draw_cmd_info = dei_cmds_[frame_draw_cmd_mesh_ids_[i]];
     cmd.base_instance = i;
     cmd.base_vertex = draw_cmd_info.base_vertex;
     cmd.instance_count = 1;

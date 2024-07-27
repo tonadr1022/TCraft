@@ -11,7 +11,7 @@ class Player {
   FPSCamera& GetCamera() { return fps_camera_; }
   void OnImGui() const;
   bool OnEvent(const SDL_Event& event);
-  void OnCameraFocusChange();
+  void SetCameraFocused(bool state);
 
   glm::vec3 position_{0};
 
