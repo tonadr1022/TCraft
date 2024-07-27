@@ -6,7 +6,7 @@
 
 class Player {
  public:
-  void Init();
+  void Init() const;
   void Update(double dt);
   FPSCamera& GetCamera() { return fps_camera_; }
   void OnImGui() const;

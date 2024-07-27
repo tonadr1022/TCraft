@@ -15,9 +15,8 @@
 
 BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_manager) {
   ZoneScoped;
-  name_ = "Block Editor";
 
-  std::unordered_map<std::string, uint32_t> name_to_idx;
+  std::unordered_map<std::string, uint32_t> tex_name_to_idx;
 
   {
     ZoneScopedN("Load texture data");
@@ -27,7 +26,7 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
     int tex_idx = 0;
     // TODO: handle diff sizes?
     for (const auto& tex_name : all_texture_names) {
-      name_to_idx[tex_name] = tex_idx++;
+      tex_name_to_idx[tex_name] = tex_idx++;
       util::LoadImage(image, GET_PATH("resources/textures/" + tex_name + ".png"), true);
       all_texture_pixel_data.emplace_back(image.pixels);
     }
@@ -40,25 +39,32 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
                                              .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
                                              .filter_mode_max = GL_NEAREST});
   }
-  block_db_.Init(name_to_idx, true);
-  // add_model_tex_indexes_.fill(block_db_.block_defaults_.model_tex_index);
-  ChunkMesher mesher{block_db_};
-  for (int block = 0; block < 10; block++) {
+  block_db_.Init(tex_name_to_idx, true);
+  ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
+
+  for (uint32_t block = 1; block < block_db_.GetBlockData().size(); block++) {
     std::vector<ChunkVertex> vertices;
     std::vector<uint32_t> indices;
     mesher.GenerateBlock(vertices, indices, block);
-    // scene_manager.GetRenderer().AllocateChunk(vertices, indices);
+    blocks_.emplace_back(
+        SingleBlock{.mesh = {scene_manager.GetRenderer().AllocateChunk(vertices, indices)},
+                    .pos = {0, block, 0},
+                    .block = block});
   }
 }
 
+BlockEditorScene::~BlockEditorScene() {
+  block_db_.WriteBlockData();
+  TextureManager::Get().Remove2dArray(render_params_.chunk_tex_array_handle);
+};
+
 void BlockEditorScene::Render(Renderer& renderer, const Window& window) {
   ZoneScoped;
-  RenderInfo render_info;
-  render_info.window_dims = window.GetWindowSize();
-  float aspect_ratio =
-      static_cast<float>(render_info.window_dims.x) / static_cast<float>(render_info.window_dims.y);
-  render_info.vp_matrix = fps_camera_.GetProjection(aspect_ratio) * fps_camera_.GetView();
-  renderer.RenderBlockEditor(*this, render_info);
+  scene_manager_.GetRenderer().RenderBlockEditor(
+      *this, {
+                 .vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
+                              player_.GetCamera().GetView(),
+             });
 }
 
 void BlockEditorScene::OnImGui() {
@@ -163,10 +169,7 @@ bool BlockEditorScene::OnEvent(const SDL_Event& event) {
         return true;
       }
   }
-  return false;
+  return player_.OnEvent(event);
 }
 
-BlockEditorScene::~BlockEditorScene() {
-  block_db_.WriteBlockData();
-  TextureManager::Get().Remove2dArray(render_params_.chunk_tex_array_handle);
-};
+void BlockEditorScene::Update(double dt) { player_.Update(dt); }

@@ -5,6 +5,10 @@
 #include "ChunkMesh.hpp"
 #include "gameplay/world/Block.hpp"
 
+ChunkMesher::ChunkMesher(const std::vector<BlockData>& db_block_data,
+                         const std::vector<BlockMeshData>& db_mesh_data)
+    : db_block_data(db_block_data), db_mesh_data(db_mesh_data) {}
+
 namespace {
 
 /* clang-format off */
@@ -46,7 +50,7 @@ constexpr int VertexLookup[120] = {
 
 void ChunkMesher::AddQuad(int face_idx, const glm::ivec3& block_pos,
                           std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
-                          BlockType block) {
+                          int tex_idx) {
   int base_vertex_idx = vertices.size();
   face_idx *= 20;
   for (int vertex_idx = 0, lookup_offset = 0; vertex_idx < 4; vertex_idx++, lookup_offset += 5) {
@@ -55,9 +59,9 @@ void ChunkMesher::AddQuad(int face_idx, const glm::ivec3& block_pos,
     vertex.position.x = block_pos.x + VertexLookup[combined_offset];
     vertex.position.y = block_pos.y + VertexLookup[combined_offset + 1];
     vertex.position.z = block_pos.z + VertexLookup[combined_offset + 2];
-    vertex.tex_coords.s = VertexLookup[combined_offset + 3];
-    vertex.tex_coords.t = VertexLookup[combined_offset + 4];
-    vertex.index = block_db_.GetMeshData()[static_cast<int>(block)].texture_indices[vertex_idx];
+    vertex.tex_coords.x = VertexLookup[combined_offset + 3];
+    vertex.tex_coords.y = VertexLookup[combined_offset + 4];
+    vertex.tex_coords.z = tex_idx;
     vertices.emplace_back(vertex);
   }
 
@@ -89,9 +93,11 @@ void ChunkMesher::AddQuad(int face_idx, const glm::ivec3& block_pos,
 void ChunkMesher::GenerateBlock(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
                                 BlockType block) {
   for (int face_idx = 0; face_idx < 6; face_idx++) {
-    AddQuad(face_idx, {0, 0, 0}, vertices, indices, block);
+    AddQuad(face_idx, {0, 0, 0}, vertices, indices,
+            db_mesh_data[static_cast<uint32_t>(block)].texture_indices[face_idx]);
   }
 }
+
 void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
                                 std::vector<uint32_t>& indices) {
   ZoneScoped;
@@ -115,7 +121,8 @@ void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVe
           adj_block_pos_arr[face_idx >> 1] += 1 - ((face_idx & 1) << 1);
           glm::ivec3 adj_pos = {adj_block_pos_arr[0], adj_block_pos_arr[1], adj_block_pos_arr[2]};
           if (ChunkData::IsOutOfBounds(adj_pos) || blocks[ChunkData::GetIndex(adj_pos)] == 0) {
-            AddQuad(face_idx, {x, y, z}, vertices, indices, block);
+            AddQuad(face_idx, {x, y, z}, vertices, indices,
+                    db_mesh_data[static_cast<uint32_t>(block)].texture_indices[face_idx]);
           }
         }
       }

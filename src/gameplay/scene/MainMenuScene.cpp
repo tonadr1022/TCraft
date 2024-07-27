@@ -10,10 +10,7 @@ void ClearField(char* data, size_t size) { memset(data, '\0', size); }
 }  // namespace
 
 MainMenuScene::MainMenuScene(SceneManager& scene_manager)
-    : Scene(scene_manager), world_manager_(std::make_unique<WorldManager>()) {
-  name_ = "Main Menu";
-  // Get all world names and store for create screen to deny creation if exists
-}
+    : Scene(scene_manager), world_manager_(std::make_unique<WorldManager>()) {}
 
 MainMenuScene::~MainMenuScene() = default;
 

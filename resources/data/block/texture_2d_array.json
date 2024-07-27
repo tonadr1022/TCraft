@@ -3,7 +3,9 @@
   "height": 32,
   "textures": [
     "block/dirt.png",
-    "block/diamond_ore.png"
+    "block/diamond_ore.png",
+    "block/warped_planks.png",
+    "block/grass_block_top.png"
   ],
   "filter_min": "nearest_mipmap_linear",
   "filter_max": "nearest",

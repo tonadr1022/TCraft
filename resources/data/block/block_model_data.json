@@ -1,4 +1,6 @@
 [
+  "block/plains_grass",
   "block/dirt",
+  "block/water",
   "block/diamond_ore"
 ]

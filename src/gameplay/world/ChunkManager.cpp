@@ -53,12 +53,19 @@ void ChunkManager::Init() {
   }
 
   glm::ivec3 pos{0, 0, 0};
+  std::vector<BlockType> blocks;
+  const auto& block_data = block_db_.GetBlockData();
+  blocks.reserve(block_data.size());
+  spdlog::info("block_data size {}", block_data.size());
+  for (int i = 1; i < block_data.size(); i++) {
+    blocks.emplace_back(i);
+  }
   for (pos.x = 0; pos.x < 10; pos.x++) {
     chunk_map_.emplace(pos, std::make_unique<Chunk>(pos));
     Chunk* chunk = chunk_map_.at(pos).get();
-    std::vector<BlockType> blocks = {1, 2};
+
     TerrainGenerator::GenerateChecker(chunk->GetData(), blocks);
-    ChunkMesher mesher{block_db_};
+    ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
     // TODO: separate  vertices and indices from here so multithreading is possible
     std::vector<ChunkVertex> vertices;
     std::vector<uint32_t> indices;

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "application/Scene.hpp"
+#include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "renderer/ChunkMesh.hpp"
-#include "renderer/FPSCamera.hpp"
 
 struct SingleBlock {
   ChunkMesh mesh;
@@ -17,6 +17,7 @@ class BlockEditorScene : public Scene {
   ~BlockEditorScene() override;
 
   void OnImGui() override;
+  void Update(double dt) override;
   bool OnEvent(const SDL_Event& event) override;
   void Render(Renderer& renderer, const Window& window) override;
 
@@ -27,10 +28,12 @@ class BlockEditorScene : public Scene {
   BlockDB block_db_;
 
   RenderParams render_params_;
-  FPSCamera fps_camera_;
+  Player player_;
+
+  // TODO: refactor
+  std::vector<SingleBlock> blocks_;
 
  private:
   bool add_model_editor_open_{false};
-  std::vector<SingleBlock> blocks_;
   std::array<int, 6> add_model_tex_indexes_;
 };

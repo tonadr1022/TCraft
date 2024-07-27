@@ -13,7 +13,7 @@
   },
   {
     "id": 3,
-    "model": "block/dirt",
+    "model": "block/water",
     "name": "Water",
     "properties": {
       "move_slow_multiplier": 2.0
@@ -21,7 +21,7 @@
   },
   {
     "id": 4,
-    "model": "block/dirt",
+    "model": "block/plains_grass",
     "name": "Plains Grass",
     "properties": {}
   }

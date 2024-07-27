@@ -29,7 +29,6 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
 
   dims_ = params.dims;
   glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &id_);
-  spdlog::info("create tex array {}", id_);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -44,6 +43,7 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
   glTextureStorage3D(id_, mip_levels, params.internal_format, dims_.x, dims_.y,
                      params.all_pixels_data.size());
 
+  spdlog::info("create tex array {} of depth: {}", id_, params.all_pixels_data.size());
   for (int i = 0; i < params.all_pixels_data.size(); i++) {
     glTextureSubImage3D(id_, 0, 0, 0, i, params.dims.x, params.dims.y, 1, params.format,
                         GL_UNSIGNED_BYTE, params.all_pixels_data[i]);
@@ -83,10 +83,10 @@ Texture2dArray::Texture2dArray(const std::string& param_path,
 
   auto path_base = std::string(TEXTURE_PATH);
   int tex_idx = 0;
+  Image image;
   for (auto& texture : data["textures"]) {
     auto texture_str = texture.get<std::string>();
     name_to_idx[util::GetFilenameStem(texture_str)] = tex_idx;
-    Image image;
     util::LoadImage(image, path_base + texture_str, true);
     if (image.width != width || image.height != height) {
       spdlog::error("invalid texture {}", texture_str);

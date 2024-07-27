@@ -9,8 +9,6 @@
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
-#include "pch.hpp"
-#include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
@@ -19,7 +17,6 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
     : Scene(scene_manager), chunk_manager_(block_db_, scene_manager.GetRenderer()) {
   ZoneScoped;
   EASSERT_MSG(!world_name.empty(), "Can't load world scene without a loaded world name");
-  name_ = "World";
 
   std::unordered_map<std::string, uint32_t> tex_name_to_idx;
   world_render_params_.chunk_tex_array_handle = TextureManager::Get().Create2dArray(

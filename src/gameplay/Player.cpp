@@ -73,7 +73,7 @@ bool Player::OnEvent(const SDL_Event& event) {
   return false;
 }
 
-void Player::Init() {
+void Player::Init() const {
   SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
   if (camera_focused_) {
     Window::DisableImGuiInputs();

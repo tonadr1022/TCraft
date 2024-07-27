@@ -71,4 +71,5 @@ class Renderer {
   std::vector<DrawElementsIndirectCommand> dei_cmds_;
 
   void LoadShaders();
+  void SetFrameDrawCommands();
 };
