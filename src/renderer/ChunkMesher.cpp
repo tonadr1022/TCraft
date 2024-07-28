@@ -91,10 +91,9 @@ void ChunkMesher::AddQuad(int face_idx, const glm::ivec3& block_pos,
 }
 
 void ChunkMesher::GenerateBlock(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
-                                BlockType block) {
+                                const std::array<uint32_t, 6>& tex_indices) {
   for (int face_idx = 0; face_idx < 6; face_idx++) {
-    AddQuad(face_idx, {0, 0, 0}, vertices, indices,
-            db_mesh_data[static_cast<uint32_t>(block)].texture_indices[face_idx]);
+    AddQuad(face_idx, {0, 0, 0}, vertices, indices, tex_indices[face_idx]);
   }
 }
 

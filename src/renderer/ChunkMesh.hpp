@@ -11,5 +11,5 @@ struct ChunkVertex {
 class ChunkMesh {
  public:
   uint32_t handle_{UINT32_MAX};
-  inline bool IsAllocated() const { return handle_ != UINT32_MAX; };
+  [[nodiscard]] inline bool IsAllocated() const { return handle_ != UINT32_MAX; };
 };

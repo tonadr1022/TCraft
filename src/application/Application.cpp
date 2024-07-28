@@ -113,6 +113,15 @@ void Application::OnImGui() {
   if (ImGui::Checkbox("Vsync", &vsync)) {
     window_.SetVsync(vsync);
   }
+  if (ImGui::Button("Load world")) {
+    scene_manager_.LoadWorld("default_world");
+  }
+  if (ImGui::Button("Block Editor")) {
+    scene_manager_.LoadScene("block_editor");
+  }
+  if (ImGui::Button("Main Menu")) {
+    scene_manager_.LoadScene("main_menu");
+  }
 
   SettingsManager::Get().OnImGui();
   scene_manager_.GetActiveScene().OnImGui();

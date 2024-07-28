@@ -12,6 +12,7 @@ struct BlockMeshData {
 
 struct BlockData {
   BlockType id;
+  std::string filename;
   std::string name;
   float move_slow_multiplier;
   bool emits_light;
@@ -47,19 +48,18 @@ class BlockDB {
  public:
   [[nodiscard]] const std::vector<BlockMeshData>& GetMeshData() const;
   [[nodiscard]] const std::vector<BlockData>& GetBlockData() const;
-  [[nodiscard]] const std::vector<std::string>& GetAllBlockTextureNames() const;
+  [[nodiscard]] const std::unordered_set<std::string>& GetTextureNamesInUse() const;
   static std::optional<BlockModelType> StringToBlockModelType(const std::string& model_type);
 
-  void Init(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
-            bool load_all_block_model_data, bool load_all_texture_names = false);
+  void Init();
+  void LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
   void WriteBlockData() const;
-  void ReloadTextureNames();
-
-  static std::optional<BlockModelData> LoadBlockModelDataFromPath(const std::string& path);
-  static std::optional<BlockModelData> LoadBlockModelDataFromName(const std::string& model_name);
+  void LoadBlockData();
 
   [[nodiscard]] static std::vector<std::string> GetAllBlockTexturesFromAllModels();
   [[nodiscard]] static std::vector<std::string> GetAllModelNames();
+
+  [[nodiscard]] static std::vector<std::string> GetAllTextureNames();
 
  private:
   // only the editor has full access to adding and changing data at runtime
@@ -68,16 +68,14 @@ class BlockDB {
   std::vector<BlockData> block_data_arr_;
   std::vector<BlockMeshData> block_mesh_data_;
   std::vector<std::string> block_model_names_;
-  std::vector<std::string> all_block_texture_names_;
 
-  std::optional<BlockMeshData> LoadBlockModel(
-      const std::string& model_name, std::unordered_map<std::string, uint32_t>& name_to_idx);
-
-  bool loaded_{false};
+  static std::optional<BlockModelData> LoadBlockModelDataFromPath(const std::string& path);
+  static std::optional<BlockModelData> LoadBlockModelDataFromName(const std::string& model_name);
+  std::optional<BlockModelData> LoadBlockModelData(const std::string& model_name);
 
   struct BlockDataDefaults {
     std::string name;
-    std::string model;
+    std::string model_name;
     std::string tex_name;
     float move_slow_multiplier;
     bool emits_light;
@@ -85,4 +83,7 @@ class BlockDB {
   BlockDataDefaults block_defaults_;
   BlockMeshData default_mesh_data_;
   bool block_defaults_loaded_{false};
+
+  std::unordered_set<std::string> block_tex_names_in_use_;
+  std::unordered_map<std::string, BlockModelData> model_name_to_model_data_;
 };

@@ -135,7 +135,8 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
                                  std::vector<uint32_t>& indices) {
   uint32_t chunk_vbo_offset;
   uint32_t chunk_ebo_offset;
-  uint32_t id = dei_cmds_.size();
+  // uint32_t id = dei_cmds_.size();
+  uint32_t id = rand();
   chunk_allocs_.try_emplace(
       id, ChunkAlloc{
               .vbo_handle = chunk_vbo_.Allocate(sizeof(ChunkVertex) * vertices.size(),
@@ -144,20 +145,21 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
                                                 chunk_ebo_offset),
           });
 
+  dei_cmds_.try_emplace(
+      id, DrawElementsIndirectCommand{
+              .count = static_cast<uint32_t>(indices.size()),
+              .instance_count = 0,
+              .first_index = static_cast<uint32_t>(chunk_ebo_offset / sizeof(uint32_t)),
+              .base_vertex = static_cast<uint32_t>(chunk_vbo_offset / sizeof(ChunkVertex)),
+              .base_instance = 0,
+          });
+
   spdlog::info(
       "v_size: {}, e_size {}, vbo_offset: {}, ebo_offset: {}, base_vertex: {},  first_index: {}, "
       "dei_size: {}",
       sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset,
       chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset / sizeof(uint32_t),
       dei_cmds_.size());
-
-  dei_cmds_.emplace_back(DrawElementsIndirectCommand{
-      .count = static_cast<uint32_t>(indices.size()),
-      .instance_count = 0,
-      .first_index = static_cast<uint32_t>(chunk_ebo_offset / sizeof(uint32_t)),
-      .base_vertex = static_cast<uint32_t>(chunk_vbo_offset / sizeof(ChunkVertex)),
-      .base_instance = 0,
-  });
   return id;
 }
 
@@ -168,7 +170,7 @@ void Renderer::FreeChunk(uint32_t handle) {
   }
   chunk_vbo_.Free(it->second.vbo_handle);
   chunk_ebo_.Free(it->second.ebo_handle);
-  dei_cmds_.erase(dei_cmds_.begin() + it->first);
+  dei_cmds_.erase(it->first);
   chunk_allocs_.erase(it);
 }
 

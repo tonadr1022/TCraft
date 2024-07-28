@@ -1,6 +1,7 @@
 {
   "name": "Default",
   "model": "block/default",
+  "tex_name": "block/diamond_ore",
   "properties": {
     "move_slow_multiplier": 1,
     "emits_light": false

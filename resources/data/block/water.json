@@ -1,0 +1,7 @@
+{
+  "name": "Water",
+  "model": "block/water",
+  "properties": {
+    "move_slow_multiplier": 2
+  }
+}

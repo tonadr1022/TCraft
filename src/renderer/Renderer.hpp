@@ -69,11 +69,12 @@ class Renderer {
   };
 
   std::unordered_map<uint32_t, ChunkAlloc> chunk_allocs_;
+  std::unordered_map<uint32_t, DrawElementsIndirectCommand> dei_cmds_;
 
   std::vector<uint32_t> frame_draw_cmd_mesh_ids_;
   std::vector<ChunkDrawCmdUniform> frame_chunk_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> frame_dei_cmds_;
-  std::vector<DrawElementsIndirectCommand> dei_cmds_;
+  // std::vector<DrawElementsIndirectCommand> dei_cmds_;
 
   void LoadShaders();
   void SetFrameDrawCommands();

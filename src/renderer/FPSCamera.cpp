@@ -11,15 +11,18 @@
 #include "application/Window.hpp"
 
 glm::mat4 FPSCamera::GetProjection(float aspect_ratio) const {
+  ZoneScoped;
   return glm::perspective(glm::radians(SettingsManager::Get().fps_cam_fov_deg), aspect_ratio,
                           near_plane_, far_plane_);
 }
 
 glm::mat4 FPSCamera::GetView() const {
+  ZoneScoped;
   return glm::lookAt(position_, position_ + front_, UpVector);
 }
 
 void FPSCamera::Update(double /* dt */) {
+  ZoneScoped;
   auto mouse_pos = Window::Get().GetMousePosition();
   auto window_center = Window::Get().GetWindowCenter();
   glm::vec2 cursor_offset = mouse_pos - window_center;
@@ -37,6 +40,7 @@ void FPSCamera::Update(double /* dt */) {
 }
 
 void FPSCamera::CalculateFront() {
+  ZoneScoped;
   glm::vec3 front;
   front.x = glm::cos(glm::radians(yaw_)) * glm::cos(glm::radians(pitch_));
   front.y = glm::sin(glm::radians(pitch_));
@@ -45,17 +49,20 @@ void FPSCamera::CalculateFront() {
 }
 
 void FPSCamera::OnImGui() const {
+  ZoneScoped;
   ImGui::Text("Yaw: %.1f, Pitch: %.1f", yaw_, pitch_);
   ImGui::Text("Position: %.1f, %.1f, %.1f", position_.x, position_.y, position_.z);
   ImGui::Text("Front: %.2f, %.2f, %.2f", front_.x, front_.y, front_.z);
 }
 
 void FPSCamera::Save() {
+  ZoneScoped;
   nlohmann::json j = {{"yaw", yaw_}, {"pitch", pitch_}};
   SettingsManager::Get().SaveSetting(j, "fps_cam");
 }
 
 void FPSCamera::Load() {
+  ZoneScoped;
   auto settings = SettingsManager::Get().LoadSetting("fps_cam");
   yaw_ = settings["yaw"].get<float>();
   pitch_ = settings["pitch"].get<float>();

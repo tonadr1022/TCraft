@@ -9,7 +9,6 @@
 #include "EAssert.hpp"
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
-#include "gameplay/world/Block.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "pch.hpp"
 #include "renderer/ChunkMesher.hpp"
@@ -23,7 +22,10 @@
 void BlockEditorScene::Reload() {
   ZoneScoped;
   all_block_model_names_ = BlockDB::GetAllModelNames();
+  std::sort(all_block_model_names_.begin(), all_block_model_names_.end());
   all_block_model_names_set_ = {all_block_model_names_.begin(), all_block_model_names_.end()};
+  all_block_texture_names_ = BlockDB::GetAllTextureNames();
+  std::sort(all_block_texture_names_.begin(), all_block_texture_names_.end());
   {
     ZoneScopedN("Load texture data");
     // auto all_texture_names = BlockDB::GetAllBlockTexturesFromAllModels();
@@ -40,7 +42,7 @@ void BlockEditorScene::Reload() {
       std::string tex_name =
           file.path().parent_path().filename().string() + "/" + file.path().stem().string();
       auto str = file.path().parent_path().string() + "/" + file.path().filename().string();
-      util::LoadImage(image, str, true);
+      util::LoadImage(image, str);
       if (image.width != 32 || image.height != 32) continue;
       tex_name_to_idx_[tex_name] = tex_idx++;
       all_texture_pixel_data.emplace_back(image.pixels);
@@ -55,59 +57,88 @@ void BlockEditorScene::Reload() {
                                              .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
                                              .filter_mode_max = GL_NEAREST});
   }
+  block_db_.Init();
+  block_db_.LoadMeshData(tex_name_to_idx_);
 
-  block_db_.Init(tex_name_to_idx_, true, true);
-
-  block_mesh_data_.resize(3);
   ResetAddModelData();
   HandleAddModelTextureChange(BlockModelType::All);
   HandleAddModelTextureChange(BlockModelType::TopBottom);
   HandleAddModelTextureChange(BlockModelType::Unique);
+  HandleEditModelChange();
 }
 
-void BlockEditorScene::HandleEditModelChange(BlockModelType type) {}
+void BlockEditorScene::HandleEditModelChange() {
+  ZoneScoped;
+  if (edit_model_type_ == BlockModelType::All) {
+    uint32_t all_tex_idx = tex_name_to_idx_[edit_model_data_all_.tex_all];
+    edit_model_block_.mesh_data = {.texture_indices = {all_tex_idx, all_tex_idx, all_tex_idx,
+                                                       all_tex_idx, all_tex_idx, all_tex_idx}};
+
+  } else if (edit_model_type_ == BlockModelType::TopBottom) {
+    uint32_t top_tex_idx = tex_name_to_idx_[edit_model_data_top_bot_.tex_top];
+    uint32_t bot_tex_idx = tex_name_to_idx_[edit_model_data_top_bot_.tex_bottom];
+    uint32_t side_tex_idx = tex_name_to_idx_[edit_model_data_top_bot_.tex_side];
+    edit_model_block_.mesh_data = {.texture_indices = {side_tex_idx, side_tex_idx, top_tex_idx,
+                                                       bot_tex_idx, side_tex_idx, side_tex_idx}};
+  } else {
+    edit_model_block_.mesh_data = {.texture_indices = {
+                                       tex_name_to_idx_[edit_model_data_unique_.tex_pos_x],
+                                       tex_name_to_idx_[edit_model_data_unique_.tex_neg_x],
+                                       tex_name_to_idx_[edit_model_data_unique_.tex_pos_y],
+                                       tex_name_to_idx_[edit_model_data_unique_.tex_neg_y],
+                                       tex_name_to_idx_[edit_model_data_unique_.tex_pos_z],
+                                       tex_name_to_idx_[edit_model_data_unique_.tex_neg_z],
+                                   }};
+  }
+
+  if (edit_model_block_.mesh.IsAllocated()) {
+    scene_manager_.GetRenderer().FreeChunk(edit_model_block_.mesh.handle_);
+  }
+  std::vector<ChunkVertex> vertices;
+  std::vector<uint32_t> indices;
+  ChunkMesher::GenerateBlock(vertices, indices, edit_model_block_.mesh_data.texture_indices);
+  edit_model_block_ = {
+      .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
+      .pos = {0, 0, 0},
+  };
+}
 
 void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   ZoneScoped;
-  if (block_mesh_data_.size() != 3) block_mesh_data_.resize(3);
   if (type == BlockModelType::All) {
     uint32_t all_tex_idx = tex_name_to_idx_[add_model_data_all_.tex_all];
-    block_mesh_data_[0] = BlockMeshData{.texture_indices = {all_tex_idx, all_tex_idx, all_tex_idx,
-                                                            all_tex_idx, all_tex_idx, all_tex_idx}};
+    add_model_blocks_[0].mesh_data = {.texture_indices = {all_tex_idx, all_tex_idx, all_tex_idx,
+                                                          all_tex_idx, all_tex_idx, all_tex_idx}};
 
   } else if (type == BlockModelType::TopBottom) {
     uint32_t top_tex_idx = tex_name_to_idx_[add_model_data_top_bot_.tex_top];
     uint32_t bot_tex_idx = tex_name_to_idx_[add_model_data_top_bot_.tex_bottom];
     uint32_t side_tex_idx = tex_name_to_idx_[add_model_data_top_bot_.tex_side];
-    block_mesh_data_[1] =
-        BlockMeshData{.texture_indices = {side_tex_idx, side_tex_idx, top_tex_idx, bot_tex_idx,
-                                          side_tex_idx, side_tex_idx}};
+    add_model_blocks_[1].mesh_data = {.texture_indices = {side_tex_idx, side_tex_idx, top_tex_idx,
+                                                          bot_tex_idx, side_tex_idx, side_tex_idx}};
   } else {
-    block_mesh_data_[2] = BlockMeshData{.texture_indices = {
-                                            tex_name_to_idx_[add_model_data_unique_.tex_pos_x],
-                                            tex_name_to_idx_[add_model_data_unique_.tex_neg_x],
-                                            tex_name_to_idx_[add_model_data_unique_.tex_pos_y],
-                                            tex_name_to_idx_[add_model_data_unique_.tex_neg_y],
-                                            tex_name_to_idx_[add_model_data_unique_.tex_pos_z],
-                                            tex_name_to_idx_[add_model_data_unique_.tex_neg_z],
-                                        }};
+    add_model_blocks_[2].mesh_data = {.texture_indices = {
+                                          tex_name_to_idx_[add_model_data_unique_.tex_pos_x],
+                                          tex_name_to_idx_[add_model_data_unique_.tex_neg_x],
+                                          tex_name_to_idx_[add_model_data_unique_.tex_pos_y],
+                                          tex_name_to_idx_[add_model_data_unique_.tex_neg_y],
+                                          tex_name_to_idx_[add_model_data_unique_.tex_pos_z],
+                                          tex_name_to_idx_[add_model_data_unique_.tex_neg_z],
+                                      }};
   }
 
-  // TODO: allow removal of meshes from the renderer buffers instead of resetting
-  // scene_manager_.GetRenderer().Reset();
   // TODO: refactor so block data either isn't necessary or used
   auto i = static_cast<uint32_t>(type);
-  ChunkMesher block_mesher{block_db_.GetBlockData(), block_mesh_data_};
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
-  block_mesher.GenerateBlock(vertices, indices, i);
+  ChunkMesher::GenerateBlock(vertices, indices, add_model_blocks_[i].mesh_data.texture_indices);
+
   if (add_model_blocks_[i].mesh.IsAllocated()) {
     scene_manager_.GetRenderer().FreeChunk(add_model_blocks_[i].mesh.handle_);
   }
   add_model_blocks_[i] = {
       .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
       .pos = {0, i * 1.1, 0},
-      .block = static_cast<BlockType>(i),
   };
 }
 
@@ -125,7 +156,7 @@ BlockEditorScene::~BlockEditorScene() {
 
 void BlockEditorScene::Render(Renderer& renderer, const Window& window) {
   ZoneScoped;
-  // TODO: store model matrix and only update on change position
+  // TODO: store model matrix and only update on change position?
   glm::mat4 model{1};
   model = glm::translate(model, {0.5, 0.5, 0.5});
   model = glm::rotate(model, block_rot_, {0, 1, 0});
@@ -158,19 +189,61 @@ void BlockEditorScene::ResetAddModelData() {
   };
 }
 
+void BlockEditorScene::TexSelectMenu(EditMode mode) {
+  auto tex_select = [this, &mode](const char* title, std::string& str) {
+    if (ImGui::BeginCombo(title, str.c_str())) {
+      for (const auto& tex_name : all_block_texture_names_) {
+        if (tex_name == str) continue;
+        if (ImGui::Selectable(tex_name.data())) {
+          str = tex_name;
+          if (mode == EditMode::AddModel)
+            HandleAddModelTextureChange(add_model_type_);
+          else if (mode == EditMode::EditModel)
+            HandleEditModelChange();
+        }
+      }
+      ImGui::EndCombo();
+    };
+  };
+
+  BlockModelDataAll& model_data_all =
+      edit_mode_ == EditMode::EditModel ? edit_model_data_all_ : add_model_data_all_;
+  BlockModelDataTopBot& model_data_top_bot =
+      edit_mode_ == EditMode::EditModel ? edit_model_data_top_bot_ : add_model_data_top_bot_;
+  BlockModelDataUnique& model_data_unique =
+      edit_mode_ == EditMode::EditModel ? edit_model_data_unique_ : add_model_data_unique_;
+  BlockModelType& model_type =
+      edit_mode_ == EditMode::EditModel ? edit_model_type_ : add_model_type_;
+
+  if (model_type == BlockModelType::All) {
+    tex_select("All##tex_select", model_data_all.tex_all);
+  } else if (model_type == BlockModelType::TopBottom) {
+    tex_select("Top", model_data_top_bot.tex_top);
+    tex_select("Bottom", model_data_top_bot.tex_bottom);
+    tex_select("Side", model_data_top_bot.tex_side);
+  } else {
+    tex_select("Pos X", model_data_unique.tex_pos_x);
+    tex_select("Neg X", model_data_unique.tex_neg_x);
+    tex_select("Pos Y", model_data_unique.tex_pos_y);
+    tex_select("Neg Y", model_data_unique.tex_neg_y);
+    tex_select("Pos Z", model_data_unique.tex_pos_z);
+    tex_select("Neg Z", model_data_unique.tex_neg_z);
+  }
+}
 void BlockEditorScene::OnImGui() {
   ZoneScoped;
   ImGui::Begin("Block Editor");
   player_.OnImGui();
   if (ImGui::BeginTabBar("MyTabBar")) {
+    ZoneScopedN("Tab Bar");
     if (ImGui::BeginTabItem("Add Model")) {
+      ZoneScopedN("Add Model tab");
       edit_mode_ = EditMode::AddModel;
       static std::string model_name;
       ImGui::InputText("Name", &model_name);
 
-      constexpr const static std::array<std::string, 3> TexTypes = {"all", "top_bottom", "unique"};
-      constexpr const static std::array<std::string, 3> TexTypeNames = {"All", "Top Bottom",
-                                                                        "Unique"};
+      ImGui::Text("Textures");
+
       for (uint32_t i = 0; i < 3; i++) {
         ImGui::BeginDisabled(static_cast<uint32_t>(add_model_type_) == i);
         if (ImGui::Button(TexTypeNames[i].data())) {
@@ -180,33 +253,7 @@ void BlockEditorScene::OnImGui() {
         if (i < 2) ImGui::SameLine();
       }
 
-      auto tex_select = [this](const char* title, std::string& str) {
-        if (ImGui::BeginCombo(title, str.c_str())) {
-          for (const auto& tex_name : block_db_.all_block_texture_names_) {
-            if (tex_name == str) continue;
-            if (ImGui::Selectable(tex_name.data())) {
-              str = tex_name;
-              HandleAddModelTextureChange(add_model_type_);
-            }
-          }
-          ImGui::EndCombo();
-        }
-      };
-
-      if (add_model_type_ == BlockModelType::All) {
-        tex_select("All##tex_select", add_model_data_all_.tex_all);
-      } else if (add_model_type_ == BlockModelType::TopBottom) {
-        tex_select("Top", add_model_data_top_bot_.tex_top);
-        tex_select("Bottom", add_model_data_top_bot_.tex_bottom);
-        tex_select("Side", add_model_data_top_bot_.tex_side);
-      } else {
-        tex_select("Pos X", add_model_data_unique_.tex_pos_x);
-        tex_select("Neg X", add_model_data_unique_.tex_neg_x);
-        tex_select("Pos Y", add_model_data_unique_.tex_pos_y);
-        tex_select("Neg Y", add_model_data_unique_.tex_neg_y);
-        tex_select("Pos Z", add_model_data_unique_.tex_pos_z);
-        tex_select("Neg Z", add_model_data_unique_.tex_neg_z);
-      }
+      TexSelectMenu(edit_mode_);
 
       if (ImGui::Button("Reset")) {
         ResetAddModelData();
@@ -250,45 +297,126 @@ void BlockEditorScene::OnImGui() {
     }
     if (all_block_model_names_.size() > 0) {
       if (ImGui::BeginTabItem("Edit Model")) {
+        ZoneScopedN("Edit Model tab");
         edit_mode_ = EditMode::EditModel;
         static std::string edit_model_name = all_block_model_names_[0];
+        static auto model_data = BlockDB::LoadBlockModelDataFromName(edit_model_name);
+        static BlockModelDataAll original_edit_model_data_all;
+        static BlockModelDataTopBot original_edit_model_top_bot;
+        static BlockModelDataUnique original_edit_model_unique;
+        static bool first_edit = true;
+
+        auto set_data = [this](std::optional<BlockModelData>& model_data) {
+          if (BlockModelDataAll* data = std::get_if<BlockModelDataAll>(&model_data.value())) {
+            edit_model_type_ = BlockModelType::All;
+            edit_model_data_all_.tex_all = data->tex_all;
+          } else {
+            edit_model_data_all_ = {block_db_.block_defaults_.tex_name};
+          }
+          if (BlockModelDataTopBot* data = std::get_if<BlockModelDataTopBot>(&model_data.value())) {
+            edit_model_type_ = BlockModelType::TopBottom;
+            edit_model_data_top_bot_.tex_top = data->tex_top;
+            edit_model_data_top_bot_.tex_bottom = data->tex_bottom;
+            edit_model_data_top_bot_.tex_side = data->tex_side;
+          } else {
+            edit_model_type_ = BlockModelType::TopBottom;
+            edit_model_data_top_bot_ = {block_db_.block_defaults_.tex_name,
+                                        block_db_.block_defaults_.tex_name,
+                                        block_db_.block_defaults_.tex_name};
+          }
+          if (BlockModelDataUnique* data = std::get_if<BlockModelDataUnique>(&model_data.value())) {
+            edit_model_type_ = BlockModelType::Unique;
+            edit_model_data_unique_.tex_pos_x = data->tex_pos_x;
+            edit_model_data_unique_.tex_neg_x = data->tex_neg_x;
+            edit_model_data_unique_.tex_pos_y = data->tex_pos_y;
+            edit_model_data_unique_.tex_neg_y = data->tex_neg_y;
+            edit_model_data_unique_.tex_pos_z = data->tex_pos_z;
+            edit_model_data_unique_.tex_neg_z = data->tex_neg_z;
+          } else {
+            edit_model_data_unique_ = {
+                block_db_.block_defaults_.tex_name, block_db_.block_defaults_.tex_name,
+                block_db_.block_defaults_.tex_name, block_db_.block_defaults_.tex_name,
+                block_db_.block_defaults_.tex_name, block_db_.block_defaults_.tex_name,
+            };
+          }
+          original_edit_model_data_all = edit_model_data_all_;
+          original_edit_model_unique = edit_model_data_unique_;
+          original_edit_model_top_bot = edit_model_data_top_bot_;
+        };
+
+        if (first_edit) {
+          set_data(model_data);
+          HandleEditModelChange();
+          first_edit = false;
+        }
+
         if (ImGui::BeginCombo("Model##edit_model_select", edit_model_name.c_str())) {
           for (const auto& model_name : all_block_model_names_) {
             if (model_name == edit_model_name) continue;
             if (ImGui::Selectable(model_name.data())) {
-              auto model_data = BlockDB::LoadBlockModelDataFromName(model_name);
+              model_data = BlockDB::LoadBlockModelDataFromName(model_name);
               if (!model_data.has_value()) {
                 spdlog::error("Unable to load model data: {}", model_name);
                 break;
               }
               edit_model_name = model_name;
-              if (BlockModelDataAll* data = std::get_if<BlockModelDataAll>(&model_data.value())) {
-                edit_model_data_all_.tex_all = data->tex_all;
-                edit_model_type_ = BlockModelType::All;
-              } else if (BlockModelDataTopBot* data =
-                             std::get_if<BlockModelDataTopBot>(&model_data.value())) {
-                edit_model_data_top_bot_.tex_top = data->tex_top;
-                edit_model_data_top_bot_.tex_bottom = data->tex_bottom;
-                edit_model_data_top_bot_.tex_side = data->tex_side;
-                edit_model_type_ = BlockModelType::TopBottom;
-              } else if (BlockModelDataUnique* data =
-                             std::get_if<BlockModelDataUnique>(&model_data.value())) {
-                edit_model_data_unique_.tex_pos_x = data->tex_pos_x;
-                edit_model_data_unique_.tex_neg_x = data->tex_neg_x;
-                edit_model_data_unique_.tex_pos_y = data->tex_pos_y;
-                edit_model_data_unique_.tex_neg_y = data->tex_neg_y;
-                edit_model_data_unique_.tex_pos_z = data->tex_pos_z;
-                edit_model_data_unique_.tex_neg_z = data->tex_neg_z;
-                edit_model_type_ = BlockModelType::Unique;
-              }
+              set_data(model_data);
+              HandleEditModelChange();
             }
           }
           ImGui::EndCombo();
+        }
+
+        ImGui::Text("Textures");
+        for (uint32_t i = 0; i < 3; i++) {
+          ImGui::BeginDisabled(static_cast<uint32_t>(edit_model_type_) == i);
+          if (ImGui::Button(TexTypeNames[i].data())) {
+            edit_model_type_ = static_cast<BlockModelType>(i);
+            HandleEditModelChange();
+          }
+          ImGui::EndDisabled();
+          if (i < 2) ImGui::SameLine();
+        }
+
+        TexSelectMenu(edit_mode_);
+
+        if (ImGui::Button("Reset")) {
+          edit_model_data_all_ = original_edit_model_data_all;
+          edit_model_data_top_bot_ = original_edit_model_top_bot;
+          edit_model_data_unique_ = original_edit_model_unique;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Save")) {
+          nlohmann::json j = nlohmann::json::object();
+          j["type"] = TexTypes[static_cast<uint32_t>(edit_model_type_)];
+          if (edit_model_type_ == BlockModelType::All) {
+            spdlog::info("edit type all");
+            j["textures"] = {{"all", edit_model_data_all_.tex_all}};
+          } else if (edit_model_type_ == BlockModelType::TopBottom) {
+            j["textures"] = {{"top", edit_model_data_top_bot_.tex_top},
+                             {"bottom", edit_model_data_top_bot_.tex_bottom},
+                             {"side", edit_model_data_top_bot_.tex_side}};
+            spdlog::info("edit type top bot {}\n{}\n{}", edit_model_data_top_bot_.tex_top,
+                         edit_model_data_top_bot_.tex_bottom, edit_model_data_top_bot_.tex_side);
+          } else {
+            spdlog::info("edit type unique");
+            j["textures"] = {
+                {"posx", edit_model_data_unique_.tex_pos_x},
+                {"negx", edit_model_data_unique_.tex_neg_x},
+                {"posy", edit_model_data_unique_.tex_pos_y},
+                {"negy", edit_model_data_unique_.tex_neg_y},
+                {"posz", edit_model_data_unique_.tex_pos_z},
+                {"negz", edit_model_data_unique_.tex_neg_z},
+            };
+          }
+          spdlog::info("edit model name: {}", edit_model_name);
+          json_util::WriteJson(j, GET_PATH("resources/data/model/" + edit_model_name + ".json"));
         }
         ImGui::EndTabItem();
       }
     }
     if (ImGui::BeginTabItem("Edit Block")) {
+      ZoneScopedN("Edit Block tab");
       edit_mode_ = EditMode::EditBlock;
       auto& block_data_arr = block_db_.block_data_arr_;
       auto& block_data_model_names = block_db_.block_model_names_;

@@ -5,18 +5,6 @@
 #include "gameplay/world/BlockDB.hpp"
 #include "renderer/ChunkMesh.hpp"
 
-struct SingleBlock {
-  ChunkMesh mesh;
-  glm::vec3 pos;
-  BlockType block;
-};
-
-enum class EditMode {
-  AddModel,
-  EditModel,
-  AddBlock,
-  EditBlock,
-};
 class BlockEditorScene : public Scene {
  public:
   explicit BlockEditorScene(SceneManager& scene_manager);
@@ -34,11 +22,23 @@ class BlockEditorScene : public Scene {
   RenderParams render_params_;
 
  private:
+  struct SingleBlock {
+    ChunkMesh mesh;
+    glm::vec3 pos;
+    BlockMeshData mesh_data;
+  };
+
+  enum class EditMode {
+    AddModel,
+    EditModel,
+    AddBlock,
+    EditBlock,
+  };
   EditMode edit_mode_;
   float block_rot_{0};
   void Reload();
   void HandleAddModelTextureChange(BlockModelType type);
-  void HandleEditModelChange(BlockModelType type);
+  void HandleEditModelChange();
   void HandleModelChange(BlockModelType type);
   void ResetAddModelData();
   bool add_model_editor_open_{false};
@@ -59,8 +59,12 @@ class BlockEditorScene : public Scene {
   Player player_;
 
   std::vector<BlockData> block_data_;
-  std::vector<BlockMeshData> block_mesh_data_;
   std::vector<std::string> all_block_model_names_;
+  std::vector<std::string> all_block_texture_names_;
   std::unordered_set<std::string> all_block_model_names_set_;
   std::unordered_map<std::string, uint32_t> tex_name_to_idx_;
+  void TexSelectMenu(EditMode mode);
+
+  constexpr const static std::array<std::string, 3> TexTypes = {"all", "top_bottom", "unique"};
+  constexpr const static std::array<std::string, 3> TexTypeNames = {"All", "Top Bottom", "Unique"};
 };

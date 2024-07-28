@@ -41,6 +41,7 @@ void Player::Update(double dt) {
 }
 
 void Player::OnImGui() const {
+  ZoneScoped;
   ImGui::Begin("Player", nullptr,
                ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
   ImGui::Text("Position %f, %f, %f", position_.x, position_.y, position_.z);
