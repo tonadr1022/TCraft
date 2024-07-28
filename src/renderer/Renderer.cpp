@@ -167,6 +167,7 @@ void Renderer::FreeChunk(uint32_t handle) {
   auto it = chunk_allocs_.find(handle);
   if (it == chunk_allocs_.end()) {
     spdlog::error("FreeChunk: handle not found: {}", handle);
+    return;
   }
   chunk_vbo_.Free(it->second.vbo_handle);
   chunk_ebo_.Free(it->second.ebo_handle);

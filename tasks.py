@@ -61,7 +61,7 @@ def cmake_build(mode):
         "--build",
         ".",
         "--",
-        f"{parallel_flag}{str(os.cpu_count())}",
+        f"{parallel_flag} {str(os.cpu_count()-2)}",
     ]
     build_process = subprocess.Popen(cmake_build_command)
     build_process.wait()

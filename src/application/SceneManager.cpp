@@ -14,7 +14,9 @@ SceneManager::SceneManager(Renderer& renderer)
 
 void SceneManager::LoadScene(const std::string& name) {
   EASSERT_MSG(scene_creators_.count(name), "Scene not found");
-  // renderer_.Reset();
+  // call destructor of active scene
+  active_scene_ = nullptr;
+  // construct new scene
   active_scene_ = scene_creators_.at(name)();
 }
 
@@ -27,6 +29,8 @@ void SceneManager::Shutdown() { active_scene_ = nullptr; }
 Renderer& SceneManager::GetRenderer() { return renderer_; }
 
 void SceneManager::LoadWorld(const std::string& world_name) {
-  // renderer_.Reset();
+  // call destructor of active scene
+  active_scene_ = nullptr;
+  // construct new scene
   active_scene_ = std::make_unique<WorldScene>(*this, world_name);
 }

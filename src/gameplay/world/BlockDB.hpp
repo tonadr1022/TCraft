@@ -58,7 +58,6 @@ class BlockDB {
 
   [[nodiscard]] static std::vector<std::string> GetAllBlockTexturesFromAllModels();
   [[nodiscard]] static std::vector<std::string> GetAllModelNames();
-
   [[nodiscard]] static std::vector<std::string> GetAllTextureNames();
 
  private:

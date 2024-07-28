@@ -150,7 +150,13 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
 }
 
 BlockEditorScene::~BlockEditorScene() {
+  spdlog::info("block editor scene destructor");
   block_db_.WriteBlockData();
+  auto& renderer = scene_manager_.GetRenderer();
+  renderer.FreeChunk(edit_model_block_.mesh.handle_);
+  for (const auto& b : add_model_blocks_) {
+    renderer.FreeChunk(b.mesh.handle_);
+  }
   TextureManager::Get().Remove2dArray(render_params_.chunk_tex_array_handle);
 };
 
