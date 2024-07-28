@@ -238,6 +238,7 @@ void BlockEditorScene::TexSelectMenu(EditMode mode) {
     tex_select("Neg Z", model_data_unique.tex_neg_z);
   }
 }
+
 void BlockEditorScene::OnImGui() {
   ZoneScoped;
   ImGui::Begin("Block Editor");
@@ -396,18 +397,14 @@ void BlockEditorScene::OnImGui() {
         ImGui::SameLine();
         if (ImGui::Button("Save")) {
           nlohmann::json j = nlohmann::json::object();
-          j["type"] = TexTypes[static_cast<uint32_t>(edit_model_type_)];
+          j["type"] = "block/" + TexTypes[static_cast<uint32_t>(edit_model_type_)];
           if (edit_model_type_ == BlockModelType::All) {
-            spdlog::info("edit type all");
             j["textures"] = {{"all", edit_model_data_all_.tex_all}};
           } else if (edit_model_type_ == BlockModelType::TopBottom) {
             j["textures"] = {{"top", edit_model_data_top_bot_.tex_top},
                              {"bottom", edit_model_data_top_bot_.tex_bottom},
                              {"side", edit_model_data_top_bot_.tex_side}};
-            spdlog::info("edit type top bot {}\n{}\n{}", edit_model_data_top_bot_.tex_top,
-                         edit_model_data_top_bot_.tex_bottom, edit_model_data_top_bot_.tex_side);
           } else {
-            spdlog::info("edit type unique");
             j["textures"] = {
                 {"posx", edit_model_data_unique_.tex_pos_x},
                 {"negx", edit_model_data_unique_.tex_neg_x},
@@ -417,7 +414,6 @@ void BlockEditorScene::OnImGui() {
                 {"negz", edit_model_data_unique_.tex_neg_z},
             };
           }
-          spdlog::info("edit model name: {}", edit_model_name);
           json_util::WriteJson(j, GET_PATH("resources/data/model/" + edit_model_name + ".json"));
         }
         ImGui::EndTabItem();

@@ -280,10 +280,11 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::str
   if (type == BlockModelType::TopBottom) {
     auto tex_name_top = json_util::GetString(tex_obj.value(), "top");
     auto tex_name_bot = json_util::GetString(tex_obj.value(), "bottom");
-    if (!tex_name_bot.has_value() || !tex_name_top.has_value()) {
+    auto tex_name_side = json_util::GetString(tex_obj.value(), "side");
+    if (!tex_name_bot.has_value() || !tex_name_top.has_value() || !tex_name_side.has_value()) {
       return std::nullopt;
     }
-    return BlockModelDataTopBot{tex_name_top.value(), tex_name_bot.value()};
+    return BlockModelDataTopBot{tex_name_top.value(), tex_name_bot.value(), tex_name_side.value()};
   }
 
   auto tex_name_posx = json_util::GetString(tex_obj.value(), "posx");

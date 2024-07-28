@@ -63,7 +63,6 @@ void ChunkManager::Init() {
     mesher.GenerateNaive(chunk->GetData(), vertices, indices);
     chunk->GetMesh().Allocate(vertices, indices);
 
-    spdlog::info("{} {}", pos.x, pos.z);
     direction_steps_counter++;
     pos.x += Dx[direction];
     pos.z += Dy[direction];
