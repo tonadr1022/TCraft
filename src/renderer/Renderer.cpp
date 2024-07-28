@@ -154,6 +154,12 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
               .base_vertex = static_cast<uint32_t>(chunk_vbo_offset / sizeof(ChunkVertex)),
               .base_instance = 0,
           });
+  spdlog::info(
+      "v_size: {}, e_size {}, vbo_offset: {}, ebo_offset: {}, base_vertex: {},  first_index: {}, "
+      "dei_size: {} ",
+      sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset,
+      chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset / sizeof(uint32_t),
+      dei_cmds_.size());
   return id;
 }
 

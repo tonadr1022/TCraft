@@ -58,6 +58,8 @@ class BlockEditorScene : public Scene {
   BlockDB block_db_;
   Player player_;
 
+  std::vector<SingleBlock> blocks_;
+
   std::vector<BlockData> block_data_;
   std::vector<std::string> all_block_model_names_;
   std::vector<std::string> all_block_texture_names_;

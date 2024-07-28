@@ -65,6 +65,20 @@ void BlockEditorScene::Reload() {
   HandleAddModelTextureChange(BlockModelType::TopBottom);
   HandleAddModelTextureChange(BlockModelType::Unique);
   HandleEditModelChange();
+
+  std::vector<ChunkVertex> vertices;
+  std::vector<uint32_t> indices;
+  int num_blocks = block_db_.GetBlockData().size();
+  for (int i = 1; i < num_blocks; i++) {
+    vertices.clear();
+    indices.clear();
+    ChunkMesher::GenerateBlock(vertices, indices, block_db_.GetMeshData()[i].texture_indices);
+    blocks_.emplace_back(SingleBlock{
+        .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
+        .pos = {(-num_blocks + i), 0, 0},
+        .mesh_data = {.texture_indices = block_db_.block_mesh_data_[i].texture_indices},
+    });
+  }
 }
 
 void BlockEditorScene::HandleEditModelChange() {
@@ -99,7 +113,6 @@ void BlockEditorScene::HandleEditModelChange() {
   ChunkMesher::GenerateBlock(vertices, indices, edit_model_block_.mesh_data.texture_indices);
   edit_model_block_ = {
       .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
-      .pos = {0, 0, 0},
   };
 }
 
@@ -127,7 +140,6 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
                                       }};
   }
 
-  // TODO: refactor so block data either isn't necessary or used
   auto i = static_cast<uint32_t>(type);
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
@@ -138,7 +150,6 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   }
   add_model_blocks_[i] = {
       .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
-      .pos = {0, i * 1.1, 0},
   };
 }
 
@@ -146,7 +157,7 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
   ZoneScoped;
   Reload();
   player_.SetCameraFocused(true);
-  player_.position_ = {-5, 2.5, 0};
+  player_.SetPosition({0, 0.5, 1});
 }
 
 BlockEditorScene::~BlockEditorScene() {
@@ -174,6 +185,11 @@ void BlockEditorScene::Render(Renderer& renderer, const Window& window) {
   } else if (edit_mode_ == EditMode::EditModel) {
     EASSERT_MSG(edit_model_block_.mesh.IsAllocated(), "Edit model not allocated");
     renderer.SubmitChunkDrawCommand(model, edit_model_block_.mesh.handle_);
+  } else if (edit_mode_ == EditMode::EditBlock) {
+    for (const auto& block : blocks_) {
+      EASSERT_MSG(block.mesh.IsAllocated(), "model not allocated");
+      renderer.SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos), block.mesh.handle_);
+    }
   }
 
   scene_manager_.GetRenderer().RenderBlockEditor(
@@ -428,7 +444,21 @@ void BlockEditorScene::OnImGui() {
 
       static BlockData original_edit_block_data;
       static std::string original_edit_block_model_name;
-      static int edit_block_idx = -1;
+      static int edit_block_idx = 1;
+      if (ImGui::BeginCombo("Block##edit_block_select",
+                            block_data_arr[edit_block_idx].name.c_str())) {
+        for (uint32_t i = 0; i < block_data_arr.size(); i++) {
+          const auto& block_data = block_data_arr[i];
+          if (block_data.name == block_data_arr[edit_block_idx].name) continue;
+          if (ImGui::Selectable(block_data.name.data())) {
+            original_edit_block_data = block_data;
+            edit_block_idx = i;
+            player_.SetPosition(glm::vec3{0.f, 0.5f, 5.0f} + blocks_[i].pos);
+            player_.GetCamera().LookAt(blocks_[i].pos);
+          }
+        }
+        ImGui::EndCombo();
+      }
       for (uint32_t i = 1; i < block_data_arr.size(); i++) {
         const auto& block_data = block_data_arr[i];
         if (ImGui::Button(block_data.name.data())) {
@@ -443,7 +473,6 @@ void BlockEditorScene::OnImGui() {
         // initialize the first time with block data name
         ImGui::InputText("Name", &block_data_arr[edit_block_idx].name);
         ImGui::Checkbox("Emits Light", &block_data_arr[edit_block_idx].emits_light);
-
         if (ImGui::BeginCombo("##Model",
                               ("Model: " + block_data_model_names[edit_block_idx]).c_str())) {
           for (const auto& model : all_block_model_names_) {

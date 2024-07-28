@@ -52,6 +52,13 @@ void Player::OnImGui() const {
   ImGui::End();
 }
 
+void Player::SetPosition(const glm::vec3& pos) {
+  position_ = pos;
+  fps_camera_.position_ = pos;
+}
+
+const glm::vec3& Player::Position() const { return position_; }
+
 bool Player::OnEvent(const SDL_Event& event) {
   switch (event.type) {
     case SDL_KEYDOWN:

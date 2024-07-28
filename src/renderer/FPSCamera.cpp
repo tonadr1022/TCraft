@@ -48,6 +48,14 @@ void FPSCamera::CalculateFront() {
   front_ = glm::normalize(front);
 }
 
+void FPSCamera::LookAt(const glm::vec3& pos) {
+  ZoneScoped;
+  front_ = glm::normalize(pos - position_);
+  yaw_ = glm::degrees(glm::atan(front_.z, front_.x));
+  pitch_ = glm::degrees(glm::asin(front_.y));
+  CalculateFront();
+}
+
 void FPSCamera::OnImGui() const {
   ZoneScoped;
   ImGui::Text("Yaw: %.1f, Pitch: %.1f", yaw_, pitch_);

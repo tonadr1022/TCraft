@@ -11,6 +11,7 @@ class FPSCamera {
   static constexpr const glm::vec3 UpVector{0.f, 1.f, 0.f};
   void Update(double dt);
   void OnImGui() const;
+  void LookAt(const glm::vec3& pos);
 
   void Save();
   void Load();

@@ -51,7 +51,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
   auto settings = SettingsManager::Get().LoadSetting("world");
 
   std::array<float, 3> player_pos = settings["player_position"].get<std::array<float, 3>>();
-  player_.position_ = {player_pos[0], player_pos[1], player_pos[2]};
+  player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
 }
 
 void WorldScene::Update(double dt) {
@@ -83,7 +83,8 @@ void WorldScene::Render(Renderer& renderer, const Window& window) {
 WorldScene::~WorldScene() {
   ZoneScoped;
   player_.GetCamera().Save();
-  std::array<float, 3> player_pos = {player_.position_.x, player_.position_.y, player_.position_.z};
+  auto pos = player_.Position();
+  std::array<float, 3> player_pos = {pos.x, pos.y, pos.z};
   nlohmann::json j = {{"player_position", player_pos}};
   SettingsManager::Get().SaveSetting(j, "world");
 }
