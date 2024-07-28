@@ -4,6 +4,13 @@
 
 Buffer::Buffer() = default;
 
+Buffer::~Buffer() {
+  EASSERT_MSG(!mapped_, "buffer can't be mapped on deletion");
+  if (id_) {
+    glDeleteBuffers(1, &id_);
+  }
+}
+
 void Buffer::Init(uint32_t size_bytes, GLbitfield flags, void* data) {
   glCreateBuffers(1, &id_);
   glNamedBufferStorage(id_, size_bytes, data, flags);
@@ -19,12 +26,6 @@ Buffer& Buffer::operator=(Buffer&& other) noexcept {
   return *this;
 }
 
-Buffer::~Buffer() {
-  EASSERT_MSG(!mapped_, "buffer can't be mapped on deletion");
-  if (id_) {
-    glDeleteBuffers(1, &id_);
-  }
-}
 void Buffer::Bind(GLuint target) const { glBindBuffer(target, id_); }
 
 void Buffer::BindBase(GLuint target, GLuint slot) const { glBindBufferBase(target, slot, id_); }

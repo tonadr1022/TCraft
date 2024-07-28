@@ -5,7 +5,9 @@
 #include "renderer/opengl/Texture2dArray.hpp"
 
 TextureManager* TextureManager::instance_ = nullptr;
+
 TextureManager& TextureManager::Get() { return *instance_; }
+
 TextureManager::TextureManager() {
   EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
   instance_ = this;

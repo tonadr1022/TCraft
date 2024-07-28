@@ -1,12 +1,9 @@
 #pragma once
 
+#include "application/Scene.hpp"
 #include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
-
-class Renderer;
-
-#include "application/Scene.hpp"
 
 class WorldScene : public Scene {
  public:
@@ -14,7 +11,7 @@ class WorldScene : public Scene {
 
   void Update(double dt) override;
   void OnImGui() override;
-  void Render(Renderer& renderer, const Window& window) override;
+  void Render(const Window& window) override;
   bool OnEvent(const SDL_Event& event) override;
   ~WorldScene() override;
 
@@ -28,5 +25,4 @@ class WorldScene : public Scene {
 
  private:
   Player player_;
-  friend class Renderer;
 };

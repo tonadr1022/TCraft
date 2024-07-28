@@ -20,8 +20,8 @@ class Application {
   bool imgui_enabled_;
   SettingsManager* settings_{nullptr};
   TextureManager* texture_manager_{nullptr};
+  Renderer* renderer_{nullptr};
   SceneManager scene_manager_;
-  Renderer renderer_;
   Window window_;
   EventDispatcher event_dispatcher_;
   void ImGuiTest();

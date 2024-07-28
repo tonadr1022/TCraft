@@ -16,7 +16,7 @@
 #include "util/Paths.hpp"
 
 WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_name)
-    : Scene(scene_manager), chunk_manager_(block_db_, scene_manager.GetRenderer()) {
+    : Scene(scene_manager), chunk_manager_(block_db_) {
   ZoneScoped;
   EASSERT_MSG(!world_name.empty(), "Can't load world scene without a loaded world name");
   block_db_.Init();
@@ -73,11 +73,21 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
   return false;
 }
 
-void WorldScene::Render(Renderer& renderer, const Window& window) {
+void WorldScene::Render(const Window& window) {
   ZoneScoped;
   RenderInfo render_info{.vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
                                       player_.GetCamera().GetView()};
-  renderer.RenderWorld(*this, render_info);
+
+  {
+    ZoneScopedN("Submit chunk draw commands");
+    // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
+    for (const auto& it : chunk_manager_.GetVisibleChunks()) {
+      auto& mesh = it.second->GetMesh();
+      glm::vec3 pos = it.first * ChunkLength;
+      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.handle_);
+    }
+  }
+  Renderer::Get().RenderWorld(*this, render_info);
 }
 
 WorldScene::~WorldScene() {

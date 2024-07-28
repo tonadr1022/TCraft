@@ -8,12 +8,11 @@
 #include <unordered_map>
 
 class BlockDB;
-class Renderer;
 using ChunkMap = std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>>;
 
 class ChunkManager {
  public:
-  ChunkManager(BlockDB& block_db, Renderer& renderer);
+  explicit ChunkManager(BlockDB& block_db);
   ~ChunkManager();
 
   void Update(double dt);
@@ -24,7 +23,6 @@ class ChunkManager {
   void OnImGui();
 
  private:
-  Renderer& renderer_;
   BlockDB& block_db_;
   ChunkMap chunk_map_;
   int load_distance_;

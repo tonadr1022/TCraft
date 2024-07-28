@@ -14,6 +14,15 @@
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
 
+Renderer* Renderer::instance_ = nullptr;
+
+Renderer& Renderer::Get() { return *instance_; }
+
+Renderer::Renderer() {
+  EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
+  instance_ = this;
+}
+
 void Renderer::Init() {
   auto settings = SettingsManager::Get().LoadSetting("renderer");
   glEnable(GL_DEBUG_OUTPUT);
@@ -37,21 +46,15 @@ void Renderer::Init() {
 }
 
 void Renderer::Shutdown() {
+  spdlog::info("vbo allocs: {}, ebo allocs: {}", chunk_vbo_.NumAllocs(), chunk_ebo_.NumAllocs());
   nlohmann::json settings;
   settings["wireframe_enabled"] = wireframe_enabled_;
   SettingsManager::Get().SaveSetting(settings, "renderer");
 }
 
-// void Renderer::Reset() {
-//   spdlog::info("resetting renderer buffers");
-//   chunk_ebo_.ResetOffset();
-//   chunk_vbo_.ResetOffset();
-// }
-
 void Renderer::RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info) {
   ZoneScoped;
   SetFrameDrawCommands();
-
   auto shader = shader_manager_.GetShader("chunk_batch");
   shader->Bind();
   shader->SetMat4("vp_matrix", render_info.vp_matrix);
@@ -64,34 +67,18 @@ void Renderer::RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo
 
 void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info) {
   ZoneScoped;
+  SetFrameDrawCommands();
   {
-    ZoneScopedN("Chunk render");
+    ZoneScopedN("Render chunks");
+    auto shader = shader_manager_.GetShader("chunk_batch");
+    shader->Bind();
+    shader->SetMat4("vp_matrix", render_info.vp_matrix);
 
-    {
-      ZoneScopedN("Submit chunk draw commands");
-      // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
-      for (const auto& it : world.chunk_manager_.GetVisibleChunks()) {
-        auto& mesh = it.second->GetMesh();
-        glm::vec3 pos = it.first * ChunkLength;
-        SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.handle_);
-      }
-    }
-
-    SetFrameDrawCommands();
-
-    {
-      ZoneScopedN("Render chunks");
-      auto shader = shader_manager_.GetShader("chunk_batch");
-      shader->Bind();
-      shader->SetMat4("vp_matrix", render_info.vp_matrix);
-
-      const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(
-          world.world_render_params_.chunk_tex_array_handle);
-      chunk_tex_arr.Bind(0);
-      chunk_vao_.Bind();
-      glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, frame_dei_cmds_.size(),
-                                  0);
-    }
+    const auto& chunk_tex_arr =
+        TextureManager::Get().GetTexture2dArray(world.world_render_params_.chunk_tex_array_handle);
+    chunk_tex_arr.Bind(0);
+    chunk_vao_.Bind();
+    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, frame_dei_cmds_.size(), 0);
   }
 }
 
@@ -156,10 +143,10 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
           });
   spdlog::info(
       "v_size: {}, e_size {}, vbo_offset: {}, ebo_offset: {}, base_vertex: {},  first_index: {}, "
-      "dei_size: {} ",
+      "dei_size: {} vbo_allocs: {}, ebo_allocs: {}",
       sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset,
       chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset / sizeof(uint32_t),
-      dei_cmds_.size());
+      dei_cmds_.size(), chunk_vbo_.NumAllocs(), chunk_ebo_.NumAllocs());
   return id;
 }
 
@@ -206,11 +193,7 @@ bool Renderer::OnEvent(const SDL_Event& event) {
 void Renderer::LoadShaders() {
   shader_manager_.AddShader("color", {{GET_SHADER_PATH("color.vs.glsl"), ShaderType::Vertex},
                                       {GET_SHADER_PATH("color.fs.glsl"), ShaderType::Fragment}});
-  // shader_manager_.AddShader("chunk", {{GET_SHADER_PATH("chunk.vs.glsl"), ShaderType::Vertex},
-  //                                     {GET_SHADER_PATH("chunk.fs.glsl"), ShaderType::Fragment}});
   shader_manager_.AddShader("chunk_batch",
                             {{GET_SHADER_PATH("chunk_batch.vs.glsl"), ShaderType::Vertex},
                              {GET_SHADER_PATH("chunk_batch.fs.glsl"), ShaderType::Fragment}});
 }
-
-Renderer::~Renderer() = default;

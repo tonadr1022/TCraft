@@ -13,7 +13,7 @@ class BlockEditorScene : public Scene {
   void OnImGui() override;
   void Update(double dt) override;
   bool OnEvent(const SDL_Event& event) override;
-  void Render(Renderer& renderer, const Window& window) override;
+  void Render(const Window& window) override;
 
   struct RenderParams {
     uint32_t chunk_tex_array_handle{0};

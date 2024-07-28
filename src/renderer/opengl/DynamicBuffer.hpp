@@ -3,6 +3,7 @@
 class DynamicBuffer {
  public:
   DynamicBuffer();
+  ~DynamicBuffer();
   void Init(uint32_t size_bytes, uint32_t alignment);
   [[nodiscard]] uint32_t Id() const;
 

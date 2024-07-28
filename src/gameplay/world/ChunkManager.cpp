@@ -10,8 +10,7 @@
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
 
-ChunkManager::ChunkManager(BlockDB& block_db, Renderer& renderer)
-    : block_db_(block_db), renderer_(renderer) {}
+ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {}
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
@@ -70,7 +69,7 @@ void ChunkManager::Init() {
     std::vector<ChunkVertex> vertices;
     std::vector<uint32_t> indices;
     mesher.GenerateNaive(chunk->GetData(), vertices, indices);
-    chunk->GetMesh().handle_ = renderer_.AllocateChunk(vertices, indices);
+    chunk->GetMesh().handle_ = Renderer::Get().AllocateChunk(vertices, indices);
   }
 }
 

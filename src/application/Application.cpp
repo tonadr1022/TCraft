@@ -22,21 +22,22 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 
 }  // namespace
 
-Application::Application(int width, int height, const char* title) : scene_manager_(renderer_) {
-  // Settings is a singleton since only one instance should exist
+Application::Application(int width, int height, const char* title) {
+  // initialize singletons
   settings_ = new SettingsManager;
   texture_manager_ = new TextureManager;
+  renderer_ = new Renderer;
 
   SettingsManager::Get().Load(SettingsPath);
   auto app_settings_json = SettingsManager::Get().LoadSetting("application");
   imgui_enabled_ = app_settings_json.value("imgui_enabled", true);
 
   window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
-  renderer_.Init();
+  Renderer::Get().Init();
 
   // Add event listeners
   event_dispatcher_.AddListener(
-      [this](const SDL_Event& event) { return renderer_.OnEvent(event); });
+      [this](const SDL_Event& event) { return Renderer::Get().OnEvent(event); });
   event_dispatcher_.AddListener(
       [this](const SDL_Event& event) { return scene_manager_.GetActiveScene().OnEvent(event); });
 }
@@ -64,8 +65,8 @@ void Application::Run() {
     {
       ZoneScopedN("Render");
       window_.StartRenderFrame(imgui_enabled_);
-      renderer_.StartFrame(window_);
-      scene_manager_.GetActiveScene().Render(renderer_, window_);
+      Renderer::Get().StartFrame(window_);
+      scene_manager_.GetActiveScene().Render(window_);
 
       if (imgui_enabled_) OnImGui();
       window_.EndRenderFrame(imgui_enabled_);
@@ -75,12 +76,17 @@ void Application::Run() {
   nlohmann::json app_settings_json = {{"imgui_enabled", imgui_enabled_}};
   SettingsManager::Get().SaveSetting(app_settings_json, "application");
 
-  renderer_.Shutdown();
+  Renderer::Get().Shutdown();
   scene_manager_.Shutdown();
   window_.Shutdown();
 }
 
-Application::~Application() { SettingsManager::Get().Shutdown(SettingsPath); }
+Application::~Application() {
+  SettingsManager::Get().Shutdown(SettingsPath);
+  delete renderer_;
+  delete texture_manager_;
+  delete settings_;
+}
 
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;

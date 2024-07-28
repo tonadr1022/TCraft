@@ -9,12 +9,10 @@ class SceneManager {
   Scene& GetActiveScene();
   void Shutdown();
   void LoadWorld(const std::string& world_name);
-  Renderer& GetRenderer();
 
  private:
   friend class Application;
-  explicit SceneManager(Renderer& renderer);
-  Renderer& renderer_;
+  SceneManager();
 
   std::unordered_map<std::string, std::function<std::unique_ptr<Scene>()>> scene_creators_;
   std::unique_ptr<Scene> active_scene_{nullptr};

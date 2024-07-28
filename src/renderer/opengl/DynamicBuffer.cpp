@@ -6,6 +6,13 @@
 
 DynamicBuffer::DynamicBuffer() = default;
 
+DynamicBuffer::~DynamicBuffer() {
+  spdlog::info("dynamic buffer destruction");
+  if (id_) {
+    glDeleteBuffers(1, &id_);
+  }
+}
+
 void DynamicBuffer::Init(uint32_t size_bytes, uint32_t alignment) {
   ZoneScoped;
   alignment_ = alignment;

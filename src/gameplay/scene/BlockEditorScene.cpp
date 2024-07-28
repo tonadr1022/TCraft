@@ -74,7 +74,7 @@ void BlockEditorScene::Reload() {
     indices.clear();
     ChunkMesher::GenerateBlock(vertices, indices, block_db_.GetMeshData()[i].texture_indices);
     blocks_.emplace_back(SingleBlock{
-        .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
+        .mesh = {Renderer::Get().AllocateChunk(vertices, indices)},
         .pos = {(-num_blocks + i), 0, 0},
         .mesh_data = {.texture_indices = block_db_.block_mesh_data_[i].texture_indices},
     });
@@ -106,13 +106,13 @@ void BlockEditorScene::HandleEditModelChange() {
   }
 
   if (edit_model_block_.mesh.IsAllocated()) {
-    scene_manager_.GetRenderer().FreeChunk(edit_model_block_.mesh.handle_);
+    Renderer::Get().FreeChunk(edit_model_block_.mesh.handle_);
   }
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
   ChunkMesher::GenerateBlock(vertices, indices, edit_model_block_.mesh_data.texture_indices);
   edit_model_block_ = {
-      .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
+      .mesh = {Renderer::Get().AllocateChunk(vertices, indices)},
   };
 }
 
@@ -146,10 +146,10 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   ChunkMesher::GenerateBlock(vertices, indices, add_model_blocks_[i].mesh_data.texture_indices);
 
   if (add_model_blocks_[i].mesh.IsAllocated()) {
-    scene_manager_.GetRenderer().FreeChunk(add_model_blocks_[i].mesh.handle_);
+    Renderer::Get().FreeChunk(add_model_blocks_[i].mesh.handle_);
   }
   add_model_blocks_[i] = {
-      .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
+      .mesh = {Renderer::Get().AllocateChunk(vertices, indices)},
   };
 }
 
@@ -162,15 +162,15 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
 
 BlockEditorScene::~BlockEditorScene() {
   block_db_.WriteBlockData();
-  auto& renderer = scene_manager_.GetRenderer();
-  renderer.FreeChunk(edit_model_block_.mesh.handle_);
-  for (const auto& b : add_model_blocks_) {
-    renderer.FreeChunk(b.mesh.handle_);
-  }
+  // TODO: remove comments once raii for chunk mesh is finished
+  // Renderer::Get().FreeChunk(edit_model_block_.mesh.handle_);
+  // for (const auto& b : add_model_blocks_) {
+  //   Renderer::Get().FreeChunk(b.mesh.handle_);
+  // }
   TextureManager::Get().Remove2dArray(render_params_.chunk_tex_array_handle);
 };
 
-void BlockEditorScene::Render(Renderer& renderer, const Window& window) {
+void BlockEditorScene::Render(const Window& window) {
   ZoneScoped;
   // TODO: store model matrix and only update on change position?
   glm::mat4 model{1};
@@ -181,18 +181,19 @@ void BlockEditorScene::Render(Renderer& renderer, const Window& window) {
   if (edit_mode_ == EditMode::AddModel) {
     auto& mesh = add_model_blocks_[static_cast<uint32_t>(add_model_type_)].mesh;
     EASSERT_MSG(mesh.IsAllocated(), "Add model mesh not allocated");
-    renderer.SubmitChunkDrawCommand(model, mesh.handle_);
+    Renderer::Get().SubmitChunkDrawCommand(model, mesh.handle_);
   } else if (edit_mode_ == EditMode::EditModel) {
     EASSERT_MSG(edit_model_block_.mesh.IsAllocated(), "Edit model not allocated");
-    renderer.SubmitChunkDrawCommand(model, edit_model_block_.mesh.handle_);
+    Renderer::Get().SubmitChunkDrawCommand(model, edit_model_block_.mesh.handle_);
   } else if (edit_mode_ == EditMode::EditBlock) {
     for (const auto& block : blocks_) {
       EASSERT_MSG(block.mesh.IsAllocated(), "model not allocated");
-      renderer.SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos), block.mesh.handle_);
+      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos),
+                                             block.mesh.handle_);
     }
   }
 
-  scene_manager_.GetRenderer().RenderBlockEditor(
+  Renderer::Get().RenderBlockEditor(
       *this, {
                  .vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
                               player_.GetCamera().GetView(),

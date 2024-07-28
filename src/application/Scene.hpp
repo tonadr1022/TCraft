@@ -4,7 +4,6 @@
 
 class SceneManager;
 class Window;
-class Renderer;
 
 class Scene {
  public:
@@ -12,7 +11,7 @@ class Scene {
   virtual ~Scene() = default;
   virtual void Update(double dt);
   virtual void OnImGui();
-  virtual void Render(Renderer& renderer, const Window& window);
+  virtual void Render(const Window& window);
   virtual bool OnEvent(const SDL_Event& event);
 
  protected:

@@ -31,6 +31,7 @@ struct RenderInfo {
 
 class Renderer {
  public:
+  static Renderer& Get();
   bool render_gui_{true};
   bool render_chunks_{true};
   bool wireframe_enabled_{false};
@@ -47,9 +48,12 @@ class Renderer {
   void StartFrame(const Window& window);
   bool OnEvent(const SDL_Event& event);
   void Shutdown();
-  ~Renderer();
 
  private:
+  friend class Application;
+  static Renderer* instance_;
+  Renderer();
+
   constexpr const static uint32_t MaxDrawCmds{1'000'000};
   ShaderManager shader_manager_;
 

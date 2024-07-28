@@ -1,6 +1,6 @@
 #include "Scene.hpp"
 
-void Scene::Render(Renderer& renderer, const Window& window) {}
+void Scene::Render(const Window& window) {}
 
 void Scene::Update(double dt) {}
 
