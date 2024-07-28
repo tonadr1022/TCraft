@@ -168,6 +168,7 @@ void Renderer::FreeChunk(uint32_t handle) {
   }
   chunk_vbo_.Free(it->second.vbo_handle);
   chunk_ebo_.Free(it->second.ebo_handle);
+  dei_cmds_.erase(dei_cmds_.begin() + it->first);
   chunk_allocs_.erase(it);
 }
 
