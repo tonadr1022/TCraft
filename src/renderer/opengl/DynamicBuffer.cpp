@@ -90,7 +90,10 @@ void DynamicBuffer::Free(uint32_t handle) {
   for (it = allocs_.begin(); it != allocs_.end(); it++) {
     if (it->handle == handle) break;
   }
-  if (it == allocs_.end()) return;
+  if (it == allocs_.end()) {
+    spdlog::error("Allocation handle not found: {}", handle);
+    return;
+  }
 
   it->handle = 0;
   Coalesce(it);

@@ -144,12 +144,13 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
                                                 chunk_ebo_offset),
           });
 
-  spdlog::info("size: {}, indices_size {}, vbo_offset: {}, ebo_offset: {}, {} {}",
-               sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(),
-               chunk_vbo_offset, chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex),
-               chunk_ebo_offset / sizeof(uint32_t));
+  spdlog::info(
+      "v_size: {}, e_size {}, vbo_offset: {}, ebo_offset: {}, base_vertex: {},  first_index: {}, "
+      "dei_size: {}",
+      sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset,
+      chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset / sizeof(uint32_t),
+      dei_cmds_.size());
 
-  spdlog::info("indices size {}", indices.size());
   dei_cmds_.emplace_back(DrawElementsIndirectCommand{
       .count = static_cast<uint32_t>(indices.size()),
       .instance_count = 0,
@@ -158,6 +159,16 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
       .base_instance = 0,
   });
   return id;
+}
+
+void Renderer::FreeChunk(uint32_t handle) {
+  auto it = chunk_allocs_.find(handle);
+  if (it == chunk_allocs_.end()) {
+    spdlog::error("FreeChunk: handle not found: {}", handle);
+  }
+  chunk_vbo_.Free(it->second.vbo_handle);
+  chunk_ebo_.Free(it->second.ebo_handle);
+  chunk_allocs_.erase(it);
 }
 
 void Renderer::StartFrame(const Window& window) {

@@ -101,6 +101,9 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
   block_mesher.GenerateBlock(vertices, indices, i);
+  if (add_model_blocks_[i].mesh.IsAllocated()) {
+    scene_manager_.GetRenderer().FreeChunk(add_model_blocks_[i].mesh.handle_);
+  }
   add_model_blocks_[i] = {
       .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
       .pos = {0, i * 1.1, 0},
@@ -157,7 +160,6 @@ void BlockEditorScene::ResetAddModelData() {
 
 void BlockEditorScene::OnImGui() {
   ZoneScoped;
-
   ImGui::Begin("Block Editor");
   player_.OnImGui();
   if (ImGui::BeginTabBar("MyTabBar")) {
