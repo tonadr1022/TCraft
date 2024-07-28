@@ -1,10 +1,13 @@
 #include "DynamicBuffer.hpp"
 
+#include <tracy/Tracy.hpp>
+
 #include "pch.hpp"
 
 DynamicBuffer::DynamicBuffer() = default;
 
 void DynamicBuffer::Init(uint32_t size_bytes, uint32_t alignment) {
+  ZoneScoped;
   alignment_ = alignment;
   // align the size
   size_bytes += (alignment_ - (size_bytes % alignment_)) % alignment_;
@@ -39,27 +42,32 @@ uint32_t DynamicBuffer::NumAllocs() const { return num_allocs_; }
 void DynamicBuffer::Bind(GLuint target) const { glBindBuffer(target, id_); }
 
 void DynamicBuffer::BindBase(uint32_t target, uint32_t slot) const {
+  ZoneScoped;
   glBindBufferBase(target, slot, id_);
 }
 
 uint32_t DynamicBuffer::Allocate(uint32_t size_bytes, void* data, uint32_t& offset) {
+  ZoneScoped;
   // align the size
   size_bytes += (alignment_ - (size_bytes % alignment_)) % alignment_;
   auto smallest_free_alloc = allocs_.end();
-  // find the smallest free allocation that is large enough
-  for (auto it = allocs_.begin(); it != allocs_.end(); it++) {
-    // adequate if free and size fits
-    if (it->handle == 0 && it->size_bytes >= size_bytes) {
-      // if it's the first or it's smaller, set it to the new smallest free alloc
-      if (smallest_free_alloc == allocs_.end() ||
-          it->size_bytes < smallest_free_alloc->size_bytes) {
-        smallest_free_alloc = it;
+  {
+    ZoneScopedN("smallest free alloc");
+    // find the smallest free allocation that is large enough
+    for (auto it = allocs_.begin(); it != allocs_.end(); it++) {
+      // adequate if free and size fits
+      if (it->handle == 0 && it->size_bytes >= size_bytes) {
+        // if it's the first or it's smaller, set it to the new smallest free alloc
+        if (smallest_free_alloc == allocs_.end() ||
+            it->size_bytes < smallest_free_alloc->size_bytes) {
+          smallest_free_alloc = it;
+        }
       }
     }
-  }
-  // if there isn't an allocation small enough, return 0, null handle
-  if (smallest_free_alloc == allocs_.end()) {
-    return 0;
+    // if there isn't an allocation small enough, return 0, null handle
+    if (smallest_free_alloc == allocs_.end()) {
+      return 0;
+    }
   }
 
   // create new allocation
@@ -77,15 +85,20 @@ uint32_t DynamicBuffer::Allocate(uint32_t size_bytes, void* data, uint32_t& offs
   if (smallest_free_alloc->size_bytes == 0) {
     *smallest_free_alloc = new_alloc;
   } else {
+    ZoneScopedN("Insert");
     allocs_.insert(smallest_free_alloc, new_alloc);
   }
 
   ++num_allocs_;
-  glNamedBufferSubData(id_, new_alloc.offset, size_bytes, data);
+  {
+    ZoneScopedN("glNamedBufferSubData");
+    glNamedBufferSubData(id_, new_alloc.offset, size_bytes, data);
+  }
   return new_alloc.handle;
 }
 
 void DynamicBuffer::Free(uint32_t handle) {
+  ZoneScoped;
   auto it = allocs_.end();
   for (it = allocs_.begin(); it != allocs_.end(); it++) {
     if (it->handle == handle) break;
@@ -102,6 +115,7 @@ void DynamicBuffer::Free(uint32_t handle) {
 }
 
 void DynamicBuffer::Coalesce(Iterator& alloc) {
+  ZoneScoped;
   EASSERT_MSG(alloc != allocs_.end(), "Don't coalesce a non-existent allocation");
 
   auto prev_alloc = alloc;

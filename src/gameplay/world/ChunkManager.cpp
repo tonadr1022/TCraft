@@ -60,7 +60,7 @@ void ChunkManager::Init() {
   for (int i = 1; i < block_data.size(); i++) {
     blocks.emplace_back(i);
   }
-  for (pos.x = 0; pos.x < 10; pos.x++) {
+  for (pos.x = 0; pos.x < 100; pos.x++) {
     chunk_map_.emplace(pos, std::make_unique<Chunk>(pos));
     Chunk* chunk = chunk_map_.at(pos).get();
 

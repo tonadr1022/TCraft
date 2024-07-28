@@ -150,7 +150,6 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
 }
 
 BlockEditorScene::~BlockEditorScene() {
-  spdlog::info("block editor scene destructor");
   block_db_.WriteBlockData();
   auto& renderer = scene_manager_.GetRenderer();
   renderer.FreeChunk(edit_model_block_.mesh.handle_);
