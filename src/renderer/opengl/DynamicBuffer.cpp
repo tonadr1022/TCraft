@@ -73,6 +73,7 @@ uint32_t DynamicBuffer::Allocate(uint32_t size_bytes, void* data, uint32_t& offs
     }
     // if there isn't an allocation small enough, return 0, null handle
     if (smallest_free_alloc == allocs_.end()) {
+      spdlog::error("uh oh, no space left");
       return 0;
     }
   }

@@ -6,22 +6,22 @@
     "load_distance": 18
   },
   "fps_cam": {
-    "pitch": -11.899906158447266,
-    "yaw": 364.59869384765625
+    "pitch": -21.802410125732422,
+    "yaw": 938.5863647460938
   },
   "main": {
     "fps_cam_fov_deg": 74.00000762939453,
     "load_distance": 0,
-    "mouse_sensitivity": 1.0
+    "mouse_sensitivity": 2.196000099182129
   },
   "renderer": {
     "wireframe_enabled": false
   },
   "world": {
     "player_position": [
-      135.8441162109375,
-      9.477303504943848,
-      17.976125717163086
+      13.676902770996094,
+      34.61079406738281,
+      13.406453132629395
     ]
   }
 }

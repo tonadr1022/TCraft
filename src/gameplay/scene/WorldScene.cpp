@@ -84,7 +84,7 @@ void WorldScene::Render(const Window& window) {
     for (const auto& it : chunk_manager_.GetVisibleChunks()) {
       auto& mesh = it.second->GetMesh();
       glm::vec3 pos = it.first * ChunkLength;
-      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.handle_);
+      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.Handle());
     }
   }
   Renderer::Get().RenderWorld(*this, render_info);

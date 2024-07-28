@@ -76,8 +76,8 @@ void Application::Run() {
   nlohmann::json app_settings_json = {{"imgui_enabled", imgui_enabled_}};
   SettingsManager::Get().SaveSetting(app_settings_json, "application");
 
-  Renderer::Get().Shutdown();
   scene_manager_.Shutdown();
+  Renderer::Get().Shutdown();
   window_.Shutdown();
 }
 

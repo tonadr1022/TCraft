@@ -10,6 +10,18 @@ struct ChunkVertex {
 
 class ChunkMesh {
  public:
-  uint32_t handle_{UINT32_MAX};
-  [[nodiscard]] inline bool IsAllocated() const { return handle_ != UINT32_MAX; };
+  ~ChunkMesh();
+  ChunkMesh();
+  void Allocate(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices);
+
+  ChunkMesh(ChunkMesh& other) = delete;
+  ChunkMesh& operator=(ChunkMesh& other) = delete;
+  ChunkMesh(ChunkMesh&& other) noexcept;
+  ChunkMesh& operator=(ChunkMesh&& other) noexcept;
+
+  [[nodiscard]] uint32_t Handle() const;
+  [[nodiscard]] inline bool IsAllocated() const { return handle_ != 0; };
+
+ private:
+  uint32_t handle_{0};
 };

@@ -46,7 +46,7 @@ void SettingsManager::SaveSetting(json& j, std::string_view name) { settings_jso
 
 void SettingsManager::OnImGui() {
   if (ImGui::CollapsingHeader("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-    ImGui::SliderFloat("Mouse Sensitivity", &mouse_sensitivity, 0.2, 1.0);
+    ImGui::SliderFloat("Mouse Sensitivity", &mouse_sensitivity, 0.2, 3.0);
     float fps_cam_fov_rad = glm::radians(fps_cam_fov_deg);
     if (ImGui::SliderAngle("FPS Camera FOV", &fps_cam_fov_rad, 45, 120)) {
       fps_cam_fov_deg = glm::degrees(fps_cam_fov_rad);

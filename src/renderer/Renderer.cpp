@@ -36,8 +36,8 @@ void Renderer::Init() {
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<float>(0, 3, offsetof(ChunkVertex, position));
   chunk_vao_.EnableAttribute<float>(1, 3, offsetof(ChunkVertex, tex_coords));
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 10'000'000, sizeof(ChunkVertex));
-  chunk_ebo_.Init(sizeof(uint32_t) * 10'000'000, sizeof(uint32_t));
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 100'000'00, sizeof(ChunkVertex));
+  chunk_ebo_.Init(sizeof(uint32_t) * 100'000'000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
   chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxDrawCmds, GL_DYNAMIC_STORAGE_BIT);
