@@ -27,8 +27,8 @@ void Renderer::Init() {
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<float>(0, 3, offsetof(ChunkVertex, position));
   chunk_vao_.EnableAttribute<float>(1, 3, offsetof(ChunkVertex, tex_coords));
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 10'000'000, GL_DYNAMIC_STORAGE_BIT);
-  chunk_ebo_.Init(sizeof(uint32_t) * 10'000'000, GL_DYNAMIC_STORAGE_BIT);
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 10'000'000, sizeof(ChunkVertex));
+  chunk_ebo_.Init(sizeof(uint32_t) * 10'000'000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
   chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxDrawCmds, GL_DYNAMIC_STORAGE_BIT);
@@ -42,11 +42,11 @@ void Renderer::Shutdown() {
   SettingsManager::Get().SaveSetting(settings, "renderer");
 }
 
-void Renderer::Reset() {
-  spdlog::info("resetting renderer buffers");
-  chunk_ebo_.ResetOffset();
-  chunk_vbo_.ResetOffset();
-}
+// void Renderer::Reset() {
+//   spdlog::info("resetting renderer buffers");
+//   chunk_ebo_.ResetOffset();
+//   chunk_vbo_.ResetOffset();
+// }
 
 void Renderer::RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info) {
   ZoneScoped;
@@ -133,16 +133,30 @@ void Renderer::SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_hand
 
 uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
                                  std::vector<uint32_t>& indices) {
+  uint32_t chunk_vbo_offset;
+  uint32_t chunk_ebo_offset;
   uint32_t id = dei_cmds_.size();
+  chunk_allocs_.try_emplace(
+      id, ChunkAlloc{
+              .vbo_handle = chunk_vbo_.Allocate(sizeof(ChunkVertex) * vertices.size(),
+                                                vertices.data(), chunk_vbo_offset),
+              .ebo_handle = chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(),
+                                                chunk_ebo_offset),
+          });
+
+  spdlog::info("size: {}, indices_size {}, vbo_offset: {}, ebo_offset: {}, {} {}",
+               sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(),
+               chunk_vbo_offset, chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex),
+               chunk_ebo_offset / sizeof(uint32_t));
+
+  spdlog::info("indices size {}", indices.size());
   dei_cmds_.emplace_back(DrawElementsIndirectCommand{
       .count = static_cast<uint32_t>(indices.size()),
       .instance_count = 0,
-      .first_index = static_cast<uint32_t>(chunk_ebo_.Offset() / sizeof(uint32_t)),
-      .base_vertex = static_cast<uint32_t>(chunk_vbo_.Offset() / sizeof(ChunkVertex)),
+      .first_index = static_cast<uint32_t>(chunk_ebo_offset / sizeof(uint32_t)),
+      .base_vertex = static_cast<uint32_t>(chunk_vbo_offset / sizeof(ChunkVertex)),
       .base_instance = 0,
   });
-  chunk_vbo_.SubData(sizeof(ChunkVertex) * vertices.size(), vertices.data());
-  chunk_ebo_.SubData(sizeof(uint32_t) * indices.size(), indices.data());
   return id;
 }
 

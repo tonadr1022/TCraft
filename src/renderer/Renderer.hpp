@@ -7,6 +7,7 @@
 
 #include "renderer/ShaderManager.hpp"
 #include "renderer/opengl/Buffer.hpp"
+#include "renderer/opengl/DynamicBuffer.hpp"
 #include "renderer/opengl/VertexArray.hpp"
 
 struct DrawElementsIndirectCommand {
@@ -37,7 +38,7 @@ class Renderer {
   void RenderWorld(const WorldScene& world, const RenderInfo& render_info);
   void RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info);
   void Render(const Window& window) const;
-  void Reset();
+  // void Reset();
   void SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle);
   [[nodiscard]] uint32_t AllocateChunk(std::vector<ChunkVertex>& vertices,
                                        std::vector<uint32_t>& indices);
@@ -56,14 +57,18 @@ class Renderer {
     glm::mat4 model;
   };
 
-  std::unique_ptr<Buffer> vertex_buffer_{nullptr};
-  std::unique_ptr<Buffer> element_buffer_{nullptr};
-
   VertexArray chunk_vao_;
-  Buffer chunk_vbo_;
-  Buffer chunk_ebo_;
+  DynamicBuffer chunk_vbo_;
+  DynamicBuffer chunk_ebo_;
   Buffer chunk_uniform_ssbo_;
   Buffer chunk_draw_indirect_buffer_;
+
+  struct ChunkAlloc {
+    uint32_t vbo_handle;
+    uint32_t ebo_handle;
+  };
+
+  std::unordered_map<uint32_t, ChunkAlloc> chunk_allocs_;
 
   std::vector<uint32_t> frame_draw_cmd_mesh_ids_;
   std::vector<ChunkDrawCmdUniform> frame_chunk_draw_cmd_uniforms_;

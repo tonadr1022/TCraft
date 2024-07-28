@@ -21,6 +21,7 @@ set(SOURCES
     renderer/opengl/Shader.cpp
     renderer/opengl/VertexArray.cpp
     renderer/opengl/Buffer.cpp
+    renderer/opengl/DynamicBuffer.cpp
 
     util/LoadFile.cpp
     util/StringUtil.cpp

@@ -66,6 +66,7 @@ void BlockEditorScene::Reload() {
 }
 
 void BlockEditorScene::HandleEditModelChange(BlockModelType type) {}
+
 void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   ZoneScoped;
   if (block_mesh_data_.size() != 3) block_mesh_data_.resize(3);
@@ -93,19 +94,18 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   }
 
   // TODO: allow removal of meshes from the renderer buffers instead of resetting
-  scene_manager_.GetRenderer().Reset();
+  // scene_manager_.GetRenderer().Reset();
   // TODO: refactor so block data either isn't necessary or used
+  auto i = static_cast<uint32_t>(type);
   ChunkMesher block_mesher{block_db_.GetBlockData(), block_mesh_data_};
-  for (uint32_t i = 0; i < 3; i++) {
-    std::vector<ChunkVertex> vertices;
-    std::vector<uint32_t> indices;
-    block_mesher.GenerateBlock(vertices, indices, i);
-    add_model_blocks_[i] = {
-        .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
-        .pos = {0, i * 1.1, 0},
-        .block = static_cast<BlockType>(i),
-    };
-  }
+  std::vector<ChunkVertex> vertices;
+  std::vector<uint32_t> indices;
+  block_mesher.GenerateBlock(vertices, indices, i);
+  add_model_blocks_[i] = {
+      .mesh = {scene_manager_.GetRenderer().AllocateChunk(vertices, indices)},
+      .pos = {0, i * 1.1, 0},
+      .block = static_cast<BlockType>(i),
+  };
 }
 
 BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_manager) {
