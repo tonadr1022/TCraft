@@ -100,6 +100,7 @@ void BlockDB::LoadBlockData() {
     auto block_data = util::LoadJsonFile(file.path());
     BlockData data;
     data.name = block_data.value("name", block_defaults_.name);
+    data.full_file_path = file.path();
     data.id = id++;
     if (block_data.contains("properties")) {
       auto properties = block_data["properties"];
@@ -123,7 +124,7 @@ void BlockDB::LoadBlockData() {
   // reserve air
   block_data_arr_.emplace_back(
       BlockData{.id = 0,
-                .filename = "",
+                .full_file_path = "",
                 .name = "Air",
                 .move_slow_multiplier = block_defaults_.move_slow_multiplier,
                 .emits_light = false});
@@ -135,24 +136,20 @@ void BlockDB::LoadBlockData() {
   }
 }
 
-void BlockDB::WriteBlockData() const {
-  for (size_t i = 1; i < block_data_arr_.size(); i++) {
-    json block_data_json = json::object();
-    const auto& block_data = block_data_arr_[i];
-    const auto& block_mesh_data = block_mesh_data_[i];
-    block_data_json["model"] = block_model_names_[i];
-    block_data_json["name"] = block_data.name;
-    auto properties = json::object();
-    if (block_data.move_slow_multiplier != block_defaults_.move_slow_multiplier) {
-      properties["move_slow_multiplier"] = block_data.move_slow_multiplier;
-    }
-    if (block_data.emits_light != block_defaults_.emits_light) {
-      properties["emits_light"] = block_data.emits_light;
-    }
-    block_data_json["properties"] = properties;
-    json_util::WriteJson(block_data_json,
-                         GET_PATH("resources/data/block" + block_data.filename + ".json"));
+void BlockDB::WriteBlockData(const BlockData& block_data, const std::string& model_name) const {
+  EASSERT_MSG(block_data.full_file_path != "", "Invalid file path");
+  json block_data_json = json::object();
+  block_data_json["model"] = model_name;
+  block_data_json["name"] = block_data.name;
+  auto properties = json::object();
+  if (block_data.move_slow_multiplier != block_defaults_.move_slow_multiplier) {
+    properties["move_slow_multiplier"] = block_data.move_slow_multiplier;
   }
+  if (block_data.emits_light != block_defaults_.emits_light) {
+    properties["emits_light"] = block_data.emits_light;
+  }
+  block_data_json["properties"] = properties;
+  json_util::WriteJson(block_data_json, block_data.full_file_path);
 }
 
 std::optional<BlockModelData> BlockDB::LoadBlockModelData(const std::string& model_name) {

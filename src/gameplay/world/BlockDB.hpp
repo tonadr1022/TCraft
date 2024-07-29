@@ -12,7 +12,7 @@ struct BlockMeshData {
 
 struct BlockData {
   BlockType id;
-  std::string filename;
+  std::string full_file_path;
   std::string name;
   float move_slow_multiplier;
   bool emits_light;
@@ -53,7 +53,7 @@ class BlockDB {
 
   void Init();
   void LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
-  void WriteBlockData() const;
+  void WriteBlockData(const BlockData& data, const std::string& model_name) const;
   void LoadBlockData();
 
   [[nodiscard]] static std::vector<std::string> GetAllBlockTexturesFromAllModels();

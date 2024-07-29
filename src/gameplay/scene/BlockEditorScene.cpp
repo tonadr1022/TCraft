@@ -75,9 +75,11 @@ void BlockEditorScene::Reload() {
     ChunkMesher::GenerateBlock(vertices, indices, block_db_.GetMeshData()[i].texture_indices);
     blocks_.emplace_back(SingleBlock{
         .pos = {(-num_blocks + i), 0, 0},
-        .mesh_data = {.texture_indices = block_db_.block_mesh_data_[i].texture_indices},
     });
+    blocks_[blocks_.size() - 1].mesh.Allocate(vertices, indices);
   }
+  original_edit_block_data_ = block_db_.block_data_arr_[1];
+  original_edit_block_model_name_ = block_db_.block_model_names_[1];
 }
 
 void BlockEditorScene::HandleEditModelChange() {
@@ -152,7 +154,6 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
 }
 
 BlockEditorScene::~BlockEditorScene() {
-  block_db_.WriteBlockData();
   TextureManager::Get().Remove2dArray(render_params_.chunk_tex_array_handle);
 };
 
@@ -425,55 +426,48 @@ void BlockEditorScene::OnImGui() {
       auto& block_data_arr = block_db_.block_data_arr_;
       auto& block_data_model_names = block_db_.block_model_names_;
 
-      static BlockData original_edit_block_data;
-      static std::string original_edit_block_model_name;
-      static int edit_block_idx = 1;
       if (ImGui::BeginCombo("Block##edit_block_select",
-                            block_data_arr[edit_block_idx].name.c_str())) {
-        for (uint32_t i = 0; i < block_data_arr.size(); i++) {
+                            block_data_arr[edit_block_idx_].name.c_str())) {
+        for (uint32_t i = 1; i < block_data_arr.size(); i++) {
           const auto& block_data = block_data_arr[i];
-          if (block_data.name == block_data_arr[edit_block_idx].name) continue;
+          if (block_data.name == block_data_arr[edit_block_idx_].name) continue;
           if (ImGui::Selectable(block_data.name.data())) {
-            original_edit_block_data = block_data;
-            edit_block_idx = i;
+            original_edit_block_data_ = block_data;
+            edit_block_idx_ = i;
             player_.SetPosition(glm::vec3{0.f, 0.5f, 5.0f} + blocks_[i].pos);
             player_.GetCamera().LookAt(blocks_[i].pos);
           }
         }
         ImGui::EndCombo();
       }
-      for (uint32_t i = 1; i < block_data_arr.size(); i++) {
-        const auto& block_data = block_data_arr[i];
-        if (ImGui::Button(block_data.name.data())) {
-          edit_block_idx = i;
-          original_edit_block_data = block_data_arr[edit_block_idx];
-          original_edit_block_model_name = block_data_model_names[edit_block_idx];
+
+      ImGui::InputText("Name", &block_data_arr[edit_block_idx_].name);
+      ImGui::Checkbox("Emits Light", &block_data_arr[edit_block_idx_].emits_light);
+      if (ImGui::BeginCombo("##Model",
+                            ("Model: " + block_data_model_names[edit_block_idx_]).c_str())) {
+        for (const auto& model : all_block_model_names_) {
+          if (model == block_data_model_names[edit_block_idx_]) continue;
+          if (ImGui::Selectable(model.data())) {
+            block_data_model_names[edit_block_idx_] = model;
+          }
         }
+        ImGui::EndCombo();
       }
 
-      static BlockModelType edit_block_model_type;
-      if (edit_block_idx != -1) {
-        // initialize the first time with block data name
-        ImGui::InputText("Name", &block_data_arr[edit_block_idx].name);
-        ImGui::Checkbox("Emits Light", &block_data_arr[edit_block_idx].emits_light);
-        if (ImGui::BeginCombo("##Model",
-                              ("Model: " + block_data_model_names[edit_block_idx]).c_str())) {
-          for (const auto& model : all_block_model_names_) {
-            if (model == block_data_model_names[edit_block_idx]) continue;
-            if (ImGui::Selectable(model.data())) {
-              block_data_model_names[edit_block_idx] = model;
-            }
-          }
-          ImGui::EndCombo();
-        }
-
-        if (ImGui::Button("Cancel")) {
-          block_data_arr[edit_block_idx] = original_edit_block_data;
-          block_data_model_names[edit_block_idx] = original_edit_block_model_name;
-          edit_block_idx = -1;
-        }
+      if (ImGui::Button("Cancel")) {
+        block_data_arr[edit_block_idx_] = original_edit_block_data_;
+        block_data_model_names[edit_block_idx_] = original_edit_block_model_name_;
+      }
+      if (ImGui::Button("Save")) {
+        block_db_.WriteBlockData(block_data_arr[edit_block_idx_],
+                                 block_data_model_names[edit_block_idx_]);
+        original_edit_block_data_ = block_data_arr[edit_block_idx_];
+        original_edit_block_model_name_ = block_data_model_names[edit_block_idx_];
       }
       ImGui::EndTabItem();
+    }
+
+    if (ImGui::BeginTabItem("Add Block")) {
     }
     ImGui::EndTabBar();
   }

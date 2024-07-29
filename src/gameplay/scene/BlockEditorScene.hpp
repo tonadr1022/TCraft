@@ -60,7 +60,8 @@ class BlockEditorScene : public Scene {
 
   std::vector<SingleBlock> blocks_;
 
-  std::vector<BlockData> block_data_;
+  std::vector<BlockData> existing_block_data_;
+  BlockData add_block_data_;
   std::vector<std::string> all_block_model_names_;
   std::vector<std::string> all_block_texture_names_;
   std::unordered_set<std::string> all_block_model_names_set_;
@@ -69,4 +70,9 @@ class BlockEditorScene : public Scene {
 
   constexpr const static std::array<std::string, 3> TexTypes = {"all", "top_bottom", "unique"};
   constexpr const static std::array<std::string, 3> TexTypeNames = {"All", "Top Bottom", "Unique"};
+
+  BlockData original_edit_block_data_;
+  BlockData edit_block_data_;
+  std::string original_edit_block_model_name_;
+  uint32_t edit_block_idx_{1};
 };
