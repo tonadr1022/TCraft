@@ -18,12 +18,21 @@ find_package(Tracy CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 add_compile_definitions(TRACY_ENABLE)
-option ( TRACY_ENABLE "" ON)
+option(TRACY_ENABLE "" ON)
 
 add_compile_definitions(SHADER_PATH="${CMAKE_SOURCE_DIR}/resources/shaders/")
 add_compile_definitions(TEXTURE_PATH="${CMAKE_SOURCE_DIR}/resources/textures/")
 add_compile_definitions(MODEL_PATH="${CMAKE_SOURCE_DIR}/resources/models/")
 add_compile_definitions(SRC_PATH="${CMAKE_SOURCE_DIR}/")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
+    endif()
+endif()
+
 
 include_directories(dep)
 include_directories(src)

@@ -4,6 +4,7 @@
 #include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "renderer/ChunkMesh.hpp"
+#include "renderer/ChunkRenderParams.hpp"
 
 class BlockEditorScene : public Scene {
  public:
@@ -15,16 +16,10 @@ class BlockEditorScene : public Scene {
   bool OnEvent(const SDL_Event& event) override;
   void Render(const Window& window) override;
 
-  struct RenderParams {
-    uint32_t chunk_tex_array_handle{0};
-  };
-
-  RenderParams render_params_;
-
  private:
   struct SingleBlock {
-    ChunkMesh mesh;
     glm::vec3 pos;
+    ChunkMesh mesh;
     BlockMeshData mesh_data;
   };
 
@@ -34,6 +29,7 @@ class BlockEditorScene : public Scene {
     AddBlock,
     EditBlock,
   };
+
   EditMode edit_mode_;
   float block_rot_{0};
   void Reload();
@@ -74,4 +70,6 @@ class BlockEditorScene : public Scene {
   BlockData original_edit_block_data_;
   std::string original_edit_block_model_name_;
   uint32_t edit_block_idx_{1};
+
+  ChunkRenderParams chunk_render_params_;
 };

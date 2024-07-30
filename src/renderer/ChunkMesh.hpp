@@ -1,6 +1,5 @@
 #pragma once
 
-#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
 struct ChunkVertex {
@@ -12,6 +11,7 @@ class ChunkMesh {
  public:
   ~ChunkMesh();
   ChunkMesh();
+  ChunkMesh(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices);
   void Allocate(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices);
 
   ChunkMesh(ChunkMesh& other) = delete;

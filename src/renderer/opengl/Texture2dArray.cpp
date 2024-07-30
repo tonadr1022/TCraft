@@ -44,7 +44,7 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
                      params.all_pixels_data.size());
 
   spdlog::info("create tex array {} of depth: {}", id_, params.all_pixels_data.size());
-  for (int i = 0; i < params.all_pixels_data.size(); i++) {
+  for (size_t i = 0; i < params.all_pixels_data.size(); i++) {
     glTextureSubImage3D(id_, 0, 0, 0, i, params.dims.x, params.dims.y, 1, params.format,
                         GL_UNSIGNED_BYTE, params.all_pixels_data[i]);
   }

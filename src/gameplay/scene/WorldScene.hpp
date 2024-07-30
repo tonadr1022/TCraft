@@ -4,6 +4,7 @@
 #include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
+#include "renderer/ChunkRenderParams.hpp"
 
 class WorldScene : public Scene {
  public:
@@ -17,10 +18,7 @@ class WorldScene : public Scene {
 
   BlockDB block_db_;
 
-  struct WorldRenderParams {
-    uint32_t chunk_tex_array_handle{0};
-  };
-  WorldRenderParams world_render_params_;
+  ChunkRenderParams chunk_render_params_;
   ChunkManager chunk_manager_;
 
  private:

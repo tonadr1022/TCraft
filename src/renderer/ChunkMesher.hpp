@@ -4,8 +4,8 @@
 
 struct ChunkVertex;
 class ChunkData;
-class BlockData;
-class BlockMeshData;
+struct BlockData;
+struct BlockMeshData;
 
 class ChunkMesher {
  public:

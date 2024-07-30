@@ -101,7 +101,6 @@ void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVe
                                 std::vector<uint32_t>& indices) {
   ZoneScoped;
   const auto& blocks = chunk_data.GetBlocks();
-  glm::ivec3 pos;
   int idx = 0;
   for (int y = 0; y < ChunkLength; y++) {
     for (int z = 0; z < ChunkLength; z++) {

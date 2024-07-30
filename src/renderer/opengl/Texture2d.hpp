@@ -30,7 +30,7 @@ class Texture2D {
   void Bind() const;
 
  private:
-  glm::ivec2 dims_{};
   uint32_t id_{0};
   uint32_t bindless_handle_{0};
+  glm::ivec2 dims_{};
 };

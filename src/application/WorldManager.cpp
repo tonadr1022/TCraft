@@ -2,7 +2,6 @@
 
 #include <nlohmann/json.hpp>
 
-#include "pch.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -25,7 +24,7 @@ void WorldManager::CreateWorldStructure(const WorldCreateParams& params) {
   json_util::WriteJson(settings, world_path / "data.json");
 }
 
-void WorldManager::DeleteWorld(std::string_view name) {}
+void WorldManager::DeleteWorld(std::string_view) {}
 
 WorldManager::WorldManager() {
   for (const auto& dir : fs::directory_iterator(GET_PATH("resources/worlds"))) {

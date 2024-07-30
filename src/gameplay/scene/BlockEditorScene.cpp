@@ -46,7 +46,7 @@ void BlockEditorScene::Reload() {
       all_texture_pixel_data.emplace_back(image.pixels);
     }
 
-    render_params_.chunk_tex_array_handle =
+    chunk_render_params_.chunk_tex_array_handle =
         TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
                                              .dims = glm::ivec2{32, 32},
                                              .generate_mipmaps = true,
@@ -73,8 +73,9 @@ void BlockEditorScene::Reload() {
     ChunkMesher::GenerateBlock(vertices, indices, block_db_.GetMeshData()[i].texture_indices);
     blocks_.emplace_back(SingleBlock{
         .pos = {(-num_blocks + i), 0, 0},
+        .mesh = {vertices, indices},
+        .mesh_data = {},
     });
-    blocks_[blocks_.size() - 1].mesh.Allocate(vertices, indices);
   }
   original_edit_block_data_ = block_db_.block_data_arr_[1];
   original_edit_block_model_name_ = block_db_.block_model_names_[1];
@@ -152,7 +153,7 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
 }
 
 BlockEditorScene::~BlockEditorScene() {
-  TextureManager::Get().Remove2dArray(render_params_.chunk_tex_array_handle);
+  TextureManager::Get().Remove2dArray(chunk_render_params_.chunk_tex_array_handle);
 };
 
 void BlockEditorScene::Render(const Window& window) {
@@ -178,11 +179,12 @@ void BlockEditorScene::Render(const Window& window) {
     }
   }
 
-  Renderer::Get().RenderBlockEditor(
-      *this, {
-                 .vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
-                              player_.GetCamera().GetView(),
-             });
+  Renderer::Get().RenderWorld(
+      chunk_render_params_,
+      {
+          .vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
+                       player_.GetCamera().GetView(),
+      });
 }
 
 void BlockEditorScene::ResetAddModelData() {

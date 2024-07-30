@@ -33,7 +33,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
       tex_name_to_idx[tex_name] = tex_idx++;
       all_texture_pixel_data.emplace_back(image.pixels);
     }
-    world_render_params_.chunk_tex_array_handle =
+    chunk_render_params_.chunk_tex_array_handle =
         TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
                                              .dims = glm::ivec2{32, 32},
                                              .generate_mipmaps = true,
@@ -87,7 +87,7 @@ void WorldScene::Render(const Window& window) {
       Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.Handle());
     }
   }
-  Renderer::Get().RenderWorld(*this, render_info);
+  Renderer::Get().RenderWorld(chunk_render_params_, render_info);
 }
 
 WorldScene::~WorldScene() {

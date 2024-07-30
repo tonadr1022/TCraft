@@ -33,6 +33,6 @@ class Texture2dArray {
 
  private:
   void LoadFromParams(const Texture2dArrayCreateParams& params);
-  glm::ivec2 dims_{};
   uint32_t id_{0};
+  glm::ivec2 dims_{};
 };

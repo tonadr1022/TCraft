@@ -5,6 +5,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 
+#include "renderer/ChunkRenderParams.hpp"
 #include "renderer/ShaderManager.hpp"
 #include "renderer/opengl/Buffer.hpp"
 #include "renderer/opengl/DynamicBuffer.hpp"
@@ -22,10 +23,10 @@ class WorldScene;
 class BlockEditorScene;
 class Window;
 class BlockDB;
+struct Vertex;
 struct ChunkVertex;
 
 struct RenderInfo {
-  glm::ivec2 window_dims;
   glm::mat4 vp_matrix;
 };
 
@@ -36,14 +37,18 @@ class Renderer {
   bool render_chunks_{true};
   bool wireframe_enabled_{false};
 
-  void RenderWorld(const WorldScene& world, const RenderInfo& render_info);
-  void RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info);
-  void Render(const Window& window) const;
+  void RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info);
   // void Reset();
   void SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle);
-  [[nodiscard]] uint32_t AllocateChunk(std::vector<ChunkVertex>& vertices,
-                                       std::vector<uint32_t>& indices);
-  void FreeChunk(uint32_t handle);
+  [[nodiscard]] uint32_t AllocateMesh(std::vector<ChunkVertex>& vertices,
+                                      std::vector<uint32_t>& indices);
+
+  // [[nodiscard]] uint32_t AllocateMesh(std::vector<Vertex>& vertices,
+  //                                     std::vector<uint32_t>& indices);
+
+  void FreeChunkMesh(uint32_t handle);
+  void FreeMesh(uint32_t handle);
+
   void Init();
   void StartFrame(const Window& window);
   bool OnEvent(const SDL_Event& event);
@@ -67,6 +72,12 @@ class Renderer {
   Buffer chunk_uniform_ssbo_;
   Buffer chunk_draw_indirect_buffer_;
 
+  VertexArray default_vao_;
+  DynamicBuffer default_vbo_;
+  DynamicBuffer default_ebo_;
+  Buffer default_uniform_ssbo_;
+  Buffer default_draw_indirect_buffer_;
+
   struct ChunkAlloc {
     uint32_t vbo_handle;
     uint32_t ebo_handle;
@@ -81,5 +92,5 @@ class Renderer {
   // std::vector<DrawElementsIndirectCommand> dei_cmds_;
 
   void LoadShaders();
-  void SetFrameDrawCommands();
+  void SetChunkFrameDrawCommands();
 };

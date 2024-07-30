@@ -5,8 +5,6 @@
 #include "ShaderManager.hpp"
 #include "application/SettingsManager.hpp"
 #include "application/Window.hpp"
-#include "gameplay/scene/BlockEditorScene.hpp"
-#include "gameplay/scene/WorldScene.hpp"
 #include "pch.hpp"
 #include "renderer/ChunkMesh.hpp"
 #include "renderer/opengl/Debug.hpp"
@@ -52,37 +50,20 @@ void Renderer::Shutdown() {
   SettingsManager::Get().SaveSetting(settings, "renderer");
 }
 
-void Renderer::RenderBlockEditor(const BlockEditorScene& scene, const RenderInfo& render_info) {
+void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
   ZoneScoped;
-  SetFrameDrawCommands();
+  SetChunkFrameDrawCommands();
   auto shader = shader_manager_.GetShader("chunk_batch");
   shader->Bind();
   shader->SetMat4("vp_matrix", render_info.vp_matrix);
   const auto& chunk_tex_arr =
-      TextureManager::Get().GetTexture2dArray(scene.render_params_.chunk_tex_array_handle);
+      TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
   chunk_tex_arr.Bind(0);
   chunk_vao_.Bind();
   glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, frame_dei_cmds_.size(), 0);
 }
 
-void Renderer::RenderWorld(const WorldScene& world, const RenderInfo& render_info) {
-  ZoneScoped;
-  SetFrameDrawCommands();
-  {
-    ZoneScopedN("Render chunks");
-    auto shader = shader_manager_.GetShader("chunk_batch");
-    shader->Bind();
-    shader->SetMat4("vp_matrix", render_info.vp_matrix);
-
-    const auto& chunk_tex_arr =
-        TextureManager::Get().GetTexture2dArray(world.world_render_params_.chunk_tex_array_handle);
-    chunk_tex_arr.Bind(0);
-    chunk_vao_.Bind();
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, frame_dei_cmds_.size(), 0);
-  }
-}
-
-void Renderer::SetFrameDrawCommands() {
+void Renderer::SetChunkFrameDrawCommands() {
   ZoneScoped;
   chunk_uniform_ssbo_.ResetOffset();
   chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * frame_chunk_draw_cmd_uniforms_.size(),
@@ -93,7 +74,6 @@ void Renderer::SetFrameDrawCommands() {
     frame_dei_cmds_.reserve(frame_chunk_draw_cmd_uniforms_.size());
   }
   DrawElementsIndirectCommand cmd;
-  uint32_t base_instance{0};
   EASSERT_MSG(frame_chunk_draw_cmd_uniforms_.size() == frame_draw_cmd_mesh_ids_.size(),
               "Per frame draw cmd size must equal mesh cmd size");
   for (uint32_t i = 0; i < frame_draw_cmd_mesh_ids_.size(); i++) {
@@ -118,8 +98,8 @@ void Renderer::SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_hand
   frame_chunk_draw_cmd_uniforms_.emplace_back(model);
 }
 
-uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
-                                 std::vector<uint32_t>& indices) {
+uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
+                                std::vector<uint32_t>& indices) {
   ZoneScoped;
   uint32_t chunk_vbo_offset;
   uint32_t chunk_ebo_offset;
@@ -150,7 +130,7 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
   return id;
 }
 
-void Renderer::FreeChunk(uint32_t handle) {
+void Renderer::FreeChunkMesh(uint32_t handle) {
   auto it = chunk_allocs_.find(handle);
   if (it == chunk_allocs_.end()) {
     spdlog::error("FreeChunk: handle not found: {}", handle);
@@ -172,8 +152,6 @@ void Renderer::StartFrame(const Window& window) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 }
-
-void Renderer::Render(const Window& window) const {}
 
 bool Renderer::OnEvent(const SDL_Event& event) {
   switch (event.type) {
@@ -197,3 +175,5 @@ void Renderer::LoadShaders() {
                             {{GET_SHADER_PATH("chunk_batch.vs.glsl"), ShaderType::Vertex},
                              {GET_SHADER_PATH("chunk_batch.fs.glsl"), ShaderType::Fragment}});
 }
+
+// uint32_t Renderer::AllocateMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {}

@@ -24,7 +24,7 @@ BlockType ChunkManager::GetBlock(const glm::ivec3& pos) {
   return it->second->GetData().GetBlock(util::chunk::WorldToPosInChunk(pos));
 }
 
-void ChunkManager::Update(double dt) {
+void ChunkManager::Update(double /*dt*/) {
   // only update if player changes chunk location
 }
 
@@ -38,7 +38,7 @@ void ChunkManager::Init() {
   const auto& block_data = block_db_.GetBlockData();
   blocks.reserve(block_data.size());
   spdlog::info("block_data size {}", block_data.size());
-  for (int i = 1; i < block_data.size(); i++) {
+  for (size_t i = 1; i < block_data.size(); i++) {
     blocks.emplace_back(i);
   }
 

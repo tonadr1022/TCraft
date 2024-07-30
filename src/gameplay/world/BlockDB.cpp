@@ -23,7 +23,7 @@ void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_t
   block_mesh_data_.emplace_back(default_mesh_data_);
 
   // load block mesh data array
-  for (int i = 1; i < block_model_names_.size(); i++) {
+  for (size_t i = 1; i < block_model_names_.size(); i++) {
     const auto& model_name = block_model_names_[i];
     BlockModelData data_general = model_name_to_model_data_[model_name];
     BlockMeshData mesh_data = default_mesh_data_;
@@ -74,7 +74,7 @@ void BlockDB::Init() {
     EASSERT_MSG(default_model_data.has_value(), "Default mesh data failed to load");
 
     // Load each block model file (skip air)
-    for (int i = 1; i < block_model_names_.size(); i++) {
+    for (uint32_t i = 1; i < block_model_names_.size(); i++) {
       const auto& model_name = block_model_names_[i];
       auto block_model_data = LoadBlockModelData(model_name);
       if (block_model_data.has_value()) {
@@ -182,25 +182,11 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelData(const std::string& mod
   BlockModelData block_model_data;
   if (block_model_type == "block/all") {
     block_model_data = BlockModelDataAll{.tex_all = get_tex_name("all")};
-    // int tex_index = get_tex_name("all");
-    // for (auto& val : block_mesh_data.texture_indices) {
-    //   val = tex_index;
-    // }
   } else if (block_model_type == "block/top_bottom") {
     block_model_data = BlockModelDataTopBot{.tex_top = get_tex_name("top"),
                                             .tex_bottom = get_tex_name("bottom"),
                                             .tex_side = get_tex_name("side")};
-    // block_mesh_data.texture_indices[2] = get_tex_name("top");
-    // block_mesh_data.texture_indices[3] = get_tex_name("bottom");
-    // int side_tex_idx = get_tex_name("side");
-    // block_mesh_data.texture_indices[0] = side_tex_idx;
-    // block_mesh_data.texture_indices[1] = side_tex_idx;
-    // block_mesh_data.texture_indices[4] = side_tex_idx;
-    // block_mesh_data.texture_indices[5] = side_tex_idx;
   } else if (block_model_type == "block/unique") {
-    static constexpr const std::array<const char*, 6> SideStrs = {"posx", "negx", "posy", "posz",
-                                                                  "negz"};
-
     block_model_data = BlockModelDataUnique{
         .tex_pos_x = get_tex_name("posx"),
         .tex_neg_x = get_tex_name("negx"),

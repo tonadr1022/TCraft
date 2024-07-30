@@ -37,7 +37,7 @@ Application::Application(int width, int height, const char* title) {
 
   // Add event listeners
   event_dispatcher_.AddListener(
-      [this](const SDL_Event& event) { return Renderer::Get().OnEvent(event); });
+      [](const SDL_Event& event) { return Renderer::Get().OnEvent(event); });
   event_dispatcher_.AddListener(
       [this](const SDL_Event& event) { return scene_manager_.GetActiveScene().OnEvent(event); });
 }
@@ -48,7 +48,6 @@ void Application::Run() {
   scene_manager_.LoadScene("block_editor");
   // scene_manager_.LoadWorld("default");
 
-  RenderInfo render_info;
   Uint64 curr_time = SDL_GetPerformanceCounter();
   Uint64 prev_time = 0;
   double dt = 0;
@@ -112,7 +111,6 @@ void Application::OnEvent(const SDL_Event& event) {
 void Application::OnImGui() {
   ZoneScoped;
   ImGuiIO& io = ImGui::GetIO();
-  static int counter = 0;
   ImGui::Begin("App", nullptr, ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
   ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
   bool vsync = window_.GetVsync();

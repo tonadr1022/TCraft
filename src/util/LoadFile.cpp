@@ -4,10 +4,15 @@
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image/stb_image.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image/stb_image_write.h>
+
+#pragma clang diagnostic pop
 
 namespace util {
 
@@ -24,7 +29,6 @@ std::optional<std::string> LoadFromFile(const std::string& path) {
 
 void LoadImage(Image& image, std::string_view path, bool flip) {
   stbi_set_flip_vertically_on_load(flip);
-  int comp;
   if (!path.empty()) {
     image.pixels = stbi_load(path.data(), &image.width, &image.height, &image.channels, 4);
     if (!image.pixels) {

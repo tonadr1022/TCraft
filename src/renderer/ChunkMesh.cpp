@@ -4,12 +4,16 @@
 
 void ChunkMesh::Allocate(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices) {
   EASSERT_MSG(!IsAllocated(), "Cannot be allocated already");
-  handle_ = Renderer::Get().AllocateChunk(vertices, indices);
+  handle_ = Renderer::Get().AllocateMesh(vertices, indices);
+}
+
+ChunkMesh::ChunkMesh(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices) {
+  handle_ = Renderer::Get().AllocateMesh(vertices, indices);
 }
 
 ChunkMesh::~ChunkMesh() {
   if (handle_) {
-    Renderer::Get().FreeChunk(handle_);
+    Renderer::Get().FreeChunkMesh(handle_);
   }
 }
 ChunkMesh::ChunkMesh() = default;

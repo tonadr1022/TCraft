@@ -33,7 +33,7 @@ void TerrainGenerator::GenerateChecker(ChunkData& chunk, std::vector<BlockType>&
   }
 }
 
-void TerrainGenerator::GeneratePyramid(ChunkData& chunk, std::vector<BlockType>& blocks) {
+void TerrainGenerator::GeneratePyramid(ChunkData& /*chunk*/, std::vector<BlockType>& /*blocks*/) {
   ZoneScoped;
-  glm::ivec3 iter = {(ChunkLength - 1) / 2, 0, (ChunkLength - 1) / 2};
+  // glm::ivec3 iter = {(ChunkLength - 1) / 2, 0, (ChunkLength - 1) / 2};
 }
