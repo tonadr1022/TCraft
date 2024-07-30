@@ -302,11 +302,41 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromName(const std::str
   return LoadBlockModelDataFromPath(GET_PATH("resources/data/model/" + model_name + ".json"));
 }
 
-std::vector<std::string> BlockDB::GetAllModelNames() {
+std::vector<std::string> BlockDB::GetAllBlockModelNames() {
   std::vector<std::string> ret;
   for (const auto& file :
        std::filesystem::directory_iterator(GET_PATH("resources/data/model/block"))) {
-    ret.emplace_back("block/" + file.path().stem().string());
+    ret.emplace_back(file.path().stem().string());
   }
   return ret;
+}
+
+bool BlockData::operator==(const BlockData& other) const {
+  return id == other.id && full_file_path == other.full_file_path && name == other.name &&
+         move_slow_multiplier == other.move_slow_multiplier && emits_light == other.emits_light;
+}
+
+void BlockDB::WriteBlockModelTypeAll(const BlockModelDataAll& data, const std::string& path) {
+  nlohmann::json j = {{"type", "block/all"}, {"textures", {"all", data.tex_all}}};
+  json_util::WriteJson(j, path);
+}
+void BlockDB::WriteBlockModelTypeTopBot(const BlockModelDataTopBot& data, const std::string& path) {
+  nlohmann::json j = {
+      {"type", "block/top_bottom"},
+      {"textures", {{"top", data.tex_top}, {"bottom", data.tex_bottom}, {"side", data.tex_side}}}};
+  json_util::WriteJson(j, path);
+}
+void BlockDB::WriteBlockModelTypeUnique(const BlockModelDataUnique& data, const std::string& path) {
+  nlohmann::json j = {{"type", "block/unique"},
+                      {
+                          "textures",
+                          {"posx", data.tex_pos_x},
+                          {"negx", data.tex_neg_x},
+                          {"posy", data.tex_pos_y},
+                          {"negy", data.tex_neg_y},
+                          {"posz", data.tex_pos_z},
+                          {"negz", data.tex_neg_z},
+                      }};
+  json_util::WriteJson(j, path);
+  // TODO: implement in block Editor scene
 }

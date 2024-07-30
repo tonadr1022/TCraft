@@ -16,6 +16,7 @@ struct BlockData {
   std::string name;
   float move_slow_multiplier;
   bool emits_light;
+  bool operator==(const BlockData& other) const;
 };
 
 enum class BlockModelType { All, TopBottom, Unique };
@@ -54,10 +55,13 @@ class BlockDB {
   void Init();
   void LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
   void WriteBlockData(const BlockData& data, const std::string& model_name) const;
+  static void WriteBlockModelTypeAll(const BlockModelDataAll& data, const std::string& path);
+  static void WriteBlockModelTypeTopBot(const BlockModelDataTopBot& data, const std::string& path);
+  static void WriteBlockModelTypeUnique(const BlockModelDataUnique& data, const std::string& path);
   void LoadBlockData();
 
   [[nodiscard]] static std::vector<std::string> GetAllBlockTexturesFromAllModels();
-  [[nodiscard]] static std::vector<std::string> GetAllModelNames();
+  [[nodiscard]] static std::vector<std::string> GetAllBlockModelNames();
   [[nodiscard]] static std::vector<std::string> GetAllTextureNames();
 
  private:

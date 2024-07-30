@@ -4,7 +4,6 @@
 #include <imgui_stdlib.h>
 
 #include <glm/ext/matrix_transform.hpp>
-#include <nlohmann/json.hpp>
 
 #include "EAssert.hpp"
 #include "application/SceneManager.hpp"
@@ -15,13 +14,12 @@
 #include "renderer/Renderer.hpp"
 #include "resource/Image.hpp"
 #include "resource/TextureManager.hpp"
-#include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
 void BlockEditorScene::Reload() {
   ZoneScoped;
-  all_block_model_names_ = BlockDB::GetAllModelNames();
+  all_block_model_names_ = BlockDB::GetAllBlockModelNames();
   std::sort(all_block_model_names_.begin(), all_block_model_names_.end());
   all_block_model_names_set_ = {all_block_model_names_.begin(), all_block_model_names_.end()};
   all_block_texture_names_ = BlockDB::GetAllTextureNames();
@@ -272,31 +270,20 @@ void BlockEditorScene::OnImGui() {
         add_model_type_ = BlockModelType::All;
       }
       ImGui::SameLine();
-      bool model_name_exists = all_block_model_names_set_.contains("block/" + model_name);
+      bool model_name_exists = all_block_model_names_set_.contains(model_name);
       ImGui::BeginDisabled(model_name_exists);
       if (ImGui::Button("Save")) {
-        nlohmann::json j = nlohmann::json::object();
-        j["type"] = TexTypes[static_cast<uint32_t>(add_model_type_)];
+        std::string path = GET_PATH("resources/data/model/block/" + model_name + ".json");
         if (add_model_type_ == BlockModelType::All) {
-          j["textures"] = {{"all", add_model_data_all_.tex_all}};
+          BlockDB::WriteBlockModelTypeAll(add_model_data_all_, path);
         } else if (add_model_type_ == BlockModelType::TopBottom) {
-          j["textures"] = {{"top", add_model_data_top_bot_.tex_top},
-                           {"bottom", add_model_data_top_bot_.tex_bottom},
-                           {"side", add_model_data_top_bot_.tex_side}};
+          BlockDB::WriteBlockModelTypeTopBot(add_model_data_top_bot_, path);
         } else {
-          j["textures"] = {
-              {"posx", add_model_data_unique_.tex_pos_x},
-              {"negx", add_model_data_unique_.tex_neg_x},
-              {"posy", add_model_data_unique_.tex_pos_y},
-              {"negy", add_model_data_unique_.tex_neg_y},
-              {"posz", add_model_data_unique_.tex_pos_z},
-              {"negz", add_model_data_unique_.tex_neg_z},
-          };
+          BlockDB::WriteBlockModelTypeUnique(add_model_data_unique_, path);
         }
-        json_util::WriteJson(j, GET_PATH("resources/data/model/block/" + model_name + ".json"));
       }
-
       ImGui::EndDisabled();
+
       if (model_name_exists) {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(ImColor(1.f, 0.f, 0.f)));
@@ -310,7 +297,7 @@ void BlockEditorScene::OnImGui() {
         ZoneScopedN("Edit Model tab");
         edit_mode_ = EditMode::EditModel;
         static std::string edit_model_name = all_block_model_names_[0];
-        static auto model_data = BlockDB::LoadBlockModelDataFromName(edit_model_name);
+        static auto model_data = BlockDB::LoadBlockModelDataFromName("block/" + edit_model_name);
         static BlockModelDataAll original_edit_model_data_all;
         static BlockModelDataTopBot original_edit_model_top_bot;
         static BlockModelDataUnique original_edit_model_unique;
@@ -397,25 +384,14 @@ void BlockEditorScene::OnImGui() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Save")) {
-          nlohmann::json j = nlohmann::json::object();
-          j["type"] = "block/" + TexTypes[static_cast<uint32_t>(edit_model_type_)];
+          std::string path = GET_PATH("resources/data/model/" + edit_model_name + ".json");
           if (edit_model_type_ == BlockModelType::All) {
-            j["textures"] = {{"all", edit_model_data_all_.tex_all}};
+            BlockDB::WriteBlockModelTypeAll(edit_model_data_all_, path);
           } else if (edit_model_type_ == BlockModelType::TopBottom) {
-            j["textures"] = {{"top", edit_model_data_top_bot_.tex_top},
-                             {"bottom", edit_model_data_top_bot_.tex_bottom},
-                             {"side", edit_model_data_top_bot_.tex_side}};
+            BlockDB::WriteBlockModelTypeTopBot(edit_model_data_top_bot_, path);
           } else {
-            j["textures"] = {
-                {"posx", edit_model_data_unique_.tex_pos_x},
-                {"negx", edit_model_data_unique_.tex_neg_x},
-                {"posy", edit_model_data_unique_.tex_pos_y},
-                {"negy", edit_model_data_unique_.tex_neg_y},
-                {"posz", edit_model_data_unique_.tex_pos_z},
-                {"negz", edit_model_data_unique_.tex_neg_z},
-            };
+            BlockDB::WriteBlockModelTypeUnique(edit_model_data_unique_, path);
           }
-          json_util::WriteJson(j, GET_PATH("resources/data/model/" + edit_model_name + ".json"));
         }
         ImGui::EndTabItem();
       }
@@ -454,20 +430,27 @@ void BlockEditorScene::OnImGui() {
         ImGui::EndCombo();
       }
 
+      bool changes_exist = original_edit_block_data_ != block_data_arr[edit_block_idx_];
+      ImGui::BeginDisabled(!changes_exist);
       if (ImGui::Button("Cancel")) {
         block_data_arr[edit_block_idx_] = original_edit_block_data_;
         block_data_model_names[edit_block_idx_] = original_edit_block_model_name_;
       }
+      ImGui::EndDisabled();
+      ImGui::SameLine();
+      ImGui::BeginDisabled(!changes_exist);
       if (ImGui::Button("Save")) {
         block_db_.WriteBlockData(block_data_arr[edit_block_idx_],
                                  block_data_model_names[edit_block_idx_]);
         original_edit_block_data_ = block_data_arr[edit_block_idx_];
         original_edit_block_model_name_ = block_data_model_names[edit_block_idx_];
       }
+      ImGui::EndDisabled();
       ImGui::EndTabItem();
     }
 
     if (ImGui::BeginTabItem("Add Block")) {
+      ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
   }

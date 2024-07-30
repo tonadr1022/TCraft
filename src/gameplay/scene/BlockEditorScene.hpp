@@ -72,7 +72,6 @@ class BlockEditorScene : public Scene {
   constexpr const static std::array<std::string, 3> TexTypeNames = {"All", "Top Bottom", "Unique"};
 
   BlockData original_edit_block_data_;
-  BlockData edit_block_data_;
   std::string original_edit_block_model_name_;
   uint32_t edit_block_idx_{1};
 };
