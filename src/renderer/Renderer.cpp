@@ -42,7 +42,7 @@ void Renderer::Init() {
   chunk_ebo_.Init(sizeof(uint32_t) * 100'000'000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
-  chunk_uniform_ssbo_.Init(sizeof(DrawCmdUniform) * MaxDrawCmds, GL_DYNAMIC_STORAGE_BIT);
+  chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxDrawCmds, GL_DYNAMIC_STORAGE_BIT);
   chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxDrawCmds,
                                    GL_DYNAMIC_STORAGE_BIT);
 
@@ -138,7 +138,7 @@ void Renderer::SetRegMeshFrameDrawCommands() {
 void Renderer::SetChunkFrameDrawCommands() {
   ZoneScoped;
   chunk_uniform_ssbo_.ResetOffset();
-  chunk_uniform_ssbo_.SubData(sizeof(DrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
+  chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
                               chunk_frame_draw_cmd_uniforms_.data());
   {
     ZoneScopedN("Clear per frame and reserve");

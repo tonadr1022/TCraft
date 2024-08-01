@@ -72,6 +72,11 @@ class Renderer {
   Mesh quad_mesh_;
 
   // TODO: try without alignas
+  struct alignas(16) ChunkDrawCmdUniform {
+    glm::mat4 model;
+  };
+
+  // TODO: try without alignas
   struct alignas(16) DrawCmdUniform {
     glm::mat4 model;
     uint64_t material_index;
@@ -103,7 +108,7 @@ class Renderer {
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> reg_mesh_dei_cmds_;
 
   std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
-  std::vector<DrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
+  std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
 
   std::vector<uint32_t> reg_mesh_frame_draw_cmd_mesh_ids_;
