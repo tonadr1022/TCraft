@@ -153,7 +153,7 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
 BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_manager) {
   ZoneScoped;
   Reload();
-  player_.SetCameraFocused(true);
+  player_.SetCameraFocused(false);
   player_.SetPosition({0, 0.5, 1});
 }
 

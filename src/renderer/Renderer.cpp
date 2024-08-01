@@ -61,13 +61,17 @@ void Renderer::Init() {
   tex_materials_buffer_.Init(sizeof(TextureMaterial) * 1000, GL_DYNAMIC_STORAGE_BIT);
 
   std::vector<Vertex> vertices = {QuadVertices.begin(), QuadVertices.end()};
-  std::vector<uint32_t> indices = {0, 1, 2, 0, 2, 3};
+  std::vector<uint32_t> indices = {0, 1, 2, 2, 1, 3};
   quad_mesh_.Allocate(vertices, indices);
 }
 
 void Renderer::Shutdown() {
   ZoneScoped;
-  spdlog::info("vbo allocs: {}, ebo allocs: {}", chunk_vbo_.NumAllocs(), chunk_ebo_.NumAllocs());
+  quad_mesh_.Free();
+  spdlog::info("chunk vbo allocs: {},chunk ebo allocs: {}", chunk_vbo_.NumAllocs(),
+               chunk_ebo_.NumAllocs());
+  spdlog::info("reg vbo allocs: {}, reg ebo allocs: {}", reg_mesh_vbo_.NumAllocs(),
+               reg_mesh_ebo_.NumAllocs());
   nlohmann::json settings;
   settings["wireframe_enabled"] = wireframe_enabled_;
   SettingsManager::Get().SaveSetting(settings, "renderer");
@@ -268,6 +272,7 @@ void Renderer::FreeRegMesh(uint32_t handle) {
 void Renderer::FreeChunkMesh(uint32_t handle) {
   auto it = chunk_allocs_.find(handle);
   if (it == chunk_allocs_.end()) {
+    spdlog::info("{} hand", quad_mesh_.Handle());
     spdlog::error("FreeChunk: handle not found: {}", handle);
     return;
   }

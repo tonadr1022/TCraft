@@ -17,7 +17,6 @@ Texture2dArray& Texture2dArray::operator=(Texture2dArray&& other) noexcept {
 }
 
 Texture2dArray::~Texture2dArray() {
-  spdlog::info("delete tex array");
   if (id_) {
     glDeleteTextures(1, &id_);
   }

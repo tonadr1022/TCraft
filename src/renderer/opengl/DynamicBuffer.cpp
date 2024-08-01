@@ -7,7 +7,6 @@
 DynamicBuffer::DynamicBuffer() = default;
 
 DynamicBuffer::~DynamicBuffer() {
-  spdlog::info("dynamic buffer destruction");
   if (id_) {
     glDeleteBuffers(1, &id_);
   }
