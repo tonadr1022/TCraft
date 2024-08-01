@@ -15,7 +15,7 @@ class DynamicBuffer {
   void Bind(uint32_t target) const;
   void BindBase(uint32_t target, uint32_t slot) const;
 
-  // Returns the offset
+  // Updates the offset parameter
   [[nodiscard]] uint32_t Allocate(uint32_t size_bytes, void* data, uint32_t& offset);
   void Free(uint32_t handle);
   [[nodiscard]] bool Valid() const;

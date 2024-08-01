@@ -2,8 +2,6 @@
 
 #include <string>
 
-#include "renderer/opengl/Texture2dArray.hpp"
-
 TextureManager* TextureManager::instance_ = nullptr;
 
 TextureManager& TextureManager::Get() { return *instance_; }
@@ -33,3 +31,17 @@ const Texture2dArray& TextureManager::GetTexture2dArray(TextureHandle handle) {
 }
 
 void TextureManager::Remove2dArray(uint32_t handle) { texture_2d_array_map_.erase(handle); }
+
+TextureHandle TextureManager::CreateTexture2D(const Texture2DCreateParams& params) {
+  static std::hash<std::string> hasher;
+  uint32_t handle = hasher(params.filepath);
+  texture_2d_map_.try_emplace(handle, params);
+  return handle;
+}
+
+void TextureManager::RemoveTexture2D(TextureHandle handle) { texture_2d_map_.erase(handle); }
+
+Texture2D& TextureManager::GetTexture2D(TextureHandle handle) {
+  EASSERT_MSG(texture_2d_map_.contains(handle), "Texture not found");
+  return texture_2d_map_.at(handle);
+}

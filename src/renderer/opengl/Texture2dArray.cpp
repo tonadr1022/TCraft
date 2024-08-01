@@ -8,8 +8,7 @@
 #include "util/LoadFile.hpp"
 #include "util/StringUtil.hpp"
 
-Texture2dArray::Texture2dArray(Texture2dArray&& other) noexcept
-    : id_(std::exchange(other.id_, 0)), dims_(other.dims_) {}
+Texture2dArray::Texture2dArray(Texture2dArray&& other) noexcept { *this = std::move(other); }
 
 Texture2dArray& Texture2dArray::operator=(Texture2dArray&& other) noexcept {
   this->id_ = std::exchange(other.id_, 0);

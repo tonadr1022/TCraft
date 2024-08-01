@@ -5,9 +5,9 @@
 
 struct Texture2DCreateParams {
   std::string filepath;
-  uint32_t internal_format;
-  uint32_t filter_mode_min;
-  uint32_t filter_mode_max;
+  uint32_t internal_format{GL_RGBA8};
+  uint32_t filter_mode_min{GL_LINEAR};
+  uint32_t filter_mode_max{GL_LINEAR};
   bool generate_mipmaps{true};
   bool bindless{true};
   bool flip{true};

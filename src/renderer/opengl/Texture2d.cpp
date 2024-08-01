@@ -45,13 +45,23 @@ Texture2D::Texture2D(const Texture2DCreateParams& params) {
 
   // https://www.khronos.org/opengl/wiki/Bindless_Texture
   if (params.bindless) {
+    spdlog::info("making bindless");
     bindless_handle_ = glGetTextureHandleARB(id_);
     glMakeTextureHandleResidentARB(bindless_handle_);
   }
 }
 
-Texture2D::Texture2D(Texture2D&& other) noexcept
-    : id_(other.id_), bindless_handle_(other.bindless_handle_), dims_(other.dims_) {}
+Texture2D::~Texture2D() {
+  if (bindless_handle_) {
+    MakeNonResident();
+  }
+  if (id_) {
+    spdlog::info("Delete texture 2d");
+    glDeleteTextures(1, &id_);
+  }
+}
+
+Texture2D::Texture2D(Texture2D&& other) noexcept { *this = std::move(other); }
 
 Texture2D& Texture2D::operator=(Texture2D&& other) noexcept {
   this->id_ = std::exchange(other.id_, 0);

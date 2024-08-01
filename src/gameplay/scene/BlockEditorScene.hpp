@@ -3,8 +3,8 @@
 #include "application/Scene.hpp"
 #include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
-#include "renderer/ChunkMesh.hpp"
 #include "renderer/ChunkRenderParams.hpp"
+#include "renderer/Mesh.hpp"
 
 class BlockEditorScene : public Scene {
  public:
@@ -19,7 +19,7 @@ class BlockEditorScene : public Scene {
  private:
   struct SingleBlock {
     glm::vec3 pos;
-    ChunkMesh mesh;
+    Mesh mesh;
     BlockMeshData mesh_data;
   };
 
@@ -30,7 +30,7 @@ class BlockEditorScene : public Scene {
     EditBlock,
   };
 
-  EditMode edit_mode_;
+  EditMode edit_mode_{EditMode::AddBlock};
   float block_rot_{0};
   void Reload();
   void HandleAddModelTextureChange(BlockModelType type);
@@ -72,4 +72,7 @@ class BlockEditorScene : public Scene {
   uint32_t edit_block_idx_{1};
 
   ChunkRenderParams chunk_render_params_;
+
+  std::vector<uint32_t> tex_handles_;
+  uint32_t crosshair_mat_handle_{0};
 };

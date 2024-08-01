@@ -2,7 +2,7 @@
 
 #include "../gameplay/world/BlockDB.hpp"
 #include "../gameplay/world/ChunkData.hpp"
-#include "ChunkMesh.hpp"
+#include "Mesh.hpp"
 #include "gameplay/world/Block.hpp"
 
 ChunkMesher::ChunkMesher(const std::vector<BlockData>& db_block_data,

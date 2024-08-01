@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ChunkData.hpp"
-#include "renderer/ChunkMesh.hpp"
+#include "renderer/Mesh.hpp"
 
 class Chunk {
  public:
@@ -9,10 +9,10 @@ class Chunk {
 
   [[nodiscard]] const glm::ivec3& GetPos() const;
   ChunkData& GetData();
-  ChunkMesh& GetMesh();
+  Mesh& GetMesh();
 
  private:
   ChunkData data_;
-  ChunkMesh mesh_;
+  Mesh mesh_;
   glm::ivec3 pos_;
 };

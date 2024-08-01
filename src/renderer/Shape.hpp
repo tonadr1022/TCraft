@@ -1,6 +1,7 @@
 #pragma once
 
 /* clang-format off */
+#include "renderer/Vertex.hpp"
 const std::array<float, 120> CubeVertices= {
       // front face
       1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
@@ -48,3 +49,10 @@ const std::array<float, 120> CubeVertices= {
       20, 21, 22, 22, 21, 23, // bottom face
   };
 /* clang-format on */
+
+const std::array<Vertex, 4> QuadVertices = {
+    {// positions        // texture Coords
+     {glm::vec3{-1.0f, 1.0f, 0.0f}, glm::vec2{0.0f, 1.0f}},
+     {glm::vec3{-1.0f, -1.0f, 0.0f}, glm::vec2{0.0f, 0.0f}},
+     {glm::vec3{1.0f, 1.0f, 0.0f}, glm::vec2{1.0f, 1.0f}},
+     {glm::vec3{1.0f, -1.0f, 0.0f}, glm::vec2{1.0f, 0.0f}}}};

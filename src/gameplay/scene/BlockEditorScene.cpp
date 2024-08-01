@@ -11,6 +11,7 @@
 #include "gameplay/world/BlockDB.hpp"
 #include "pch.hpp"
 #include "renderer/ChunkMesher.hpp"
+#include "renderer/Material.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/Image.hpp"
 #include "resource/TextureManager.hpp"
@@ -19,6 +20,12 @@
 
 void BlockEditorScene::Reload() {
   ZoneScoped;
+  // TODO: free the tex handles and make this more streamlined across scenes
+  tex_handles_.emplace_back(
+      TextureManager::Get().CreateTexture2D({.filepath = GET_TEXTURE_PATH("crosshair.png")}));
+  TextureMaterial mat{.texture_handle =
+                          TextureManager::Get().GetTexture2D(tex_handles_[0]).BindlessHandle()};
+  crosshair_mat_handle_ = Renderer::Get().AllocateMaterial(mat);
   all_block_model_names_ = BlockDB::GetAllBlockModelNames();
   std::sort(all_block_model_names_.begin(), all_block_model_names_.end());
   all_block_model_names_set_ = {all_block_model_names_.begin(), all_block_model_names_.end()};
@@ -87,7 +94,6 @@ void BlockEditorScene::HandleEditModelChange() {
     uint32_t all_tex_idx = tex_name_to_idx_[edit_model_data_all_.tex_all];
     edit_model_block_.mesh_data = {.texture_indices = {all_tex_idx, all_tex_idx, all_tex_idx,
                                                        all_tex_idx, all_tex_idx, all_tex_idx}};
-
   } else if (edit_model_type_ == BlockModelType::TopBottom) {
     uint32_t top_tex_idx = tex_name_to_idx_[edit_model_data_top_bot_.tex_top];
     uint32_t bot_tex_idx = tex_name_to_idx_[edit_model_data_top_bot_.tex_bottom];
@@ -140,7 +146,6 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
   ChunkMesher::GenerateBlock(vertices, indices, add_model_blocks_[i].mesh_data.texture_indices);
-
   add_model_blocks_[i] = {};
   add_model_blocks_[i].mesh.Allocate(vertices, indices);
 }

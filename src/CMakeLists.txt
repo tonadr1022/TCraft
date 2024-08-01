@@ -22,7 +22,7 @@ set(SOURCES
     renderer/opengl/VertexArray.cpp
     renderer/opengl/Buffer.cpp
     renderer/opengl/DynamicBuffer.cpp
-    renderer/ChunkMesh.cpp
+    renderer/Mesh.cpp
 
     util/LoadFile.cpp
     util/StringUtil.cpp
