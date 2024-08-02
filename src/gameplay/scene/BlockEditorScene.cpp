@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
+#include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
 #include "EAssert.hpp"
@@ -165,6 +166,14 @@ void BlockEditorScene::Render(const Window& window) {
   ZoneScoped;
   // TODO: store model matrix and only update on change position?
   glm::mat4 model{1};
+  // cross hair
+  // Renderer::Get().SubmitUIDrawCommand(
+  //     glm::scale(
+  //         glm::translate(model, {window.GetWindowSize().x / 2, window.GetWindowSize().y / 2, 0}),
+  //         {10, 10, 1}),
+  //     crosshair_mat_handle_);
+  Renderer::Get().DrawQuad(crosshair_mat_handle_, {0, 0},
+                           {window.GetWindowSize().x / 2, window.GetWindowSize().y / 2});
   model = glm::translate(model, {0.5, 0.5, 0.5});
   model = glm::rotate(model, block_rot_, {0, 1, 0});
   model = glm::translate(model, {-0.5, -0.5, -0.5});
@@ -183,10 +192,12 @@ void BlockEditorScene::Render(const Window& window) {
                                              block.mesh.Handle());
     }
   }
-
   Renderer::Get().RenderWorld(
       chunk_render_params_,
       {
+          // .vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()),
+          // .vp_matrix = glm::ortho(0.f, static_cast<float>(window.GetWindowSize().x), 0.f,
+          //                         static_cast<float>(window.GetWindowSize().y)),
           .vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
                        player_.GetCamera().GetView(),
       });

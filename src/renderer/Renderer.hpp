@@ -44,12 +44,12 @@ class Renderer {
   void SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle);
   void SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_handle,
                                 uint32_t material_handle);
-  void SubmitQuadDrawCommand(const glm::mat4& model, uint32_t material_handle);
   [[nodiscard]] uint32_t AllocateMesh(std::vector<ChunkVertex>& vertices,
                                       std::vector<uint32_t>& indices);
 
   [[nodiscard]] uint32_t AllocateMesh(std::vector<Vertex>& vertices,
                                       std::vector<uint32_t>& indices);
+  void DrawQuad(uint32_t material_handle, const glm::ivec2& bot_left, const glm::ivec2& top_right);
 
   void FreeChunkMesh(uint32_t handle);
   void FreeRegMesh(uint32_t handle);
@@ -67,6 +67,8 @@ class Renderer {
   Renderer();
 
   constexpr const static uint32_t MaxDrawCmds{1'000'000};
+  constexpr const static uint32_t MaxChunkDrawCmds{1'000'00};
+  constexpr const static uint32_t MaxUIDrawCmds{10'000};
   ShaderManager shader_manager_;
 
   Mesh quad_mesh_;
@@ -92,32 +94,34 @@ class Renderer {
   DynamicBuffer chunk_ebo_;
   Buffer chunk_uniform_ssbo_;
   Buffer chunk_draw_indirect_buffer_;
+  std::unordered_map<uint32_t, MeshAlloc> chunk_allocs_;
+  std::unordered_map<uint32_t, DrawElementsIndirectCommand> chunk_dei_cmds_;
+  std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
+  std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
+  std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
 
   VertexArray reg_mesh_vao_;
   DynamicBuffer reg_mesh_vbo_;
   DynamicBuffer reg_mesh_ebo_;
   Buffer reg_mesh_uniform_ssbo_;
   Buffer reg_mesh_draw_indirect_buffer_;
-
-  DynamicBuffer tex_materials_buffer_;
-
-  std::unordered_map<uint32_t, MeshAlloc> chunk_allocs_;
-  std::unordered_map<uint32_t, DrawElementsIndirectCommand> chunk_dei_cmds_;
-
   std::unordered_map<uint32_t, MeshAlloc> reg_mesh_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> reg_mesh_dei_cmds_;
-
-  std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
-  std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
-  std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
-
   std::vector<uint32_t> reg_mesh_frame_draw_cmd_mesh_ids_;
   std::vector<DrawCmdUniform> reg_mesh_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> reg_mesh_frame_dei_cmds_;
 
+  Buffer quad_buffer_;
+
+  DynamicBuffer tex_materials_buffer_;
   std::unordered_map<uint32_t, uint32_t> material_allocs_;
 
   void LoadShaders();
-  void SetChunkFrameDrawCommands();
-  void SetRegMeshFrameDrawCommands();
+
+  template <typename UniformType>
+  void SetMeshFrameDrawCommands(
+      Buffer& draw_indirect_buffer, std::vector<UniformType>& frame_draw_cmd_uniforms,
+      std::vector<uint32_t>& frame_draw_cmd_mesh_ids,
+      std::vector<DrawElementsIndirectCommand>& frame_dei_cmds,
+      std::unordered_map<uint32_t, DrawElementsIndirectCommand>& dei_cmds);
 };

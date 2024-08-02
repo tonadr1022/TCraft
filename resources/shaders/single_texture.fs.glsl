@@ -21,6 +21,9 @@ void main() {
     const bool hasTex = (material.tex_handle.x != 0 || material.tex_handle.y != 0);
     if (hasTex) {
         o_Color = texture(sampler2D(material.tex_handle), fs_in.tex_coords);
+        if (o_Color.a < 0.5) {
+            discard;
+        }
     } else {
         o_Color = vec4(0);
     }

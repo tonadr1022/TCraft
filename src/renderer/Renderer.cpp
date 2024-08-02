@@ -38,19 +38,19 @@ void Renderer::Init() {
   chunk_vao_.EnableAttribute<float>(0, 3, offsetof(ChunkVertex, position));
   chunk_vao_.EnableAttribute<float>(1, 3, offsetof(ChunkVertex, tex_coords));
   // TODO: fine tune or make resizeable
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 100'000'00, sizeof(ChunkVertex));
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 100'00'000, sizeof(ChunkVertex));
   chunk_ebo_.Init(sizeof(uint32_t) * 100'000'000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
-  chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxDrawCmds, GL_DYNAMIC_STORAGE_BIT);
-  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxDrawCmds,
+  chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxChunkDrawCmds, GL_DYNAMIC_STORAGE_BIT);
+  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxChunkDrawCmds,
                                    GL_DYNAMIC_STORAGE_BIT);
 
   reg_mesh_vao_.Init();
   reg_mesh_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
   reg_mesh_vao_.EnableAttribute<float>(1, 2, offsetof(Vertex, tex_coords));
   // TODO: fine tune or make resizeable
-  reg_mesh_vbo_.Init(sizeof(Vertex) * 100'000, sizeof(Vertex));
+  reg_mesh_vbo_.Init(sizeof(Vertex) * 100'0000, sizeof(Vertex));
   reg_mesh_ebo_.Init(sizeof(uint32_t) * 1'000'000, sizeof(uint32_t));
   reg_mesh_vao_.AttachVertexBuffer(reg_mesh_vbo_.Id(), 0, 0, sizeof(Vertex));
   reg_mesh_vao_.AttachElementBuffer(reg_mesh_ebo_.Id());
@@ -79,9 +79,15 @@ void Renderer::Shutdown() {
 
 void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
   ZoneScoped;
-  {
+  if (chunk_frame_draw_cmd_uniforms_.size() > 0) {
     ZoneScopedN("Chunk render");
-    SetChunkFrameDrawCommands();
+    chunk_uniform_ssbo_.ResetOffset();
+    chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
+                                chunk_frame_draw_cmd_uniforms_.data());
+    chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    SetMeshFrameDrawCommands(chunk_draw_indirect_buffer_, chunk_frame_draw_cmd_uniforms_,
+                             chunk_frame_draw_cmd_mesh_ids_, chunk_frame_dei_cmds_,
+                             chunk_dei_cmds_);
     auto shader = shader_manager_.GetShader("chunk_batch");
     shader->Bind();
     shader->SetMat4("vp_matrix", render_info.vp_matrix);
@@ -93,9 +99,16 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
                                 chunk_frame_dei_cmds_.size(), 0);
   }
 
-  {
+  if (reg_mesh_frame_draw_cmd_uniforms_.size() > 0) {
     ZoneScopedN("Reg Mesh render");
-    SetRegMeshFrameDrawCommands();
+    reg_mesh_uniform_ssbo_.ResetOffset();
+    reg_mesh_uniform_ssbo_.SubData(
+        sizeof(DrawCmdUniform) * reg_mesh_frame_draw_cmd_uniforms_.size(),
+        reg_mesh_frame_draw_cmd_uniforms_.data());
+    reg_mesh_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    SetMeshFrameDrawCommands(reg_mesh_draw_indirect_buffer_, reg_mesh_frame_draw_cmd_uniforms_,
+                             reg_mesh_frame_draw_cmd_mesh_ids_, reg_mesh_frame_dei_cmds_,
+                             reg_mesh_dei_cmds_);
     auto shader = shader_manager_.GetShader("single_texture");
     shader->Bind();
     shader->SetMat4("vp_matrix", render_info.vp_matrix);
@@ -107,67 +120,35 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
   }
 }
 
-void Renderer::SetRegMeshFrameDrawCommands() {
+template <typename UniformType>
+void Renderer::SetMeshFrameDrawCommands(
+    Buffer& draw_indirect_buffer, std::vector<UniformType>& frame_draw_cmd_uniforms,
+    std::vector<uint32_t>& frame_draw_cmd_mesh_ids,
+    std::vector<DrawElementsIndirectCommand>& frame_dei_cmds,
+    std::unordered_map<uint32_t, DrawElementsIndirectCommand>& dei_cmds) {
   ZoneScoped;
-  reg_mesh_uniform_ssbo_.ResetOffset();
-  reg_mesh_uniform_ssbo_.SubData(sizeof(DrawCmdUniform) * reg_mesh_frame_draw_cmd_uniforms_.size(),
-                                 reg_mesh_frame_draw_cmd_uniforms_.data());
   // spdlog::info("reg mesh {}", reg_mesh_frame_draw_cmd_uniforms_[0].material_index);
   {
     ZoneScopedN("Clear per frame and reserve");
-    reg_mesh_frame_dei_cmds_.clear();
-    reg_mesh_frame_dei_cmds_.reserve(reg_mesh_frame_draw_cmd_uniforms_.size());
+    frame_dei_cmds.clear();
+    frame_dei_cmds.reserve(frame_draw_cmd_uniforms.size());
   }
   DrawElementsIndirectCommand cmd;
-  EASSERT_MSG(reg_mesh_frame_draw_cmd_uniforms_.size() == reg_mesh_frame_draw_cmd_mesh_ids_.size(),
+  EASSERT_MSG(frame_draw_cmd_uniforms.size() == frame_draw_cmd_mesh_ids.size(),
               "Per frame draw cmd size must equal mesh cmd size");
-  for (uint32_t i = 0; i < reg_mesh_frame_draw_cmd_mesh_ids_.size(); i++) {
-    const auto& draw_cmd_info = reg_mesh_dei_cmds_[reg_mesh_frame_draw_cmd_mesh_ids_[i]];
+  for (uint32_t i = 0; i < frame_draw_cmd_mesh_ids.size(); i++) {
+    const auto& draw_cmd_info = dei_cmds[frame_draw_cmd_mesh_ids[i]];
     cmd.base_instance = i;
     cmd.base_vertex = draw_cmd_info.base_vertex;
     cmd.instance_count = 1;
     cmd.count = draw_cmd_info.count;
     cmd.first_index = draw_cmd_info.first_index;
-    reg_mesh_frame_dei_cmds_.emplace_back(cmd);
+    frame_dei_cmds.emplace_back(cmd);
   }
-
-  reg_mesh_draw_indirect_buffer_.ResetOffset();
-  reg_mesh_draw_indirect_buffer_.SubData(
-      sizeof(DrawElementsIndirectCommand) * reg_mesh_frame_dei_cmds_.size(),
-      reg_mesh_frame_dei_cmds_.data());
-  reg_mesh_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
-  reg_mesh_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-}
-
-void Renderer::SetChunkFrameDrawCommands() {
-  ZoneScoped;
-  chunk_uniform_ssbo_.ResetOffset();
-  chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
-                              chunk_frame_draw_cmd_uniforms_.data());
-  {
-    ZoneScopedN("Clear per frame and reserve");
-    chunk_frame_dei_cmds_.clear();
-    chunk_frame_dei_cmds_.reserve(chunk_frame_draw_cmd_uniforms_.size());
-  }
-  DrawElementsIndirectCommand cmd;
-  EASSERT_MSG(chunk_frame_draw_cmd_uniforms_.size() == chunk_frame_draw_cmd_mesh_ids_.size(),
-              "Per frame draw cmd size must equal mesh cmd size");
-  for (uint32_t i = 0; i < chunk_frame_draw_cmd_mesh_ids_.size(); i++) {
-    const auto& draw_cmd_info = chunk_dei_cmds_[chunk_frame_draw_cmd_mesh_ids_[i]];
-    cmd.base_instance = i;
-    cmd.base_vertex = draw_cmd_info.base_vertex;
-    cmd.instance_count = 1;
-    cmd.count = draw_cmd_info.count;
-    cmd.first_index = draw_cmd_info.first_index;
-    chunk_frame_dei_cmds_.emplace_back(cmd);
-  }
-
-  chunk_draw_indirect_buffer_.ResetOffset();
-  chunk_draw_indirect_buffer_.SubData(
-      sizeof(DrawElementsIndirectCommand) * chunk_frame_dei_cmds_.size(),
-      chunk_frame_dei_cmds_.data());
-  chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
-  chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+  draw_indirect_buffer.ResetOffset();
+  draw_indirect_buffer.SubData(sizeof(DrawElementsIndirectCommand) * frame_dei_cmds.size(),
+                               frame_dei_cmds.data());
+  draw_indirect_buffer.Bind(GL_DRAW_INDIRECT_BUFFER);
 }
 
 void Renderer::SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle) {
@@ -181,9 +162,7 @@ void Renderer::SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_ha
   reg_mesh_frame_draw_cmd_uniforms_.emplace_back(model, material_allocs_[material_handle]);
 }
 
-void Renderer::SubmitQuadDrawCommand(const glm::mat4& model, uint32_t material_handle) {
-  SubmitRegMeshDrawCommand(model, quad_mesh_.Handle(), material_handle);
-}
+void Renderer::DrawQuad(uint32_t, const glm::ivec2&, const glm::ivec2&) {}
 
 uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
                                 std::vector<uint32_t>& indices) {
