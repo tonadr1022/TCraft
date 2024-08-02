@@ -13,9 +13,6 @@ class FPSCamera {
   void OnImGui() const;
   void LookAt(const glm::vec3& pos);
 
-  void Save();
-  void Load();
-
   glm::vec3 position_{0, 0, 0};
   [[nodiscard]] const glm::vec3& GetFront() const { return front_; }
 

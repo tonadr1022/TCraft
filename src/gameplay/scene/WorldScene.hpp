@@ -10,7 +10,7 @@ class Window;
 
 class WorldScene : public Scene {
  public:
-  WorldScene(SceneManager& scene_manager, const std::string& world_name);
+  WorldScene(SceneManager& scene_manager, std::string_view path);
 
   void Update(double dt) override;
   void OnImGui() override;
@@ -25,4 +25,5 @@ class WorldScene : public Scene {
 
  private:
   Player player_;
+  uint32_t seed_{0};
 };

@@ -5,20 +5,40 @@
 #include <nlohmann/json.hpp>
 
 #include "application/SceneManager.hpp"
-#include "application/SettingsManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/Image.hpp"
 #include "resource/TextureManager.hpp"
+#include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
-WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_name)
+WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     : Scene(scene_manager), chunk_manager_(block_db_) {
   ZoneScoped;
-  EASSERT_MSG(!world_name.empty(), "Can't load world scene without a loaded world name");
+  EASSERT_MSG(!path.empty(), "Can't load world scene without a loaded world name");
+  {
+    ZoneScopedN("Initialize data");
+    try {
+      auto data = util::LoadJsonFile(std::string(path) + "/data.json");
+      auto level_data = util::LoadJsonFile(std::string(path) + "/level.json");
+      auto seed = json_util::GetString(level_data, "seed");
+      spdlog::info("loading");
+      EASSERT_MSG(seed.has_value(), "Missing seed from level.json");
+      static std::hash<std::string> hasher;
+      seed_ = hasher(seed.value());
+      std::array<float, 3> player_pos =
+          data.value("player_position", std::array<float, 3>{0, 0, 0});
+      player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
+    } catch (std::runtime_error& error) {
+      spdlog::info("failed to load world data");
+      scene_manager_.SetNextSceneOnConstructionError("main_menu");
+      return;
+    }
+  }
+  player_.Init();
   block_db_.Init();
   {
     ZoneScopedN("Load block mesh data");
@@ -43,15 +63,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& world_nam
                                              .filter_mode_max = GL_NEAREST});
     block_db_.LoadMeshData(tex_name_to_idx);
   }
-
   chunk_manager_.Init();
-
-  player_.GetCamera().Load();
-  player_.Init();
-  auto settings = SettingsManager::Get().LoadSetting("world");
-
-  std::array<float, 3> player_pos = settings["player_position"].get<std::array<float, 3>>();
-  player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
 }
 
 void WorldScene::Update(double dt) {
@@ -92,11 +104,9 @@ void WorldScene::Render() {
 
 WorldScene::~WorldScene() {
   ZoneScoped;
-  player_.GetCamera().Save();
   auto pos = player_.Position();
   std::array<float, 3> player_pos = {pos.x, pos.y, pos.z};
   nlohmann::json j = {{"player_position", player_pos}};
-  SettingsManager::Get().SaveSetting(j, "world");
 }
 
 void WorldScene::OnImGui() {

@@ -8,7 +8,8 @@ class SceneManager {
   void LoadScene(const std::string& name);
   Scene& GetActiveScene();
   void Shutdown();
-  void LoadWorld(const std::string& world_name);
+  void LoadWorld(std::string_view path);
+  void SetNextSceneOnConstructionError(const std::string& name);
 
  private:
   // Initialization
@@ -20,4 +21,5 @@ class SceneManager {
   std::unordered_map<std::string, std::function<std::unique_ptr<Scene>()>> scene_creators_;
   std::unique_ptr<Scene> active_scene_{nullptr};
   Window& window_;
+  std::string next_scene_after_scene_construction_err_;
 };

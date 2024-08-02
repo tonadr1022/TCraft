@@ -9,8 +9,9 @@ struct WorldCreateParams {
 class WorldManager {
  public:
   WorldManager();
-  void CreateWorldStructure(const WorldCreateParams& params);
+  void CreateWorld(const WorldCreateParams& params);
   void DeleteWorld(std::string_view name);
+  void LoadWorld(std::string_view name);
   bool WorldExists(const std::string& name);
   ~WorldManager() = default;
 

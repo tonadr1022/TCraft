@@ -8,7 +8,7 @@
 
 namespace fs = std::filesystem;
 
-void WorldManager::CreateWorldStructure(const WorldCreateParams& params) {
+void WorldManager::CreateWorld(const WorldCreateParams& params) {
   if (!fs::exists(GET_PATH("resources/worlds"))) {
     fs::create_directory(GET_PATH("resources/worlds"));
   }
@@ -20,7 +20,7 @@ void WorldManager::CreateWorldStructure(const WorldCreateParams& params) {
   // TODO: either better id or get rid of it
   nlohmann::json level_data = {{"name", params.name}, {"id", rand()}, {"seed", params.seed}};
   json_util::WriteJson(level_data, level_path);
-  nlohmann::json settings = {{"player_position", std::array<int, 3>{0, 0, 0}}};
+  nlohmann::json settings = {{"player_position", std::array<float, 3>{0, 0, 0}}};
   json_util::WriteJson(settings, world_path / "data.json");
 }
 

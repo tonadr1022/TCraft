@@ -18,6 +18,11 @@ void SceneManager::LoadScene(const std::string& name) {
   active_scene_ = nullptr;
   // construct new scene
   active_scene_ = scene_creators_.at(name)();
+  if (next_scene_after_scene_construction_err_ != "") {
+    auto tmp = next_scene_after_scene_construction_err_;
+    next_scene_after_scene_construction_err_ = "";
+    LoadScene(tmp);
+  }
 }
 
 Scene& SceneManager::GetActiveScene() {
@@ -27,9 +32,18 @@ Scene& SceneManager::GetActiveScene() {
 
 void SceneManager::Shutdown() { active_scene_ = nullptr; }
 
-void SceneManager::LoadWorld(const std::string& world_name) {
+void SceneManager::LoadWorld(std::string_view path) {
   // call destructor of active scene
   active_scene_ = nullptr;
   // construct new scene
-  active_scene_ = std::make_unique<WorldScene>(*this, world_name);
+  active_scene_ = std::make_unique<WorldScene>(*this, path);
+  if (next_scene_after_scene_construction_err_ != "") {
+    auto tmp = next_scene_after_scene_construction_err_;
+    next_scene_after_scene_construction_err_ = "";
+    LoadScene(tmp);
+  }
+}
+
+void SceneManager::SetNextSceneOnConstructionError(const std::string& name) {
+  next_scene_after_scene_construction_err_ = name;
 }

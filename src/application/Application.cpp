@@ -46,7 +46,6 @@ void Application::Run() {
   ZoneScoped;
   // scene_manager_.LoadScene("main_menu");
   scene_manager_.LoadScene("block_editor");
-  // scene_manager_.LoadWorld("default");
 
   Uint64 curr_time = SDL_GetPerformanceCounter();
   Uint64 prev_time = 0;
@@ -118,7 +117,7 @@ void Application::OnImGui() {
     window_.SetVsync(vsync);
   }
   if (ImGui::Button("Load world")) {
-    scene_manager_.LoadWorld("default_world");
+    scene_manager_.LoadWorld(GET_PATH("resources/worlds/default_world"));
   }
   if (ImGui::Button("Block Editor")) {
     scene_manager_.LoadScene("block_editor");

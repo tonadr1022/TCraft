@@ -62,17 +62,3 @@ void FPSCamera::OnImGui() const {
   ImGui::Text("Position: %.1f, %.1f, %.1f", position_.x, position_.y, position_.z);
   ImGui::Text("Front: %.2f, %.2f, %.2f", front_.x, front_.y, front_.z);
 }
-
-void FPSCamera::Save() {
-  ZoneScoped;
-  nlohmann::json j = {{"yaw", yaw_}, {"pitch", pitch_}};
-  SettingsManager::Get().SaveSetting(j, "fps_cam");
-}
-
-void FPSCamera::Load() {
-  ZoneScoped;
-  auto settings = SettingsManager::Get().LoadSetting("fps_cam");
-  yaw_ = settings["yaw"].get<float>();
-  pitch_ = settings["pitch"].get<float>();
-  CalculateFront();
-}
