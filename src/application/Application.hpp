@@ -21,8 +21,8 @@ class Application {
   SettingsManager* settings_{nullptr};
   TextureManager* texture_manager_{nullptr};
   Renderer* renderer_{nullptr};
-  SceneManager scene_manager_;
   Window window_;
+  SceneManager scene_manager_;
   EventDispatcher event_dispatcher_;
   void ImGuiTest();
 };

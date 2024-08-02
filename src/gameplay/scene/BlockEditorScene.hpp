@@ -14,7 +14,7 @@ class BlockEditorScene : public Scene {
   void OnImGui() override;
   void Update(double dt) override;
   bool OnEvent(const SDL_Event& event) override;
-  void Render(const Window& window) override;
+  void Render() override;
 
  private:
   struct SingleBlock {

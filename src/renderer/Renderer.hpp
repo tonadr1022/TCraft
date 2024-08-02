@@ -6,6 +6,7 @@
 #include <glm/vec2.hpp>
 
 #include "renderer/ChunkRenderParams.hpp"
+#include "renderer/Common.hpp"
 #include "renderer/Mesh.hpp"
 #include "renderer/ShaderManager.hpp"
 #include "renderer/opengl/Buffer.hpp"
@@ -20,6 +21,7 @@ struct DrawElementsIndirectCommand {
   uint32_t base_instance;
 };
 
+class Window;
 class WorldScene;
 class BlockEditorScene;
 class Window;
@@ -50,6 +52,9 @@ class Renderer {
   [[nodiscard]] uint32_t AllocateMesh(std::vector<Vertex>& vertices,
                                       std::vector<uint32_t>& indices);
   void DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size);
+  void AddStaticQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size);
+  void AddStaticQuads(std::vector<UserDrawCommand>& static_quad_draw_cmds);
+  void ClearStaticData();
 
   void FreeChunkMesh(uint32_t handle);
   void FreeRegMesh(uint32_t handle);
@@ -64,7 +69,8 @@ class Renderer {
  private:
   friend class Application;
   static Renderer* instance_;
-  Renderer();
+  explicit Renderer(Window& window);
+  Window& window_;
 
   constexpr const static uint32_t MaxDrawCmds{1'000'000};
   constexpr const static uint32_t MaxChunkDrawCmds{1'000'00};
@@ -119,6 +125,7 @@ class Renderer {
   Buffer quad_uniform_ssbo_;
   std::vector<DrawCmdUniform> quad_uniforms_;
   Buffer quad_draw_indirect_buffer_;
+  std::vector<DrawCmdUniform> static_quad_uniforms_;
 
   struct Stats {
     uint32_t quad_draw_calls{0};

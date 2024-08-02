@@ -22,11 +22,11 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 
 }  // namespace
 
-Application::Application(int width, int height, const char* title) {
+Application::Application(int width, int height, const char* title) : scene_manager_(window_) {
   // initialize singletons
   settings_ = new SettingsManager;
   texture_manager_ = new TextureManager;
-  renderer_ = new Renderer;
+  renderer_ = new Renderer(window_);
 
   SettingsManager::Get().Load(SettingsPath);
   auto app_settings_json = SettingsManager::Get().LoadSetting("application");
@@ -65,7 +65,7 @@ void Application::Run() {
       ZoneScopedN("Render");
       window_.StartRenderFrame(imgui_enabled_);
       Renderer::Get().StartFrame(window_);
-      scene_manager_.GetActiveScene().Render(window_);
+      scene_manager_.GetActiveScene().Render();
 
       if (imgui_enabled_) OnImGui();
       window_.EndRenderFrame(imgui_enabled_);

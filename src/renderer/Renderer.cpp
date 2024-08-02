@@ -22,7 +22,7 @@ Renderer* Renderer::instance_ = nullptr;
 
 Renderer& Renderer::Get() { return *instance_; }
 
-Renderer::Renderer() {
+Renderer::Renderer(Window& window) : window_(window) {
   EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
   instance_ = this;
 }
@@ -131,32 +131,38 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
                                 reg_mesh_frame_dei_cmds_.size(), 0);
   }
 
+  glDepthFunc(GL_ALWAYS);
+  stats_.quad_draw_calls += static_quad_uniforms_.size();
   if (stats_.quad_draw_calls > 0) {
     ZoneScopedN("Quad render");
     // Uses a single draw elements indirect command using instancing
     auto shader = shader_manager_.GetShader("single_texture");
     shader->Bind();
     // TODO: use window size
-    shader->SetMat4("vp_matrix", glm::ortho(0.f, 1600.f, 0.f, 900.f));
+    auto window_dims = window_.GetWindowSize();
+    shader->SetMat4("vp_matrix", glm::ortho(0.f, static_cast<float>(window_dims.x), 0.f,
+                                            static_cast<float>(window_dims.y)));
     quad_vao_.Bind();
     quad_uniform_ssbo_.ResetOffset();
+    quad_uniform_ssbo_.SubData(sizeof(DrawCmdUniform) * static_quad_uniforms_.size(),
+                               static_quad_uniforms_.data());
     quad_uniform_ssbo_.SubData(sizeof(DrawCmdUniform) * quad_uniforms_.size(),
                                quad_uniforms_.data());
     quad_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
-    static DrawElementsIndirectCommand cmd{
+    DrawElementsIndirectCommand cmd{
         .count = 6,
-        .instance_count = 0,
+        .instance_count = stats_.quad_draw_calls,
         .first_index = 0,
         .base_vertex = 0,
         .base_instance = 0,
     };
-    cmd.instance_count = stats_.quad_draw_calls;
     quad_draw_indirect_buffer_.ResetOffset();
     quad_draw_indirect_buffer_.SubData(sizeof(DrawElementsIndirectCommand), &cmd);
     quad_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
     glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
   }
+  glDepthFunc(GL_LESS);
 }
 
 template <typename UniformType>
@@ -166,7 +172,6 @@ void Renderer::SetMeshFrameDrawCommands(
     std::vector<DrawElementsIndirectCommand>& frame_dei_cmds,
     std::unordered_map<uint32_t, DrawElementsIndirectCommand>& dei_cmds) {
   ZoneScoped;
-  // spdlog::info("reg mesh {}", reg_mesh_frame_draw_cmd_uniforms_[0].material_index);
   {
     ZoneScopedN("Clear per frame and reserve");
     frame_dei_cmds.clear();
@@ -205,10 +210,18 @@ void Renderer::SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_ha
 
 void Renderer::DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size) {
   ZoneScoped;
+  // TODO: handle gracefully no material handle
   quad_uniforms_.emplace_back(
       glm::scale(glm::translate(glm::mat4{1}, {center.x, center.y, 0}), {size.x, size.y, 1}),
-      material_allocs_[material_handle]);
+      material_allocs_.at(material_handle));
   stats_.quad_draw_calls++;
+}
+
+void Renderer::AddStaticQuad(uint32_t material_handle, const glm::vec2& center,
+                             const glm::vec2& size) {
+  static_quad_uniforms_.emplace_back(
+      glm::scale(glm::translate(glm::mat4{1}, {center.x, center.y, 0}), {size.x, size.y, 1}),
+      material_allocs_.at(material_handle));
 }
 
 uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
@@ -233,12 +246,12 @@ uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
               .base_vertex = static_cast<uint32_t>(chunk_vbo_offset / sizeof(ChunkVertex)),
               .base_instance = 0,
           });
-  spdlog::info(
-      "v_size: {}, e_size {}, vbo_offset: {}, ebo_offset: {}, base_vertex: {},  first_index: {},"
-      "dei_size: {} vbo_allocs: {}, ebo_allocs: {}",
-      sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset,
-      chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset / sizeof(uint32_t),
-      chunk_dei_cmds_.size(), chunk_vbo_.NumAllocs(), chunk_ebo_.NumAllocs());
+  // spdlog::info(
+  //     "v_size: {}, e_size {}, vbo_offset: {}, ebo_offset: {}, base_vertex: {},  first_index: {},"
+  //     "dei_size: {} vbo_allocs: {}, ebo_allocs: {}",
+  //     sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset,
+  //     chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset /
+  //     sizeof(uint32_t), chunk_dei_cmds_.size(), chunk_vbo_.NumAllocs(), chunk_ebo_.NumAllocs());
   return id;
 }
 
@@ -266,11 +279,10 @@ uint32_t Renderer::AllocateMesh(std::vector<Vertex>& vertices, std::vector<uint3
 uint32_t Renderer::AllocateMaterial(TextureMaterial& material) {
   ZoneScoped;
   uint32_t offset;
-  uint32_t id = rand();
-  uint32_t _ = tex_materials_buffer_.Allocate(sizeof(TextureMaterial),
-                                              static_cast<void*>(&material), offset);
-  material_allocs_.emplace(id, offset / sizeof(TextureMaterial));
-  return id;
+  uint32_t handle = tex_materials_buffer_.Allocate(sizeof(TextureMaterial),
+                                                   static_cast<void*>(&material), offset);
+  material_allocs_.emplace(handle, offset / sizeof(TextureMaterial));
+  return handle;
 }
 
 void Renderer::FreeMaterial(uint32_t material_handle) {
@@ -279,8 +291,7 @@ void Renderer::FreeMaterial(uint32_t material_handle) {
   if (it == material_allocs_.end()) {
     spdlog::error("Material with handle {} not found", material_handle);
   }
-  spdlog::info("Free material {}", material_handle);
-  tex_materials_buffer_.Free(it->second);
+  tex_materials_buffer_.Free(it->first);
 }
 
 void Renderer::FreeRegMesh(uint32_t handle) {
@@ -305,6 +316,11 @@ void Renderer::FreeChunkMesh(uint32_t handle) {
   chunk_ebo_.Free(it->second.ebo_handle);
   chunk_dei_cmds_.erase(it->first);
   chunk_allocs_.erase(it);
+}
+
+void Renderer::ClearStaticData() {
+  static_quad_uniforms_.clear();
+  stats_.quad_draw_calls = 0;
 }
 
 void Renderer::StartFrame(const Window& window) {

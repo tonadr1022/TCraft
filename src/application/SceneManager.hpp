@@ -11,9 +11,13 @@ class SceneManager {
   void LoadWorld(const std::string& world_name);
 
  private:
+  // Initialization
   friend class Application;
-  SceneManager();
+  // Allows scenes to initialize window ref
+  friend class Scene;
+  explicit SceneManager(Window& window);
 
   std::unordered_map<std::string, std::function<std::unique_ptr<Scene>()>> scene_creators_;
   std::unique_ptr<Scene> active_scene_{nullptr};
+  Window& window_;
 };

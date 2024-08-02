@@ -3,6 +3,7 @@
 #include "application/Scene.hpp"
 
 class WorldManager;
+class Window;
 
 class MainMenuScene : public Scene {
  public:

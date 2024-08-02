@@ -6,13 +6,15 @@
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/ChunkRenderParams.hpp"
 
+class Window;
+
 class WorldScene : public Scene {
  public:
   WorldScene(SceneManager& scene_manager, const std::string& world_name);
 
   void Update(double dt) override;
   void OnImGui() override;
-  void Render(const Window& window) override;
+  void Render() override;
   bool OnEvent(const SDL_Event& event) override;
   ~WorldScene() override;
 

@@ -30,10 +30,9 @@ void Buffer::Bind(GLuint target) const { glBindBuffer(target, id_); }
 
 void Buffer::BindBase(GLuint target, GLuint slot) const { glBindBufferBase(target, slot, id_); }
 
-uint32_t Buffer::SubData(size_t size_bytes, void* data) {
+void Buffer::SubData(size_t size_bytes, void* data) {
   glNamedBufferSubData(id_, offset_, size_bytes, data);
   offset_ += size_bytes;
-  return num_allocs_++;
 }
 
 void* Buffer::Map(uint32_t access) {
@@ -41,10 +40,8 @@ void* Buffer::Map(uint32_t access) {
   return glMapNamedBuffer(id_, access);
 }
 
-void Buffer::ResetOffset() {
-  num_allocs_ = 0;
-  offset_ = 0;
-}
+void Buffer::ResetOffset() { offset_ = 0; }
+void Buffer::SetOffset(uint32_t offset) { offset_ = offset; }
 
 void* Buffer::MapRange(uint32_t offset, uint32_t length_bytes, GLbitfield access) const {
   return glMapNamedBufferRange(id_, offset, length_bytes, access);

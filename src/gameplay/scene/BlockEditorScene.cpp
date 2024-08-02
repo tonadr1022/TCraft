@@ -6,7 +6,6 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
-#include "EAssert.hpp"
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
@@ -21,12 +20,21 @@
 
 void BlockEditorScene::Reload() {
   ZoneScoped;
-  // TODO: free the tex handles and make this more streamlined across scenes
-  tex_handles_.emplace_back(
-      TextureManager::Get().CreateTexture2D({.filepath = GET_TEXTURE_PATH("crosshair.png")}));
-  TextureMaterial mat{.texture_handle =
-                          TextureManager::Get().GetTexture2D(tex_handles_[0]).BindlessHandle()};
-  crosshair_mat_handle_ = Renderer::Get().AllocateMaterial(mat);
+  {
+    ZoneScopedN("UI");
+    // TODO: make this more streamlined across scenes
+    tex_handles_.emplace_back(
+        TextureManager::Get().CreateTexture2D({.filepath = GET_TEXTURE_PATH("crosshair.png")}));
+    TextureMaterial mat{.texture_handle =
+                            TextureManager::Get().GetTexture2D(tex_handles_[0]).BindlessHandle()};
+    crosshair_mat_handle_ = Renderer::Get().AllocateMaterial(mat);
+    // for (int j = 0; j < 10; j++) {
+    //   for (int i = 0; i < 10; i++) {
+    //     Renderer::Get().AddStaticQuad(crosshair_mat_handle_, {i * 10, j * 10}, {50, 50});
+    //   }
+    // }
+  }
+
   all_block_model_names_ = BlockDB::GetAllBlockModelNames();
   std::sort(all_block_model_names_.begin(), all_block_model_names_.end());
   all_block_model_names_set_ = {all_block_model_names_.begin(), all_block_model_names_.end()};
@@ -160,24 +168,24 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
 
 BlockEditorScene::~BlockEditorScene() {
   TextureManager::Get().Remove2dArray(chunk_render_params_.chunk_tex_array_handle);
+  for (const auto handle : tex_handles_) {
+    TextureManager::Get().RemoveTexture2D(handle);
+  }
+  Renderer::Get().FreeMaterial(crosshair_mat_handle_);
 };
 
-void BlockEditorScene::Render(const Window& window) {
+void BlockEditorScene::Render() {
   ZoneScoped;
   // TODO: store model matrix and only update on change position?
   glm::mat4 model{1};
-  for (int j = 0; j < 10; j++) {
-    for (int i = 0; i < 10; i++) {
-      ZoneScopedN("for loop iter");
-      Renderer::Get().DrawQuad(crosshair_mat_handle_, {i * 10, j * 10}, {50, 50});
-    }
-  }
 
   {
     ZoneScopedN("Block render");
     model = glm::translate(model, {0.5, 0.5, 0.5});
     model = glm::rotate(model, block_rot_, {0, 1, 0});
     model = glm::translate(model, {-0.5, -0.5, -0.5});
+    auto win_center = window_.GetWindowCenter();
+    Renderer::Get().DrawQuad(crosshair_mat_handle_, {win_center.x, win_center.y}, {20, 20});
     if (edit_mode_ == EditMode::AddModel) {
       auto& mesh = add_model_blocks_[static_cast<uint32_t>(add_model_type_)].mesh;
       EASSERT_MSG(mesh.IsAllocated(), "Add model mesh not allocated");
@@ -196,10 +204,7 @@ void BlockEditorScene::Render(const Window& window) {
   Renderer::Get().RenderWorld(
       chunk_render_params_,
       {
-          // .vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()),
-          // .vp_matrix = glm::ortho(0.f, static_cast<float>(window.GetWindowSize().x), 0.f,
-          //                         static_cast<float>(window.GetWindowSize().y)),
-          .vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
+          .vp_matrix = player_.GetCamera().GetProjection(window_.GetAspectRatio()) *
                        player_.GetCamera().GetView(),
       });
 }

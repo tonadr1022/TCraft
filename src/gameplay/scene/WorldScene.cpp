@@ -73,9 +73,9 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
   return false;
 }
 
-void WorldScene::Render(const Window& window) {
+void WorldScene::Render() {
   ZoneScoped;
-  RenderInfo render_info{.vp_matrix = player_.GetCamera().GetProjection(window.GetAspectRatio()) *
+  RenderInfo render_info{.vp_matrix = player_.GetCamera().GetProjection(window_.GetAspectRatio()) *
                                       player_.GetCamera().GetView()};
 
   {

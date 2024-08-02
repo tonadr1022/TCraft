@@ -6,10 +6,11 @@
 #include "gameplay/scene/WorldScene.hpp"
 #include "renderer/Renderer.hpp"
 
-SceneManager::SceneManager()
+SceneManager::SceneManager(Window& window)
     : scene_creators_(
           {{"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }},
-           {"block_editor", [this]() { return std::make_unique<BlockEditorScene>(*this); }}}) {}
+           {"block_editor", [this]() { return std::make_unique<BlockEditorScene>(*this); }}}),
+      window_(window) {}
 
 void SceneManager::LoadScene(const std::string& name) {
   EASSERT_MSG(scene_creators_.count(name), "Scene not found");

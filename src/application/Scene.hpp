@@ -7,13 +7,14 @@ class Window;
 
 class Scene {
  public:
-  explicit Scene(SceneManager& scene_manager) : scene_manager_(scene_manager) {}
-  virtual ~Scene() = default;
+  explicit Scene(SceneManager& scene_manager);
+  virtual ~Scene();
   virtual void Update(double dt);
   virtual void OnImGui();
-  virtual void Render(const Window& window);
+  virtual void Render();
   virtual bool OnEvent(const SDL_Event& event);
 
  protected:
   SceneManager& scene_manager_;
+  Window& window_;
 };
