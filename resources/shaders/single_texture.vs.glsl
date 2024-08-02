@@ -21,7 +21,7 @@ layout(std430, binding = 0) readonly buffer data {
 };
 
 void main() {
-    UniformData uniform_data = uniforms[gl_DrawID];
+    UniformData uniform_data = uniforms[gl_DrawID + gl_InstanceID];
     vec4 pos_world_space = uniform_data.model * vec4(aPosition, 1.0);
     gl_Position = vp_matrix * pos_world_space;
     vs_out.tex_coords = aTexCoord;

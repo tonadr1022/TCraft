@@ -49,7 +49,7 @@ class Renderer {
 
   [[nodiscard]] uint32_t AllocateMesh(std::vector<Vertex>& vertices,
                                       std::vector<uint32_t>& indices);
-  void DrawQuad(uint32_t material_handle, const glm::ivec2& bot_left, const glm::ivec2& top_right);
+  void DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size);
 
   void FreeChunkMesh(uint32_t handle);
   void FreeRegMesh(uint32_t handle);
@@ -70,8 +70,6 @@ class Renderer {
   constexpr const static uint32_t MaxChunkDrawCmds{1'000'00};
   constexpr const static uint32_t MaxUIDrawCmds{10'000};
   ShaderManager shader_manager_;
-
-  Mesh quad_mesh_;
 
   // TODO: try without alignas
   struct alignas(16) ChunkDrawCmdUniform {
@@ -111,10 +109,21 @@ class Renderer {
   std::vector<DrawCmdUniform> reg_mesh_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> reg_mesh_frame_dei_cmds_;
 
-  Buffer quad_buffer_;
-
   DynamicBuffer tex_materials_buffer_;
   std::unordered_map<uint32_t, uint32_t> material_allocs_;
+
+  // std::vector<DrawCmdUniform> quad_frame_draw_cmd_uniforms_;
+  VertexArray quad_vao_;
+  Buffer quad_vbo_;
+  Buffer quad_ebo_;
+  Buffer quad_uniform_ssbo_;
+  std::vector<DrawCmdUniform> quad_uniforms_;
+  Buffer quad_draw_indirect_buffer_;
+
+  struct Stats {
+    uint32_t quad_draw_calls{0};
+  };
+  Stats stats_;
 
   void LoadShaders();
 

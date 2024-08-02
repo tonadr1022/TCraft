@@ -166,30 +166,31 @@ void BlockEditorScene::Render(const Window& window) {
   ZoneScoped;
   // TODO: store model matrix and only update on change position?
   glm::mat4 model{1};
-  // cross hair
-  // Renderer::Get().SubmitUIDrawCommand(
-  //     glm::scale(
-  //         glm::translate(model, {window.GetWindowSize().x / 2, window.GetWindowSize().y / 2, 0}),
-  //         {10, 10, 1}),
-  //     crosshair_mat_handle_);
-  Renderer::Get().DrawQuad(crosshair_mat_handle_, {0, 0},
-                           {window.GetWindowSize().x / 2, window.GetWindowSize().y / 2});
-  model = glm::translate(model, {0.5, 0.5, 0.5});
-  model = glm::rotate(model, block_rot_, {0, 1, 0});
-  model = glm::translate(model, {-0.5, -0.5, -0.5});
+  for (int j = 0; j < 10; j++) {
+    for (int i = 0; i < 10; i++) {
+      ZoneScopedN("for loop iter");
+      Renderer::Get().DrawQuad(crosshair_mat_handle_, {i * 10, j * 10}, {50, 50});
+    }
+  }
 
-  if (edit_mode_ == EditMode::AddModel) {
-    auto& mesh = add_model_blocks_[static_cast<uint32_t>(add_model_type_)].mesh;
-    EASSERT_MSG(mesh.IsAllocated(), "Add model mesh not allocated");
-    Renderer::Get().SubmitChunkDrawCommand(model, mesh.Handle());
-  } else if (edit_mode_ == EditMode::EditModel) {
-    EASSERT_MSG(edit_model_block_.mesh.IsAllocated(), "Edit model not allocated");
-    Renderer::Get().SubmitChunkDrawCommand(model, edit_model_block_.mesh.Handle());
-  } else if (edit_mode_ == EditMode::EditBlock) {
-    for (const auto& block : blocks_) {
-      EASSERT_MSG(block.mesh.IsAllocated(), "model not allocated");
-      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos),
-                                             block.mesh.Handle());
+  {
+    ZoneScopedN("Block render");
+    model = glm::translate(model, {0.5, 0.5, 0.5});
+    model = glm::rotate(model, block_rot_, {0, 1, 0});
+    model = glm::translate(model, {-0.5, -0.5, -0.5});
+    if (edit_mode_ == EditMode::AddModel) {
+      auto& mesh = add_model_blocks_[static_cast<uint32_t>(add_model_type_)].mesh;
+      EASSERT_MSG(mesh.IsAllocated(), "Add model mesh not allocated");
+      Renderer::Get().SubmitChunkDrawCommand(model, mesh.Handle());
+    } else if (edit_mode_ == EditMode::EditModel) {
+      EASSERT_MSG(edit_model_block_.mesh.IsAllocated(), "Edit model not allocated");
+      Renderer::Get().SubmitChunkDrawCommand(model, edit_model_block_.mesh.Handle());
+    } else if (edit_mode_ == EditMode::EditBlock) {
+      for (const auto& block : blocks_) {
+        EASSERT_MSG(block.mesh.IsAllocated(), "model not allocated");
+        Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos),
+                                               block.mesh.Handle());
+      }
     }
   }
   Renderer::Get().RenderWorld(

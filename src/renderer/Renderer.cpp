@@ -1,6 +1,9 @@
 #include "Renderer.hpp"
 
 #include <cstdint>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <tracy/Tracy.hpp>
 
 #include "ShaderManager.hpp"
 #include "Vertex.hpp"
@@ -25,6 +28,7 @@ Renderer::Renderer() {
 }
 
 void Renderer::Init() {
+  // TODO: don't hard code size!!!!!!!!!!!!!!!!!!!!!!!
   auto settings = SettingsManager::Get().LoadSetting("renderer");
   glEnable(GL_DEBUG_OUTPUT);
   glDebugMessageCallback(MessageCallback, nullptr);
@@ -58,16 +62,24 @@ void Renderer::Init() {
   reg_mesh_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxDrawCmds / 10,
                                       GL_DYNAMIC_STORAGE_BIT);
 
-  tex_materials_buffer_.Init(sizeof(TextureMaterial) * 1000, GL_DYNAMIC_STORAGE_BIT);
-
-  std::vector<Vertex> vertices = {QuadVertices.begin(), QuadVertices.end()};
+  // Quad vbo, ebo, and indirect buffer are length 1, for the quad mesh
+  std::vector<Vertex> vertices = {QuadVerticesCentered.begin(), QuadVerticesCentered.end()};
   std::vector<uint32_t> indices = {0, 1, 2, 2, 1, 3};
-  quad_mesh_.Allocate(vertices, indices);
+  quad_vao_.Init();
+  quad_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
+  quad_vao_.EnableAttribute<float>(1, 2, offsetof(Vertex, tex_coords));
+  quad_vbo_.Init(sizeof(Vertex) * 4, 0, vertices.data());
+  quad_ebo_.Init(sizeof(uint32_t) * 6, 0, indices.data());
+  quad_vao_.AttachVertexBuffer(quad_vbo_.Id(), 0, 0, sizeof(Vertex));
+  quad_vao_.AttachElementBuffer(quad_ebo_.Id());
+  quad_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand), GL_DYNAMIC_STORAGE_BIT);
+  quad_uniform_ssbo_.Init(sizeof(DrawCmdUniform) * 10000, GL_DYNAMIC_STORAGE_BIT);
+
+  tex_materials_buffer_.Init(sizeof(TextureMaterial) * 1000, GL_DYNAMIC_STORAGE_BIT);
 }
 
 void Renderer::Shutdown() {
   ZoneScoped;
-  quad_mesh_.Free();
   spdlog::info("chunk vbo allocs: {},chunk ebo allocs: {}", chunk_vbo_.NumAllocs(),
                chunk_ebo_.NumAllocs());
   spdlog::info("reg vbo allocs: {}, reg ebo allocs: {}", reg_mesh_vbo_.NumAllocs(),
@@ -115,8 +127,35 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
     reg_mesh_vao_.Bind();
     tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
     // spdlog::info("size {}", reg_mesh_dei_cmds_.size());
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, reg_mesh_dei_cmds_.size(),
-                                0);
+    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
+                                reg_mesh_frame_dei_cmds_.size(), 0);
+  }
+
+  if (stats_.quad_draw_calls > 0) {
+    ZoneScopedN("Quad render");
+    // Uses a single draw elements indirect command using instancing
+    auto shader = shader_manager_.GetShader("single_texture");
+    shader->Bind();
+    // TODO: use window size
+    shader->SetMat4("vp_matrix", glm::ortho(0.f, 1600.f, 0.f, 900.f));
+    quad_vao_.Bind();
+    quad_uniform_ssbo_.ResetOffset();
+    quad_uniform_ssbo_.SubData(sizeof(DrawCmdUniform) * quad_uniforms_.size(),
+                               quad_uniforms_.data());
+    quad_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
+    static DrawElementsIndirectCommand cmd{
+        .count = 6,
+        .instance_count = 0,
+        .first_index = 0,
+        .base_vertex = 0,
+        .base_instance = 0,
+    };
+    cmd.instance_count = stats_.quad_draw_calls;
+    quad_draw_indirect_buffer_.ResetOffset();
+    quad_draw_indirect_buffer_.SubData(sizeof(DrawElementsIndirectCommand), &cmd);
+    quad_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
   }
 }
 
@@ -152,17 +191,25 @@ void Renderer::SetMeshFrameDrawCommands(
 }
 
 void Renderer::SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle) {
+  ZoneScoped;
   chunk_frame_draw_cmd_mesh_ids_.emplace_back(mesh_handle);
   chunk_frame_draw_cmd_uniforms_.emplace_back(model);
 }
 
 void Renderer::SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_handle,
                                         uint32_t material_handle) {
+  ZoneScoped;
   reg_mesh_frame_draw_cmd_mesh_ids_.emplace_back(mesh_handle);
   reg_mesh_frame_draw_cmd_uniforms_.emplace_back(model, material_allocs_[material_handle]);
 }
 
-void Renderer::DrawQuad(uint32_t, const glm::ivec2&, const glm::ivec2&) {}
+void Renderer::DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size) {
+  ZoneScoped;
+  quad_uniforms_.emplace_back(
+      glm::scale(glm::translate(glm::mat4{1}, {center.x, center.y, 0}), {size.x, size.y, 1}),
+      material_allocs_[material_handle]);
+  stats_.quad_draw_calls++;
+}
 
 uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
                                 std::vector<uint32_t>& indices) {
@@ -251,7 +298,6 @@ void Renderer::FreeRegMesh(uint32_t handle) {
 void Renderer::FreeChunkMesh(uint32_t handle) {
   auto it = chunk_allocs_.find(handle);
   if (it == chunk_allocs_.end()) {
-    spdlog::info("{} hand", quad_mesh_.Handle());
     spdlog::error("FreeChunk: handle not found: {}", handle);
     return;
   }
@@ -267,6 +313,8 @@ void Renderer::StartFrame(const Window& window) {
   chunk_frame_draw_cmd_uniforms_.clear();
   reg_mesh_frame_draw_cmd_mesh_ids_.clear();
   reg_mesh_frame_draw_cmd_uniforms_.clear();
+  quad_uniforms_.clear();
+  stats_ = {};
 
   auto dims = window.GetWindowSize();
   glViewport(0, 0, dims.x, dims.y);
