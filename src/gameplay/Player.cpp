@@ -10,6 +10,23 @@
 #include "application/Input.hpp"
 #include "application/Window.hpp"
 
+void Player::Init() const {
+  SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
+  if (camera_focused_) {
+    Window::DisableImGuiInputs();
+  } else {
+    Window::EnableImGuiInputs();
+  }
+}
+
+const glm::vec3& Player::Position() const { return position_; }
+
+void Player::SetPosition(const glm::vec3& pos) {
+  position_ = pos;
+  fps_camera_.SetPosition(pos);
+  orbit_camera_.SetPosition(pos);
+}
+
 void Player::Update(double dt) {
   if (!camera_focused_) return;
   if (camera_mode == CameraMode::FPS) {
@@ -61,15 +78,6 @@ void Player::OnImGui() const {
   }
   ImGui::End();
 }
-
-void Player::SetPosition(const glm::vec3& pos) {
-  position_ = pos;
-  fps_camera_.SetPosition(pos);
-  orbit_camera_.SetPosition(pos);
-}
-
-const glm::vec3& Player::Position() const { return position_; }
-
 bool Player::OnEvent(const SDL_Event& event) {
   switch (event.type) {
     case SDL_KEYDOWN:
@@ -90,15 +98,6 @@ bool Player::OnEvent(const SDL_Event& event) {
     return fps_camera_.OnEvent(event);
   }
   return orbit_camera_.OnEvent(event);
-}
-
-void Player::Init() const {
-  SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
-  if (camera_focused_) {
-    Window::DisableImGuiInputs();
-  } else {
-    Window::EnableImGuiInputs();
-  }
 }
 
 void Player::SetCameraFocused(bool state) {

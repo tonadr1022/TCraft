@@ -6,6 +6,7 @@
 
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
+#include "gameplay/GamePlayer.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Renderer.hpp"
@@ -16,7 +17,7 @@
 #include "util/Paths.hpp"
 
 WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
-    : Scene(scene_manager), chunk_manager_(block_db_) {
+    : Scene(scene_manager), chunk_manager_(block_db_), player_(chunk_manager_) {
   ZoneScoped;
   EASSERT_MSG(!path.empty(), "Can't load world scene without a loaded world name");
   {

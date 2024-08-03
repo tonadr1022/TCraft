@@ -18,7 +18,7 @@ void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   it->second->GetData().SetBlock(util::chunk::WorldToPosInChunk(pos), block);
 }
 
-BlockType ChunkManager::GetBlock(const glm::ivec3& pos) {
+BlockType ChunkManager::GetBlock(const glm::ivec3& pos) const {
   auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
   EASSERT_MSG(it != chunk_map_.end(), "Get block in non existent chunk");
   return it->second->GetData().GetBlock(util::chunk::WorldToPosInChunk(pos));

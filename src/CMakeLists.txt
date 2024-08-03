@@ -26,6 +26,7 @@ set(SOURCES
     renderer/opengl/DynamicBuffer.cpp
 
     gameplay/Player.cpp
+    gameplay/GamePlayer.cpp
     gameplay/scene/WorldScene.cpp
     gameplay/scene/BlockEditorScene.cpp
     gameplay/scene/MainMenuScene.cpp

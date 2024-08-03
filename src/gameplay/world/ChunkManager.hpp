@@ -19,7 +19,7 @@ class ChunkManager {
   void Init();
   const ChunkMap& GetVisibleChunks() const { return chunk_map_; }
   void SetBlock(const glm::ivec3& pos, BlockType block);
-  BlockType GetBlock(const glm::ivec3& pos);
+  BlockType GetBlock(const glm::ivec3& pos) const;
   void OnImGui();
 
  private:

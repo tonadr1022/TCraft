@@ -1,6 +1,7 @@
 #pragma once
 
 #include "application/Scene.hpp"
+#include "gameplay/GamePlayer.hpp"
 #include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
@@ -24,6 +25,6 @@ class WorldScene : public Scene {
   ChunkManager chunk_manager_;
 
  private:
-  Player player_;
+  GamePlayer player_;
   uint32_t seed_{0};
 };

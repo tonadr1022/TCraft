@@ -68,7 +68,6 @@ void OrbitCamera::UpdatePosition() {
 }
 
 void OrbitCamera::SetPosition(const glm::vec3& pos) {
-  spdlog::info("set pos");
   auto dist_to_target = glm::distance(pos, target_);
   distance_ = dist_to_target;
   auto diff = pos - target_;
