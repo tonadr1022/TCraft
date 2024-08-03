@@ -10,7 +10,6 @@
 
 #include "application/Input.hpp"
 #include "application/SettingsManager.hpp"
-#include "application/Window.hpp"
 
 glm::mat4 OrbitCamera::GetProjection(float aspect_ratio) const {
   ZoneScoped;
@@ -24,11 +23,24 @@ glm::mat4 OrbitCamera::GetView() const {
 }
 
 bool OrbitCamera::OnEvent(const SDL_Event& event) {
-  switch (event.type) {
-    case SDL_MOUSEWHEEL:
-      distance_ += 0.1 * event.wheel.preciseY;
-      UpdatePosition();
-      return true;
+  float sensitivity = SettingsManager::Get().orbit_mouse_sensitivity;
+  if (event.type == SDL_MOUSEWHEEL) {
+    distance_ += 0.1f * event.wheel.preciseY;
+    UpdatePosition();
+    return true;
+  }
+
+  if (event.type == SDL_MOUSEMOTION && Input::IsMouseButtonPressed(SDL_BUTTON_LEFT)) {
+    glm::vec2 cursor_offset = {event.motion.xrel, event.motion.yrel};
+    if (first_mouse_) {
+      first_mouse_ = false;
+      cursor_offset = {};
+    }
+    azimuth_angle_ += static_cast<float>(cursor_offset.x) * sensitivity;
+    polar_angle_ += static_cast<float>(cursor_offset.y) * sensitivity;
+    polar_angle_ = glm::clamp(polar_angle_, -89.0f, 89.0f);
+    UpdatePosition();
+    return true;
   }
   return false;
 }
@@ -38,33 +50,7 @@ void OrbitCamera::LookAt(const glm::vec3& pos) {
   UpdatePosition();
 }
 
-void OrbitCamera::Update(double) {
-  float sensitivity = SettingsManager::Get().orbit_mouse_sensitivity;
-  auto mouse_pos = Window::Get().GetMousePosition();
-  auto window_center = Window::Get().GetWindowCenter();
-  glm::vec2 cursor_offset = mouse_pos - window_center;
-  if (first_mouse_) {
-    first_mouse_ = false;
-    // Window::Get().CenterCursor();
-    return;
-  }
-  // Window::Get().CenterCursor();
-  if (cursor_offset.x != 0 || cursor_offset.y != 0) {
-    if (Input::IsKeyDown(KMOD_RSHIFT)) {
-      glm::vec3 move_offset = right_ * static_cast<float>(-cursor_offset.x) * sensitivity +
-                              up_ * static_cast<float>(cursor_offset.y) * sensitivity;
-
-      // TODO: speed here multiply
-      target_ += move_offset;
-    }
-
-    azimuth_angle_ += static_cast<float>(cursor_offset.x) * sensitivity;
-    polar_angle_ += static_cast<float>(cursor_offset.y) * sensitivity;
-    polar_angle_ =
-        glm::clamp(polar_angle_ + static_cast<float>(cursor_offset.y) * sensitivity, -89.0f, 89.0f);
-    UpdatePosition();
-  }
-}
+void OrbitCamera::Update(double) {}
 
 void OrbitCamera::UpdatePosition() {
   float azimuth_rad = glm::radians(azimuth_angle_);
@@ -82,6 +68,7 @@ void OrbitCamera::UpdatePosition() {
 }
 
 void OrbitCamera::SetPosition(const glm::vec3& pos) {
+  spdlog::info("set pos");
   auto dist_to_target = glm::distance(pos, target_);
   distance_ = dist_to_target;
   auto diff = pos - target_;

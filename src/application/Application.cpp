@@ -98,10 +98,17 @@ void Application::OnEvent(const SDL_Event& event) {
   if (event_dispatcher_.Dispatch(event)) return;
   switch (event.type) {
     case SDL_KEYDOWN:
+      spdlog::info("button down");
       Input::SetKeyPressed(event.key.keysym.sym, true);
       break;
     case SDL_KEYUP:
       Input::SetKeyPressed(event.key.keysym.sym, false);
+      break;
+    case SDL_MOUSEBUTTONDOWN:
+      Input::SetMouseButtonPressed(event.button.button, true);
+      break;
+    case SDL_MOUSEBUTTONUP:
+      Input::SetMouseButtonPressed(event.button.button, false);
       break;
   }
 }

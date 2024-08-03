@@ -40,7 +40,6 @@ void Player::Update(double dt) {
     }
     fps_camera_.Update(dt);
   } else {
-    orbit_camera_.SetPosition(position_);
     orbit_camera_.Update(dt);
   }
 }
@@ -66,6 +65,7 @@ void Player::OnImGui() const {
 void Player::SetPosition(const glm::vec3& pos) {
   position_ = pos;
   fps_camera_.SetPosition(pos);
+  orbit_camera_.SetPosition(pos);
 }
 
 const glm::vec3& Player::Position() const { return position_; }
@@ -86,7 +86,10 @@ bool Player::OnEvent(const SDL_Event& event) {
           }
       }
   }
-  return false;
+  if (camera_mode == CameraMode::FPS) {
+    return fps_camera_.OnEvent(event);
+  }
+  return orbit_camera_.OnEvent(event);
 }
 
 void Player::Init() const {

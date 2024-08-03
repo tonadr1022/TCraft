@@ -206,6 +206,8 @@ void Window::PollEvents() {
         event_callback_(event);
         break;
       case SDL_MOUSEWHEEL:
+      case SDL_MOUSEBUTTONDOWN:
+      case SDL_MOUSEBUTTONUP:
         event_callback_(event);
       default:
         break;
