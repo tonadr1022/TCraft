@@ -14,9 +14,9 @@ class TextureManager {
                               std::unordered_map<std::string, uint32_t>& name_to_idx);
   void Remove2dArray(uint32_t handle);
 
-  TextureHandle CreateTexture2D(const Texture2DCreateParams& params);
-  Texture2D& GetTexture2D(TextureHandle handle);
+  [[nodiscard]] std::shared_ptr<Texture2D> Load(const Texture2DCreateParams& params);
   void RemoveTexture2D(TextureHandle handle);
+  void RemoveUnused();
 
  private:
   friend class Application;
@@ -24,6 +24,6 @@ class TextureManager {
   TextureManager();
   uint32_t next_tex_array_handle_{1};
 
-  std::unordered_map<uint32_t, Texture2dArray> texture_2d_array_map_;
-  std::unordered_map<uint32_t, Texture2D> texture_2d_map_;
+  std::unordered_map<uint32_t, std::shared_ptr<Texture2dArray>> texture_2d_array_map_;
+  std::unordered_map<std::string, std::shared_ptr<Texture2D>> texture_2d_map_;
 };

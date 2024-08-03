@@ -85,7 +85,7 @@ void Renderer::Init() {
   cube_vao_.AttachVertexBuffer(cube_vbo_.Id(), 0, 0, sizeof(Vertex));
   cube_vao_.AttachElementBuffer(cube_ebo_.Id());
 
-  tex_materials_buffer_.Init(sizeof(TextureMaterial) * 1000, GL_DYNAMIC_STORAGE_BIT);
+  tex_materials_buffer_.Init(sizeof(TextureMaterialData) * 1000, GL_DYNAMIC_STORAGE_BIT);
 }
 
 void Renderer::Shutdown() {
@@ -286,20 +286,20 @@ uint32_t Renderer::AllocateMesh(std::vector<Vertex>& vertices, std::vector<uint3
   return id;
 }
 
-uint32_t Renderer::AllocateMaterial(TextureMaterial& material) {
+uint32_t Renderer::AllocateMaterial(TextureMaterialData& material) {
   ZoneScoped;
   uint32_t offset;
-  uint32_t handle = tex_materials_buffer_.Allocate(sizeof(TextureMaterial),
+  uint32_t handle = tex_materials_buffer_.Allocate(sizeof(TextureMaterialData),
                                                    static_cast<void*>(&material), offset);
-  material_allocs_.emplace(handle, offset / sizeof(TextureMaterial));
+  material_allocs_.emplace(handle, offset / sizeof(TextureMaterialData));
   return handle;
 }
 
-uint32_t Renderer::AllocateTextureMaterial(uint32_t texture_handle) {
-  ZoneScoped;
-  TextureMaterial mat{.texture_handle = texture_handle};
-  return AllocateMaterial(mat);
-}
+// uint32_t Renderer::AllocateTextureMaterial(uint32_t texture_handle) {
+//   ZoneScoped;
+//   TextureMaterialData mat{.texture_handle = texture_handle};
+//   return AllocateMaterial(mat);
+// }
 
 void Renderer::FreeMaterial(uint32_t material_handle) {
   ZoneScoped;
@@ -307,7 +307,8 @@ void Renderer::FreeMaterial(uint32_t material_handle) {
   if (it == material_allocs_.end()) {
     spdlog::error("Material with handle {} not found", material_handle);
   }
-  tex_materials_buffer_.Free(it->first);
+  tex_materials_buffer_.Free(material_handle);
+  material_allocs_.erase(it);
 }
 
 void Renderer::FreeRegMesh(uint32_t handle) {

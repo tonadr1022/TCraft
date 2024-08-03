@@ -13,6 +13,7 @@
 #include "application/Input.hpp"
 #include "application/SceneManager.hpp"
 #include "renderer/Renderer.hpp"
+#include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
 
@@ -23,10 +24,10 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 }  // namespace
 
 Application::Application(int width, int height, const char* title) : scene_manager_(window_) {
-  // initialize singletons
   settings_ = new SettingsManager;
   texture_manager_ = new TextureManager;
   renderer_ = new Renderer(window_);
+  MaterialManager::Init();
 
   SettingsManager::Get().Load(SettingsPath);
   auto app_settings_json = SettingsManager::Get().LoadSetting("application");
@@ -77,6 +78,7 @@ void Application::Run() {
   scene_manager_.Shutdown();
   Renderer::Get().Shutdown();
   window_.Shutdown();
+  MaterialManager::Shutdown();
 }
 
 Application::~Application() {

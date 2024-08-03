@@ -5,6 +5,8 @@
 #include "gameplay/scene/MainMenuScene.hpp"
 #include "gameplay/scene/WorldScene.hpp"
 #include "renderer/Renderer.hpp"
+#include "resource/MaterialManager.hpp"
+#include "resource/TextureManager.hpp"
 
 SceneManager::SceneManager(Window& window)
     : scene_creators_(
@@ -18,11 +20,19 @@ void SceneManager::LoadScene(const std::string& name) {
   active_scene_ = nullptr;
   // construct new scene
   active_scene_ = scene_creators_.at(name)();
-  if (next_scene_after_scene_construction_err_ != "") {
-    auto tmp = next_scene_after_scene_construction_err_;
+
+  // Up to the user to end this loop with a valid constructed scene name if the
+  // scene they intend fails to load
+  while (next_scene_after_scene_construction_err_ != "") {
+    // call destructor of active scene
+    active_scene_ = nullptr;
     next_scene_after_scene_construction_err_ = "";
-    LoadScene(tmp);
+    // construct new scene
+    active_scene_ = scene_creators_.at(name)();
   }
+
+  MaterialManager::Get().RemoveUnused();
+  TextureManager::Get().RemoveUnused();
 }
 
 Scene& SceneManager::GetActiveScene() {

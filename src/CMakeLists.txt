@@ -17,6 +17,7 @@ set(SOURCES
     renderer/Renderer.cpp
     renderer/ChunkMesher.cpp
     renderer/Mesh.cpp
+    renderer/Material.cpp
     renderer/opengl/Texture2d.cpp
     renderer/opengl/Texture2dArray.cpp
     renderer/opengl/Debug.cpp
@@ -38,6 +39,7 @@ set(SOURCES
     gameplay/world/ChunkUtil.cpp
 
     resource/TextureManager.cpp
+    resource/MaterialManager.cpp
 
     util/LoadFile.cpp
     util/StringUtil.cpp

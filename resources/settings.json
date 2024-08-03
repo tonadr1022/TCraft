@@ -3,7 +3,7 @@
     "imgui_enabled": true
   },
   "chunk_manager": {
-    "load_distance": 10
+    "load_distance": 0
   },
   "fps_cam": {
     "pitch": 3.0122883319854736,

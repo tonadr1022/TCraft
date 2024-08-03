@@ -32,6 +32,7 @@ Mesh::~Mesh() {
   }
   handle_ = 0;
 }
+
 Mesh::Mesh() = default;
 
 Mesh::Mesh(Mesh&& other) noexcept { *this = std::move(other); }

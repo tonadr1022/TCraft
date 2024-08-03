@@ -28,7 +28,7 @@ class Window;
 class BlockDB;
 struct Vertex;
 struct ChunkVertex;
-struct TextureMaterial;
+struct TextureMaterialData;
 
 struct RenderInfo {
   glm::mat4 vp_matrix;
@@ -58,7 +58,7 @@ class Renderer {
 
   void FreeChunkMesh(uint32_t handle);
   void FreeRegMesh(uint32_t handle);
-  [[nodiscard]] uint32_t AllocateMaterial(TextureMaterial& material);
+  [[nodiscard]] uint32_t AllocateMaterial(TextureMaterialData& material);
   [[nodiscard]] uint32_t AllocateTextureMaterial(uint32_t texture_handle);
   void FreeMaterial(uint32_t material_handle);
 

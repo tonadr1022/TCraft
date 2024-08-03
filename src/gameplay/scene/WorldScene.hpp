@@ -2,11 +2,11 @@
 
 #include "application/Scene.hpp"
 #include "gameplay/GamePlayer.hpp"
-#include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/ChunkRenderParams.hpp"
 
+class TextureMaterial;
 class Window;
 
 class WorldScene : public Scene {
@@ -23,6 +23,8 @@ class WorldScene : public Scene {
 
   ChunkRenderParams chunk_render_params_;
   ChunkManager chunk_manager_;
+
+  std::shared_ptr<TextureMaterial> cross_hair_mat_;
 
  private:
   GamePlayer player_;

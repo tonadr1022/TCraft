@@ -52,6 +52,7 @@ Texture2D::Texture2D(const Texture2DCreateParams& params) {
 
 Texture2D::~Texture2D() {
   if (bindless_handle_) {
+    spdlog::info("delete tex2d");
     MakeNonResident();
   }
   if (id_) {

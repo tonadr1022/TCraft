@@ -13,6 +13,7 @@
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/Image.hpp"
+#include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -22,10 +23,13 @@ void BlockEditorScene::Reload() {
   {
     ZoneScopedN("UI");
     // TODO: make this more streamlined across scenes
-    tex_handles_.emplace_back(
-        TextureManager::Get().CreateTexture2D({.filepath = GET_TEXTURE_PATH("crosshair.png")}));
-    crosshair_mat_handle_ = Renderer::Get().AllocateTextureMaterial(
-        TextureManager::Get().GetTexture2D(tex_handles_[0]).BindlessHandle());
+    // cross_hair_tex_ = TextureManager::Get().Load({.filepath =
+    // GET_TEXTURE_PATH("crosshair.png")});
+    cross_hair_mat_ =
+        MaterialManager::Get().LoadTextureMaterial({.filepath = GET_TEXTURE_PATH("crosshair.png")});
+    // crosshair_mat_handle_ =
+    //     Renderer::Get().AllocateTextureMaterial(cross_hair_tex_->BindlessHandle());
+
     // for (int j = 0; j < 10; j++) {
     //   for (int i = 0; i < 10; i++) {
     //     Renderer::Get().AddStaticQuad(crosshair_mat_handle_, {i * 10, j * 10}, {50, 50});
@@ -168,10 +172,6 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
 
 BlockEditorScene::~BlockEditorScene() {
   TextureManager::Get().Remove2dArray(chunk_render_params_.chunk_tex_array_handle);
-  for (const auto handle : tex_handles_) {
-    TextureManager::Get().RemoveTexture2D(handle);
-  }
-  Renderer::Get().FreeMaterial(crosshair_mat_handle_);
 };
 
 void BlockEditorScene::Render() {
@@ -185,7 +185,7 @@ void BlockEditorScene::Render() {
     model = glm::rotate(model, block_rot_, {0, 1, 0});
     model = glm::translate(model, {-0.5, -0.5, -0.5});
     auto win_center = window_.GetWindowCenter();
-    Renderer::Get().DrawQuad(crosshair_mat_handle_, {win_center.x, win_center.y}, {20, 20});
+    Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
     if (edit_mode_ == EditMode::AddModel) {
       auto& mesh = add_model_blocks_[static_cast<uint32_t>(add_model_type_)].mesh;
       EASSERT_MSG(mesh.IsAllocated(), "Add model mesh not allocated");

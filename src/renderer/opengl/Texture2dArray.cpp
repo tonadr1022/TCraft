@@ -18,7 +18,7 @@ Texture2dArray& Texture2dArray::operator=(Texture2dArray&& other) noexcept {
 }
 
 Texture2dArray::~Texture2dArray() {
-  spdlog::info("delete tex array");
+  // spdlog::info("delete tex array");
   if (id_) {
     glDeleteTextures(1, &id_);
   }
@@ -43,7 +43,7 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
   glTextureStorage3D(id_, mip_levels, params.internal_format, dims_.x, dims_.y,
                      params.all_pixels_data.size());
 
-  spdlog::info("create tex array {} of depth: {}", id_, params.all_pixels_data.size());
+  // spdlog::info("create tex array {} of depth: {}", id_, params.all_pixels_data.size());
   for (size_t i = 0; i < params.all_pixels_data.size(); i++) {
     glTextureSubImage3D(id_, 0, 0, 0, i, params.dims.x, params.dims.y, 1, params.format,
                         GL_UNSIGNED_BYTE, params.all_pixels_data[i]);

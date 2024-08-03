@@ -11,6 +11,7 @@
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/Image.hpp"
+#include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
@@ -26,7 +27,6 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
       auto data = util::LoadJsonFile(std::string(path) + "/data.json");
       auto level_data = util::LoadJsonFile(std::string(path) + "/level.json");
       auto seed = json_util::GetString(level_data, "seed");
-      spdlog::info("loading");
       EASSERT_MSG(seed.has_value(), "Missing seed from level.json");
       static std::hash<std::string> hasher;
       seed_ = hasher(seed.value());
@@ -39,7 +39,11 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
       return;
     }
   }
-  { ZoneScopedN("Texture load"); }
+  {
+    ZoneScopedN("Texture load");
+    cross_hair_mat_ =
+        MaterialManager::Get().LoadTextureMaterial({.filepath = GET_TEXTURE_PATH("crosshair.png")});
+  }
 
   player_.Init();
   block_db_.Init();
@@ -93,6 +97,8 @@ void WorldScene::Render() {
   RenderInfo render_info{.vp_matrix = player_.GetCamera().GetProjection(window_.GetAspectRatio()) *
                                       player_.GetCamera().GetView()};
 
+  auto win_center = window_.GetWindowCenter();
+  Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
   {
     ZoneScopedN("Submit chunk draw commands");
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map

@@ -6,6 +6,8 @@
 #include "renderer/ChunkRenderParams.hpp"
 #include "renderer/Mesh.hpp"
 
+class TextureMaterial;
+
 class BlockEditorScene : public Scene {
  public:
   explicit BlockEditorScene(SceneManager& scene_manager);
@@ -73,6 +75,5 @@ class BlockEditorScene : public Scene {
 
   ChunkRenderParams chunk_render_params_;
 
-  std::vector<uint32_t> tex_handles_;
-  uint32_t crosshair_mat_handle_{0};
+  std::shared_ptr<TextureMaterial> cross_hair_mat_;
 };
