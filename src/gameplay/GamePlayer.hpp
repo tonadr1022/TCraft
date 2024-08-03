@@ -11,6 +11,7 @@ class GamePlayer : public Player {
   explicit GamePlayer(const ChunkManager& chunk_manager);
   void RayCast();
   void Update(double dt) override;
+  const glm::ivec3& GetRayCastBlockPos() const;
 
  private:
   glm::ivec3 ray_cast_non_air_pos_;

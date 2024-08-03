@@ -59,12 +59,15 @@ class Renderer {
   void FreeChunkMesh(uint32_t handle);
   void FreeRegMesh(uint32_t handle);
   [[nodiscard]] uint32_t AllocateMaterial(TextureMaterial& material);
+  [[nodiscard]] uint32_t AllocateTextureMaterial(uint32_t texture_handle);
   void FreeMaterial(uint32_t material_handle);
 
   void Init();
   void StartFrame(const Window& window);
   [[nodiscard]] bool OnEvent(const SDL_Event& event);
   void Shutdown();
+  void DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
+                        const glm::mat4& projection);
 
  private:
   friend class Application;
@@ -126,6 +129,10 @@ class Renderer {
   std::vector<DrawCmdUniform> quad_uniforms_;
   Buffer quad_draw_indirect_buffer_;
   std::vector<DrawCmdUniform> static_quad_uniforms_;
+
+  VertexArray cube_vao_;
+  Buffer cube_vbo_;
+  Buffer cube_ebo_;
 
   struct Stats {
     uint32_t quad_draw_calls{0};

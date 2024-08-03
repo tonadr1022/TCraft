@@ -75,6 +75,16 @@ void Renderer::Init() {
   quad_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand), GL_DYNAMIC_STORAGE_BIT);
   quad_uniform_ssbo_.Init(sizeof(DrawCmdUniform) * 10000, GL_DYNAMIC_STORAGE_BIT);
 
+  cube_vao_.Init();
+  cube_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
+  cube_vao_.EnableAttribute<float>(1, 2, offsetof(Vertex, tex_coords));
+  auto cube_vertices = CubeVertices;
+  auto cube_indices = CubeIndices;
+  cube_vbo_.Init(sizeof(cube_vertices), 0, cube_vertices.data());
+  cube_ebo_.Init(sizeof(cube_indices), 0, cube_indices.data());
+  cube_vao_.AttachVertexBuffer(cube_vbo_.Id(), 0, 0, sizeof(Vertex));
+  cube_vao_.AttachElementBuffer(cube_ebo_.Id());
+
   tex_materials_buffer_.Init(sizeof(TextureMaterial) * 1000, GL_DYNAMIC_STORAGE_BIT);
 }
 
@@ -285,6 +295,12 @@ uint32_t Renderer::AllocateMaterial(TextureMaterial& material) {
   return handle;
 }
 
+uint32_t Renderer::AllocateTextureMaterial(uint32_t texture_handle) {
+  ZoneScoped;
+  TextureMaterial mat{.texture_handle = texture_handle};
+  return AllocateMaterial(mat);
+}
+
 void Renderer::FreeMaterial(uint32_t material_handle) {
   ZoneScoped;
   auto it = material_allocs_.find(material_handle);
@@ -363,4 +379,22 @@ void Renderer::LoadShaders() {
   shader_manager_.AddShader("single_texture",
                             {{GET_SHADER_PATH("single_texture.vs.glsl"), ShaderType::Vertex},
                              {GET_SHADER_PATH("single_texture.fs.glsl"), ShaderType::Fragment}});
+  shader_manager_.AddShader("block_outline",
+                            {{GET_SHADER_PATH("block_outline.vs.glsl"), ShaderType::Vertex},
+                             {GET_SHADER_PATH("block_outline.gs.glsl"), ShaderType::Geometry},
+                             {GET_SHADER_PATH("block_outline.fs.glsl"), ShaderType::Fragment}});
+}
+
+void Renderer::DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
+                                const glm::mat4& projection) {
+  glm::mat4 model = glm::translate(
+      glm::scale(glm::translate(glm::mat4{1.f}, block_pos), glm::vec3(1.005f)), glm::vec3(-.0025f));
+  auto shader = shader_manager_.GetShader("block_outline");
+  shader->Bind();
+  shader->SetMat4("model", model);
+  shader->SetMat4("view", view);
+  shader->SetMat4("projection", projection);
+  shader->SetFloat("line_width", .01f);
+  cube_vao_.Bind();
+  glDrawElements(GL_LINES, CubeIndices.size(), GL_UNSIGNED_INT, nullptr);
 }

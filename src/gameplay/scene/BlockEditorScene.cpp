@@ -11,7 +11,6 @@
 #include "gameplay/world/BlockDB.hpp"
 #include "pch.hpp"
 #include "renderer/ChunkMesher.hpp"
-#include "renderer/Material.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/Image.hpp"
 #include "resource/TextureManager.hpp"
@@ -25,9 +24,8 @@ void BlockEditorScene::Reload() {
     // TODO: make this more streamlined across scenes
     tex_handles_.emplace_back(
         TextureManager::Get().CreateTexture2D({.filepath = GET_TEXTURE_PATH("crosshair.png")}));
-    TextureMaterial mat{.texture_handle =
-                            TextureManager::Get().GetTexture2D(tex_handles_[0]).BindlessHandle()};
-    crosshair_mat_handle_ = Renderer::Get().AllocateMaterial(mat);
+    crosshair_mat_handle_ = Renderer::Get().AllocateTextureMaterial(
+        TextureManager::Get().GetTexture2D(tex_handles_[0]).BindlessHandle());
     // for (int j = 0; j < 10; j++) {
     //   for (int i = 0; i < 10; i++) {
     //     Renderer::Get().AddStaticQuad(crosshair_mat_handle_, {i * 10, j * 10}, {50, 50});

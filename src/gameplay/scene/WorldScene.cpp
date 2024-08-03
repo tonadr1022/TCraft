@@ -39,6 +39,8 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
       return;
     }
   }
+  { ZoneScopedN("Texture load"); }
+
   player_.Init();
   block_db_.Init();
   {
@@ -100,6 +102,10 @@ void WorldScene::Render() {
       Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.Handle());
     }
   }
+  Renderer::Get().DrawBlockOutline(
+      player_.GetRayCastBlockPos(), player_.GetCamera().GetView(),
+      player_.GetCamera().GetProjection(Window::Get().GetAspectRatio()));
+
   Renderer::Get().RenderWorld(chunk_render_params_, render_info);
 }
 

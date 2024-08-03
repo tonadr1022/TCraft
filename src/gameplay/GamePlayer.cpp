@@ -15,6 +15,7 @@ float IntBound(float s, float ds) {
 GamePlayer::GamePlayer(const ChunkManager& chunk_manager) : chunk_manager_(chunk_manager) {}
 
 void GamePlayer::RayCast() {
+  ZoneScoped;
   glm::vec3 direction = fps_camera_.GetFront();
   EASSERT_MSG(direction != glm::vec3(0), "Invalid front vector");
 
@@ -63,6 +64,8 @@ void GamePlayer::RayCast() {
     }
   }
 }
+
+const glm::ivec3& GamePlayer::GetRayCastBlockPos() const { return ray_cast_non_air_pos_; }
 
 void GamePlayer::Update(double dt) {
   RayCast();
