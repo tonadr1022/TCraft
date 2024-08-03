@@ -146,6 +146,9 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
   SDL_GL_MakeCurrent(window_, gl_context);
   SetVsync(true);
 
+  SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
+  SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
+
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -202,6 +205,8 @@ void Window::PollEvents() {
         if (ImGui::GetIO().WantCaptureMouse) break;
         event_callback_(event);
         break;
+      case SDL_MOUSEWHEEL:
+        event_callback_(event);
       default:
         break;
     }

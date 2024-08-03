@@ -10,11 +10,13 @@ set(SOURCES
     application/WorldManager.cpp
     application/Scene.cpp
 
+    camera/FPSCamera.cpp
+    camera/OrbitCamera.cpp
+
     renderer/ShaderManager.cpp
     renderer/Renderer.cpp
-    renderer/FPSCamera.cpp
     renderer/ChunkMesher.cpp
-
+    renderer/Mesh.cpp
     renderer/opengl/Texture2d.cpp
     renderer/opengl/Texture2dArray.cpp
     renderer/opengl/Debug.cpp
@@ -22,23 +24,23 @@ set(SOURCES
     renderer/opengl/VertexArray.cpp
     renderer/opengl/Buffer.cpp
     renderer/opengl/DynamicBuffer.cpp
-    renderer/Mesh.cpp
 
-    util/LoadFile.cpp
-    util/StringUtil.cpp
-    util/JsonUtil.cpp
     gameplay/Player.cpp
+    gameplay/scene/WorldScene.cpp
+    gameplay/scene/BlockEditorScene.cpp
+    gameplay/scene/MainMenuScene.cpp
     gameplay/world/TerrainGenerator.cpp
     gameplay/world/Chunk.cpp
     gameplay/world/ChunkData.cpp
     gameplay/world/BlockDB.cpp
     gameplay/world/ChunkManager.cpp
     gameplay/world/ChunkUtil.cpp
-    gameplay/scene/WorldScene.cpp
-    gameplay/scene/BlockEditorScene.cpp
-    gameplay/scene/MainMenuScene.cpp
 
     resource/TextureManager.cpp
+
+    util/LoadFile.cpp
+    util/StringUtil.cpp
+    util/JsonUtil.cpp
 
     EAssert.cpp
     pch.cpp

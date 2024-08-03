@@ -18,8 +18,10 @@ glm::mat4 FPSCamera::GetProjection(float aspect_ratio) const {
 
 glm::mat4 FPSCamera::GetView() const {
   ZoneScoped;
-  return glm::lookAt(position_, position_ + front_, UpVector);
+  return glm::lookAt(pos_, pos_ + front_, UpVector);
 }
+
+void FPSCamera::SetPosition(const glm::vec3& pos) { pos_ = pos; }
 
 void FPSCamera::Update(double /* dt */) {
   ZoneScoped;
@@ -50,7 +52,7 @@ void FPSCamera::CalculateFront() {
 
 void FPSCamera::LookAt(const glm::vec3& pos) {
   ZoneScoped;
-  front_ = glm::normalize(pos - position_);
+  front_ = glm::normalize(pos - pos_);
   yaw_ = glm::degrees(glm::atan(front_.z, front_.x));
   pitch_ = glm::degrees(glm::asin(front_.y));
   CalculateFront();
@@ -59,6 +61,6 @@ void FPSCamera::LookAt(const glm::vec3& pos) {
 void FPSCamera::OnImGui() const {
   ZoneScoped;
   ImGui::Text("Yaw: %.1f, Pitch: %.1f", yaw_, pitch_);
-  ImGui::Text("Position: %.1f, %.1f, %.1f", position_.x, position_.y, position_.z);
+  ImGui::Text("Position: %.1f, %.1f, %.1f", pos_.x, pos_.y, pos_.z);
   ImGui::Text("Front: %.2f, %.2f, %.2f", front_.x, front_.y, front_.z);
 }

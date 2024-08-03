@@ -163,7 +163,9 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
   ZoneScoped;
   Reload();
   player_.SetCameraFocused(false);
-  player_.SetPosition({0, 0.5, 1});
+  player_.SetPosition({0, 0.5, 2});
+  player_.LookAt({0.5f, 0.5f, 0.5f});
+  player_.camera_mode = Player::CameraMode::Orbit;
 }
 
 BlockEditorScene::~BlockEditorScene() {

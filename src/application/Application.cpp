@@ -88,7 +88,6 @@ Application::~Application() {
 
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;
-
   if (event.type == SDL_KEYDOWN) {
     if (event.key.keysym.sym == SDLK_g && event.key.keysym.mod & KMOD_ALT) {
       imgui_enabled_ = !imgui_enabled_;

@@ -3,7 +3,7 @@
     "imgui_enabled": true
   },
   "chunk_manager": {
-    "load_distance": 131072
+    "load_distance": 10
   },
   "fps_cam": {
     "pitch": 3.0122883319854736,
@@ -12,16 +12,10 @@
   "main": {
     "fps_cam_fov_deg": 74.00000762939453,
     "load_distance": 0,
-    "mouse_sensitivity": 2.196000099182129
+    "mouse_sensitivity": 2.196000099182129,
+    "orbit_mouse_sensitivity": 0.4580000042915344
   },
   "renderer": {
     "wireframe_enabled": false
-  },
-  "world": {
-    "player_position": [
-      17.153945922851563,
-      34.25644302368164,
-      11.767059326171875
-    ]
   }
 }
