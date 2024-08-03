@@ -7,6 +7,8 @@ using json = nlohmann::json;
 class SettingsManager {
  public:
   static SettingsManager& Get();
+  static void Init();
+  static void Shutdown();
   void OnImGui();
   void Load(const std::string& path);
   void Shutdown(const std::string& path);
@@ -24,7 +26,6 @@ class SettingsManager {
 
  private:
   json settings_json_;
-  friend class Application;
   SettingsManager();
   static SettingsManager* instance_;
 };

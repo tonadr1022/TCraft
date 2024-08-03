@@ -15,6 +15,15 @@ SettingsManager::SettingsManager() {
   EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
   instance_ = this;
 }
+void SettingsManager::Init() {
+  EASSERT_MSG(instance_ == nullptr, "Can't make two instances");
+  instance_ = new SettingsManager;
+}
+
+void SettingsManager::Shutdown() {
+  EASSERT_MSG(instance_ != nullptr, "Can't shutdown before initializing");
+  delete instance_;
+}
 
 void SettingsManager::Load(const std::string& path) {
   settings_json_ = util::LoadJsonFile(path);

@@ -1,21 +1,8 @@
 {
-  "application": {
-    "imgui_enabled": true
-  },
-  "chunk_manager": {
-    "load_distance": 0
-  },
-  "fps_cam": {
-    "pitch": 3.0122883319854736,
-    "yaw": 961.6388549804688
-  },
   "main": {
-    "fps_cam_fov_deg": 74.00000762939453,
+    "fps_cam_fov_deg": 3.115226616040501e-41,
     "load_distance": 0,
-    "mouse_sensitivity": 2.196000099182129,
+    "mouse_sensitivity": 2.5412515469724895e-07,
     "orbit_mouse_sensitivity": 0.4580000042915344
-  },
-  "renderer": {
-    "wireframe_enabled": false
   }
 }

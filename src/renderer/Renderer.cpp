@@ -27,6 +27,29 @@ Renderer::Renderer(Window& window) : window_(window) {
   instance_ = this;
 }
 
+Renderer::~Renderer() { ZoneScoped; }
+
+void Renderer::ShutdownInternal() {
+  spdlog::info("chunk vbo allocs: {},chunk ebo allocs: {}", chunk_vbo_.NumAllocs(),
+               chunk_ebo_.NumAllocs());
+  spdlog::info("reg vbo allocs: {}, reg ebo allocs: {}", reg_mesh_vbo_.NumAllocs(),
+               reg_mesh_ebo_.NumAllocs());
+  nlohmann::json settings;
+  settings["wireframe_enabled"] = wireframe_enabled_;
+  SettingsManager::Get().SaveSetting(settings, "renderer");
+}
+
+void Renderer::Init(Window& window) {
+  EASSERT_MSG(instance_ == nullptr, "Can't make two instances");
+  instance_ = new Renderer(window);
+}
+
+void Renderer::Shutdown() {
+  EASSERT_MSG(instance_ != nullptr, "Can't shutdown before initializing");
+  instance_->ShutdownInternal();
+  delete instance_;
+}
+
 void Renderer::Init() {
   // TODO: don't hard code size!!!!!!!!!!!!!!!!!!!!!!!
   auto settings = SettingsManager::Get().LoadSetting("renderer");
@@ -86,17 +109,6 @@ void Renderer::Init() {
   cube_vao_.AttachElementBuffer(cube_ebo_.Id());
 
   tex_materials_buffer_.Init(sizeof(TextureMaterialData) * 1000, GL_DYNAMIC_STORAGE_BIT);
-}
-
-void Renderer::Shutdown() {
-  ZoneScoped;
-  spdlog::info("chunk vbo allocs: {},chunk ebo allocs: {}", chunk_vbo_.NumAllocs(),
-               chunk_ebo_.NumAllocs());
-  spdlog::info("reg vbo allocs: {}, reg ebo allocs: {}", reg_mesh_vbo_.NumAllocs(),
-               reg_mesh_ebo_.NumAllocs());
-  nlohmann::json settings;
-  settings["wireframe_enabled"] = wireframe_enabled_;
-  SettingsManager::Get().SaveSetting(settings, "renderer");
 }
 
 void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {

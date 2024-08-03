@@ -7,6 +7,8 @@ using TextureHandle = uint32_t;
 
 class TextureManager {
  public:
+  static void Init();
+  static void Shutdown();
   static TextureManager& Get();
   const Texture2dArray& GetTexture2dArray(TextureHandle handle);
   TextureHandle Create2dArray(const Texture2dArrayCreateParams& params);
@@ -19,7 +21,6 @@ class TextureManager {
   void RemoveUnused();
 
  private:
-  friend class Application;
   static TextureManager* instance_;
   TextureManager();
   uint32_t next_tex_array_handle_{1};

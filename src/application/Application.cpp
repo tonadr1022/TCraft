@@ -24,9 +24,9 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 }  // namespace
 
 Application::Application(int width, int height, const char* title) : scene_manager_(window_) {
-  settings_ = new SettingsManager;
-  texture_manager_ = new TextureManager;
-  renderer_ = new Renderer(window_);
+  SettingsManager::Init();
+  Renderer::Init(window_);
+  TextureManager::Init();
   MaterialManager::Init();
 
   SettingsManager::Get().Load(SettingsPath);
@@ -76,17 +76,14 @@ void Application::Run() {
   SettingsManager::Get().SaveSetting(app_settings_json, "application");
 
   scene_manager_.Shutdown();
-  Renderer::Get().Shutdown();
-  window_.Shutdown();
   MaterialManager::Shutdown();
+  TextureManager::Shutdown();
+  Renderer::Shutdown();
+  window_.Shutdown();
+  SettingsManager::Shutdown();
 }
 
-Application::~Application() {
-  SettingsManager::Get().Shutdown(SettingsPath);
-  delete renderer_;
-  delete texture_manager_;
-  delete settings_;
-}
+Application::~Application() { SettingsManager::Get().Shutdown(SettingsPath); }
 
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;

@@ -24,7 +24,6 @@ struct DrawElementsIndirectCommand {
 class Window;
 class WorldScene;
 class BlockEditorScene;
-class Window;
 class BlockDB;
 struct Vertex;
 struct ChunkVertex;
@@ -37,6 +36,10 @@ struct RenderInfo {
 class Renderer {
  public:
   static Renderer& Get();
+  ~Renderer();
+  static void Init(Window& window);
+  static void Shutdown();
+
   bool render_gui_{true};
   bool render_chunks_{true};
   bool wireframe_enabled_{false};
@@ -65,7 +68,6 @@ class Renderer {
   void Init();
   void StartFrame(const Window& window);
   [[nodiscard]] bool OnEvent(const SDL_Event& event);
-  void Shutdown();
   void DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
                         const glm::mat4& projection);
 
@@ -147,4 +149,5 @@ class Renderer {
       std::vector<uint32_t>& frame_draw_cmd_mesh_ids,
       std::vector<DrawElementsIndirectCommand>& frame_dei_cmds,
       std::unordered_map<uint32_t, DrawElementsIndirectCommand>& dei_cmds);
+  void ShutdownInternal();
 };

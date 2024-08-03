@@ -5,9 +5,6 @@
 #include "application/Window.hpp"
 #include "renderer/Renderer.hpp"
 
-class SettingsManager;
-class TextureManager;
-
 class Application {
  public:
   Application(int width, int height, const char* title);
@@ -18,9 +15,6 @@ class Application {
 
  private:
   bool imgui_enabled_;
-  SettingsManager* settings_{nullptr};
-  TextureManager* texture_manager_{nullptr};
-  Renderer* renderer_{nullptr};
   Window window_;
   SceneManager scene_manager_;
   EventDispatcher event_dispatcher_;

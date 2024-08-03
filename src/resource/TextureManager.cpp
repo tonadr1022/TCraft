@@ -6,6 +6,16 @@ TextureManager* TextureManager::instance_ = nullptr;
 
 TextureManager& TextureManager::Get() { return *instance_; }
 
+void TextureManager::Init() {
+  EASSERT_MSG(instance_ == nullptr, "Can't make two instances");
+  instance_ = new TextureManager;
+}
+
+void TextureManager::Shutdown() {
+  EASSERT_MSG(instance_ != nullptr, "Can't shutdown before initializing");
+  delete instance_;
+}
+
 TextureManager::TextureManager() {
   EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
   instance_ = this;
