@@ -100,6 +100,8 @@ bool Player::OnEvent(const SDL_Event& event) {
   return orbit_camera_.OnEvent(event);
 }
 
+bool Player::GetCameraFocused() const { return camera_focused_; }
+
 void Player::SetCameraFocused(bool state) {
   camera_focused_ = state;
   SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);

@@ -4,6 +4,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "Constants.hpp"
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/GamePlayer.hpp"
@@ -18,7 +19,7 @@
 #include "util/Paths.hpp"
 
 WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
-    : Scene(scene_manager), chunk_manager_(block_db_), player_(chunk_manager_) {
+    : Scene(scene_manager), chunk_manager_(block_db_), player_(chunk_manager_, block_db_) {
   ZoneScoped;
   EASSERT_MSG(!path.empty(), "Can't load world scene without a loaded world name");
   {
@@ -108,9 +109,13 @@ void WorldScene::Render() {
       Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.Handle());
     }
   }
-  Renderer::Get().DrawBlockOutline(
-      player_.GetRayCastBlockPos(), player_.GetCamera().GetView(),
-      player_.GetCamera().GetProjection(Window::Get().GetAspectRatio()));
+
+  auto ray_cast_pos = player_.GetRayCastBlockPos();
+  if (ray_cast_pos != glm::NullIVec3) {
+    Renderer::Get().DrawBlockOutline(
+        ray_cast_pos, player_.GetCamera().GetView(),
+        player_.GetCamera().GetProjection(Window::Get().GetAspectRatio()));
+  }
 
   Renderer::Get().RenderWorld(chunk_render_params_, render_info);
 }

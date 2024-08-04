@@ -20,6 +20,7 @@ class ChunkManager {
   const ChunkMap& GetVisibleChunks() const { return chunk_map_; }
   void SetBlock(const glm::ivec3& pos, BlockType block);
   BlockType GetBlock(const glm::ivec3& pos) const;
+  bool BlockPosExists(const glm::ivec3& world_pos) const;
   void OnImGui();
 
  private:

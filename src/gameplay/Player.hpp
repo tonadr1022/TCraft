@@ -13,6 +13,7 @@ class Player {
   virtual void OnImGui() const;
   bool OnEvent(const SDL_Event& event);
   void SetCameraFocused(bool state);
+  [[nodiscard]] bool GetCameraFocused() const;
   void SetPosition(const glm::vec3& pos);
   [[nodiscard]] const glm::vec3& Position() const;
   Camera& GetCamera();
@@ -24,5 +25,5 @@ class Player {
   FPSCamera fps_camera_;
   OrbitCamera orbit_camera_;
   bool camera_focused_{false};
-  float move_speed_{0.01};
+  float move_speed_{10.f};
 };

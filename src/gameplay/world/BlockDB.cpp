@@ -303,15 +303,18 @@ bool BlockData::operator==(const BlockData& other) const {
 }
 
 void BlockDB::WriteBlockModelTypeAll(const BlockModelDataAll& data, const std::string& path) {
-  nlohmann::json j = {{"type", "block/all"}, {"textures", {"all", data.tex_all}}};
+  nlohmann::json j = {{"type", "block/all"}, {"textures", {{"all", data.tex_all}}}};
+  spdlog::info("writing all");
   json_util::WriteJson(j, path);
 }
+
 void BlockDB::WriteBlockModelTypeTopBot(const BlockModelDataTopBot& data, const std::string& path) {
   nlohmann::json j = {
       {"type", "block/top_bottom"},
       {"textures", {{"top", data.tex_top}, {"bottom", data.tex_bottom}, {"side", data.tex_side}}}};
   json_util::WriteJson(j, path);
 }
+
 void BlockDB::WriteBlockModelTypeUnique(const BlockModelDataUnique& data, const std::string& path) {
   nlohmann::json j = {{"type", "block/unique"},
                       {

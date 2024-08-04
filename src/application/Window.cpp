@@ -216,6 +216,7 @@ void Window::PollEvents() {
 }
 
 void Window::StartRenderFrame(bool imgui_enabled) {
+  ZoneScoped;
   if (imgui_enabled) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();

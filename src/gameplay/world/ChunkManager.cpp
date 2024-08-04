@@ -55,7 +55,8 @@ void ChunkManager::Init() {
     chunk_map_.emplace(pos, std::make_unique<Chunk>(pos));
     Chunk* chunk = chunk_map_.at(pos).get();
 
-    TerrainGenerator::GenerateChecker(chunk->GetData(), blocks);
+    TerrainGenerator gen{chunk->GetData()};
+    gen.GenerateChecker(blocks);
     ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
     // TODO: separate  vertices and indices from here so multithreading is possible
     std::vector<ChunkVertex> vertices;
@@ -83,4 +84,8 @@ void ChunkManager::OnImGui() {
   if (ImGui::CollapsingHeader("Chunk Manager", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SliderInt("Load Distance", &load_distance_, 1, 32);
   }
+}
+
+bool ChunkManager::BlockPosExists(const glm::ivec3& world_pos) const {
+  return chunk_map_.contains(util::chunk::WorldToChunkPos(world_pos));
 }

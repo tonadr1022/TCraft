@@ -1,8 +1,6 @@
 {
   "textures": {
-    "bottom": "block/dirt",
-    "side": "block/acacia_leaves",
-    "top": "block/grass_block_top"
+    "all": "block/acacia_log"
   },
-  "type": "block/top_bottom"
+  "type": "block/all"
 }

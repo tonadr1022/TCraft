@@ -5,8 +5,12 @@ class ChunkData;
 
 class TerrainGenerator {
  public:
-  static void GenerateSolid(ChunkData& chunk, BlockType block);
-  static void GenerateChecker(ChunkData& chunk, BlockType block);
-  static void GenerateChecker(ChunkData& chunk, std::vector<BlockType>& blocks);
-  static void GeneratePyramid(ChunkData& chunk, std::vector<BlockType>& blocks);
+  explicit TerrainGenerator(ChunkData& chunk);
+  void GenerateSolid(BlockType block);
+  void GenerateChecker(BlockType block);
+  void GenerateChecker(std::vector<BlockType>& blocks);
+  void GenerateLayers(std::vector<BlockType>& blocks);
+  void GeneratePyramid(std::vector<BlockType>& blocks);
+
+  ChunkData& chunk;
 };

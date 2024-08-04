@@ -353,19 +353,25 @@ void Renderer::ClearStaticData() {
 }
 
 void Renderer::StartFrame(const Window& window) {
-  // TODO: don't clear and reallocate, or at least profile in the future
-  chunk_frame_draw_cmd_mesh_ids_.clear();
-  chunk_frame_draw_cmd_uniforms_.clear();
-  reg_mesh_frame_draw_cmd_mesh_ids_.clear();
-  reg_mesh_frame_draw_cmd_uniforms_.clear();
-  quad_uniforms_.clear();
-  stats_ = {};
+  {
+    ZoneScopedN("clear buffers");
+    // TODO: don't clear and reallocate, or at least profile in the future
+    chunk_frame_draw_cmd_mesh_ids_.clear();
+    chunk_frame_draw_cmd_uniforms_.clear();
+    reg_mesh_frame_draw_cmd_mesh_ids_.clear();
+    reg_mesh_frame_draw_cmd_uniforms_.clear();
+    quad_uniforms_.clear();
+    stats_ = {};
+  }
 
-  auto dims = window.GetWindowSize();
-  glViewport(0, 0, dims.x, dims.y);
-  glClearColor(1, 0.0, 0.0, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
+  {
+    ZoneScopedN("OpenGL state");
+    auto dims = window.GetWindowSize();
+    glViewport(0, 0, dims.x, dims.y);
+    glClearColor(1, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
+  }
 }
 
 bool Renderer::OnEvent(const SDL_Event& event) {

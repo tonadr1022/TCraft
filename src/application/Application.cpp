@@ -28,8 +28,8 @@ Application::Application(int width, int height, const char* title) : scene_manag
   Renderer::Init(window_);
   TextureManager::Init();
   MaterialManager::Init();
-
   SettingsManager::Get().Load(SettingsPath);
+
   auto app_settings_json = SettingsManager::Get().LoadSetting("application");
   imgui_enabled_ = app_settings_json.value("imgui_enabled", true);
 
@@ -56,7 +56,7 @@ void Application::Run() {
     ZoneScopedN("main loop");
     prev_time = curr_time;
     curr_time = SDL_GetPerformanceCounter();
-    dt = ((curr_time - prev_time) * 1000 / static_cast<double>(SDL_GetPerformanceFrequency()));
+    dt = ((curr_time - prev_time) / static_cast<double>(SDL_GetPerformanceFrequency()));
 
     window_.PollEvents();
     scene_manager_.GetActiveScene().Update(dt);
@@ -80,10 +80,11 @@ void Application::Run() {
   TextureManager::Shutdown();
   Renderer::Shutdown();
   window_.Shutdown();
+  SettingsManager::Get().Shutdown(SettingsPath);
   SettingsManager::Shutdown();
 }
 
-Application::~Application() { SettingsManager::Get().Shutdown(SettingsPath); }
+Application::~Application() = default;
 
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;

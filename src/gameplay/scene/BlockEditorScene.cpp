@@ -331,34 +331,41 @@ void BlockEditorScene::OnImGui() {
           if (BlockModelDataAll* data = std::get_if<BlockModelDataAll>(&model_data.value())) {
             edit_model_type_ = BlockModelType::All;
             edit_model_data_all_.tex_all = data->tex_all;
-          } else {
-            edit_model_data_all_ = {block_db_.block_defaults_.tex_name};
-          }
-          if (BlockModelDataTopBot* data = std::get_if<BlockModelDataTopBot>(&model_data.value())) {
+            edit_model_data_top_bot_.tex_top = data->tex_all;
+            edit_model_data_top_bot_.tex_bottom = data->tex_all;
+            edit_model_data_top_bot_.tex_side = data->tex_all;
+            edit_model_data_unique_.tex_pos_x = data->tex_all;
+            edit_model_data_unique_.tex_neg_x = data->tex_all;
+            edit_model_data_unique_.tex_pos_y = data->tex_all;
+            edit_model_data_unique_.tex_neg_y = data->tex_all;
+            edit_model_data_unique_.tex_pos_z = data->tex_all;
+            edit_model_data_unique_.tex_neg_z = data->tex_all;
+          } else if (BlockModelDataTopBot* data =
+                         std::get_if<BlockModelDataTopBot>(&model_data.value())) {
             edit_model_type_ = BlockModelType::TopBottom;
+            edit_model_data_all_.tex_all = data->tex_side;
             edit_model_data_top_bot_.tex_top = data->tex_top;
             edit_model_data_top_bot_.tex_bottom = data->tex_bottom;
             edit_model_data_top_bot_.tex_side = data->tex_side;
-          } else {
-            edit_model_type_ = BlockModelType::TopBottom;
-            edit_model_data_top_bot_ = {block_db_.block_defaults_.tex_name,
-                                        block_db_.block_defaults_.tex_name,
-                                        block_db_.block_defaults_.tex_name};
-          }
-          if (BlockModelDataUnique* data = std::get_if<BlockModelDataUnique>(&model_data.value())) {
+            edit_model_data_unique_.tex_pos_x = data->tex_side;
+            edit_model_data_unique_.tex_neg_x = data->tex_side;
+            edit_model_data_unique_.tex_pos_y = data->tex_top;
+            edit_model_data_unique_.tex_neg_y = data->tex_bottom;
+            edit_model_data_unique_.tex_pos_z = data->tex_side;
+            edit_model_data_unique_.tex_neg_z = data->tex_side;
+          } else if (BlockModelDataUnique* data =
+                         std::get_if<BlockModelDataUnique>(&model_data.value())) {
             edit_model_type_ = BlockModelType::Unique;
+            edit_model_data_all_.tex_all = data->tex_pos_y;
+            edit_model_data_top_bot_.tex_top = data->tex_pos_y;
+            edit_model_data_top_bot_.tex_bottom = data->tex_neg_y;
+            edit_model_data_top_bot_.tex_side = data->tex_pos_x;
             edit_model_data_unique_.tex_pos_x = data->tex_pos_x;
             edit_model_data_unique_.tex_neg_x = data->tex_neg_x;
             edit_model_data_unique_.tex_pos_y = data->tex_pos_y;
             edit_model_data_unique_.tex_neg_y = data->tex_neg_y;
             edit_model_data_unique_.tex_pos_z = data->tex_pos_z;
             edit_model_data_unique_.tex_neg_z = data->tex_neg_z;
-          } else {
-            edit_model_data_unique_ = {
-                block_db_.block_defaults_.tex_name, block_db_.block_defaults_.tex_name,
-                block_db_.block_defaults_.tex_name, block_db_.block_defaults_.tex_name,
-                block_db_.block_defaults_.tex_name, block_db_.block_defaults_.tex_name,
-            };
           }
           original_edit_model_data_all = edit_model_data_all_;
           original_edit_model_unique = edit_model_data_unique_;
@@ -375,7 +382,7 @@ void BlockEditorScene::OnImGui() {
           for (const auto& model_name : all_block_model_names_) {
             if (model_name == edit_model_name) continue;
             if (ImGui::Selectable(model_name.data())) {
-              model_data = BlockDB::LoadBlockModelDataFromName(model_name);
+              model_data = BlockDB::LoadBlockModelDataFromName("block/" + model_name);
               if (!model_data.has_value()) {
                 spdlog::error("Unable to load model data: {}", model_name);
                 break;
@@ -408,7 +415,7 @@ void BlockEditorScene::OnImGui() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Save")) {
-          std::string path = GET_PATH("resources/data/model/" + edit_model_name + ".json");
+          std::string path = GET_PATH("resources/data/model/block/" + edit_model_name + ".json");
           if (edit_model_type_ == BlockModelType::All) {
             BlockDB::WriteBlockModelTypeAll(edit_model_data_all_, path);
           } else if (edit_model_type_ == BlockModelType::TopBottom) {
@@ -495,5 +502,5 @@ bool BlockEditorScene::OnEvent(const SDL_Event& event) {
 
 void BlockEditorScene::Update(double dt) {
   player_.Update(dt);
-  block_rot_ += dt * 0.001;
+  block_rot_ += dt;
 }
