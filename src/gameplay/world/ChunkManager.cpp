@@ -39,6 +39,9 @@ void ChunkManager::Update(double /*dt*/) {
     std::vector<ChunkVertex> vertices;
     std::vector<uint32_t> indices;
     mesher.GenerateNaive(chunk.GetData(), vertices, indices);
+    total_vertex_count_ += vertices.size();
+    total_index_count_ += indices.size();
+    num_mesh_creations_++;
     chunk.mesh_.Allocate(vertices, indices);
   }
   remesh_chunks_.clear();
@@ -70,14 +73,17 @@ void ChunkManager::Init() {
   for (int i = 0; i < load_len * load_len; i++) {
     chunk_map_.try_emplace(pos, pos);
     Chunk& chunk = chunk_map_.at(pos);
-
     TerrainGenerator gen{chunk.GetData()};
-    gen.GenerateChecker(blocks);
+    // gen.GenerateLayers(blocks);
+    gen.GenerateSolid(1);
     ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
     // TODO: separate  vertices and indices from here so multithreading is possible
     std::vector<ChunkVertex> vertices;
     std::vector<uint32_t> indices;
     mesher.GenerateNaive(chunk.GetData(), vertices, indices);
+    total_vertex_count_ += vertices.size();
+    total_index_count_ += indices.size();
+    num_mesh_creations_++;
     chunk.mesh_.Allocate(vertices, indices);
 
     direction_steps_counter++;
@@ -99,6 +105,8 @@ ChunkManager::~ChunkManager() {
 void ChunkManager::OnImGui() {
   if (ImGui::CollapsingHeader("Chunk Manager", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SliderInt("Load Distance", &load_distance_, 1, 32);
+    ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
+    ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);
   }
 }
 

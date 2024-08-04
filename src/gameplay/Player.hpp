@@ -11,7 +11,7 @@ class Player {
   void Init() const;
   virtual void Update(double dt);
   virtual void OnImGui();
-  bool OnEvent(const SDL_Event& event);
+  virtual bool OnEvent(const SDL_Event& event);
   void SetCameraFocused(bool state);
   [[nodiscard]] bool GetCameraFocused() const;
   void SetPosition(const glm::vec3& pos);

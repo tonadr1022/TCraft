@@ -28,4 +28,8 @@ class ChunkManager {
   ChunkMap chunk_map_;
   int load_distance_;
   std::vector<glm::ivec3> remesh_chunks_;
+
+  uint32_t num_mesh_creations_{0};
+  uint32_t total_vertex_count_{0};
+  uint32_t total_index_count_{0};
 };

@@ -131,3 +131,18 @@ void GamePlayer::OnImGui() {
   ImGui::SliderFloat("Temp Mining Speed", &mine_speed_, 0.5, 10.0);
   ImGui::End();
 }
+
+bool GamePlayer::OnEvent(const SDL_Event& event) {
+  if (Player::OnEvent(event)) return true;
+  switch (event.type) {
+    case SDL_MOUSEBUTTONDOWN:
+      if (event.button.button == SDL_BUTTON_RIGHT) {
+        if (ray_cast_air_pos_ != glm::NullIVec3) {
+          // TODO: access held block in inventory
+          chunk_manager_.SetBlock(ray_cast_air_pos_, 2);
+        }
+        return true;
+      }
+  }
+  return false;
+}

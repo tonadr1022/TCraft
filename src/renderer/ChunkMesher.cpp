@@ -52,10 +52,9 @@ void ChunkMesher::AddQuad(int face_idx, const glm::ivec3& block_pos,
                           std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
                           int tex_idx) {
   int base_vertex_idx = vertices.size();
-  face_idx *= 20;
   for (int vertex_idx = 0, lookup_offset = 0; vertex_idx < 4; vertex_idx++, lookup_offset += 5) {
     ChunkVertex vertex;
-    int combined_offset = face_idx + lookup_offset;
+    int combined_offset = face_idx * 20 + lookup_offset;
     vertex.position.x = block_pos.x + VertexLookup[combined_offset];
     vertex.position.y = block_pos.y + VertexLookup[combined_offset + 1];
     vertex.position.z = block_pos.z + VertexLookup[combined_offset + 2];
@@ -101,26 +100,27 @@ void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVe
                                 std::vector<uint32_t>& indices) {
   ZoneScoped;
   const auto& blocks = chunk_data.GetBlocks();
-  int idx = 0;
+  auto get_block_type = [&blocks](int x, int y, int z) -> BlockType {
+    if (ChunkData::IsOutOfBounds(x, y, z)) return 0;
+    return blocks[ChunkData::GetIndex(x, y, z)];
+  };
+
   for (int y = 0; y < ChunkLength; y++) {
     for (int z = 0; z < ChunkLength; z++) {
-      for (int x = 0; x < ChunkLength; x++, idx++) {
+      for (int x = 0; x < ChunkLength; x++) {
         BlockType block = blocks[ChunkData::GetIndex(x, y, z)];
         if (block == 0) continue;
-        // 1, 0, 0
-        // -1, 0, 0
-        // 0, 1, 0
-        // 0, -1, 0
-        // 0, 0, 1
-        // 0, 0, -1
+        static constexpr const int Offsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
+                                                    {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
         for (int face_idx = 0; face_idx < 6; face_idx++) {
-          // get adj block position
-          int adj_block_pos_arr[3] = {x, y, z};
-          adj_block_pos_arr[face_idx >> 1] += 1 - ((face_idx & 1) << 1);
-          glm::ivec3 adj_pos = {adj_block_pos_arr[0], adj_block_pos_arr[1], adj_block_pos_arr[2]};
-          if (ChunkData::IsOutOfBounds(adj_pos) || blocks[ChunkData::GetIndex(adj_pos)] == 0) {
-            AddQuad(face_idx, {x, y, z}, vertices, indices,
-                    db_mesh_data[static_cast<uint32_t>(block)].texture_indices[face_idx]);
+          int nx = x + Offsets[face_idx][0];
+          int ny = y + Offsets[face_idx][1];
+          int nz = z + Offsets[face_idx][2];
+          {
+            if (get_block_type(nx, ny, nz) == 0) {
+              AddQuad(face_idx, {x, y, z}, vertices, indices,
+                      db_mesh_data[static_cast<uint32_t>(block)].texture_indices[face_idx]);
+            }
           }
         }
       }
