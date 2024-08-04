@@ -3,6 +3,11 @@
 #include "ChunkData.hpp"
 #include "renderer/Mesh.hpp"
 
+struct ChunkMeshTask {
+  std::vector<ChunkVertex> vertices;
+  std::vector<uint32_t> indices;
+};
+
 class Chunk {
  public:
   explicit Chunk(const glm::ivec3& pos);

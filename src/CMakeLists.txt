@@ -44,6 +44,7 @@ set(SOURCES
     util/LoadFile.cpp
     util/StringUtil.cpp
     util/JsonUtil.cpp
+    util/ThreadPool.cpp
 
     EAssert.cpp
     pch.cpp

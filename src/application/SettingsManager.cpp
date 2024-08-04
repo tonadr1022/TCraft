@@ -11,7 +11,8 @@
 using json = nlohmann::json;
 SettingsManager* SettingsManager::instance_ = nullptr;
 SettingsManager& SettingsManager::Get() { return *instance_; }
-SettingsManager::SettingsManager() {
+
+SettingsManager::SettingsManager() : core_count_(std::thread::hardware_concurrency()) {
   EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
   instance_ = this;
 }
@@ -63,3 +64,5 @@ void SettingsManager::OnImGui() {
     }
   }
 }
+
+uint32_t SettingsManager::CoreCount() const { return core_count_; }

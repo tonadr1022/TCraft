@@ -10,7 +10,8 @@
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
 
-ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {}
+ChunkManager::ChunkManager(BlockDB& block_db)
+    : thread_pool_(SettingsManager::Get().CoreCount()), block_db_(block_db) {}
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   auto chunk_pos = util::chunk::WorldToChunkPos(pos);
@@ -73,6 +74,8 @@ void ChunkManager::Init() {
   for (int i = 0; i < load_len * load_len; i++) {
     chunk_map_.try_emplace(pos, pos);
     Chunk& chunk = chunk_map_.at(pos);
+    // Place chunk in tasks
+
     TerrainGenerator gen{chunk.GetData()};
     // gen.GenerateLayers(blocks);
     gen.GenerateSolid(1);
@@ -84,8 +87,8 @@ void ChunkManager::Init() {
     total_vertex_count_ += vertices.size();
     total_index_count_ += indices.size();
     num_mesh_creations_++;
-    chunk.mesh_.Allocate(vertices, indices);
 
+    chunk.mesh_.Allocate(vertices, indices);
     direction_steps_counter++;
     pos.x += Dx[direction];
     pos.z += Dy[direction];

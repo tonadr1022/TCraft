@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gameplay/world/Chunk.hpp"
+#include "util/ThreadPool.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -24,6 +25,7 @@ class ChunkManager {
   void OnImGui();
 
  private:
+  ThreadPool thread_pool_;
   BlockDB& block_db_;
   ChunkMap chunk_map_;
   int load_distance_;

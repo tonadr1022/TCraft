@@ -9,6 +9,7 @@ class SettingsManager {
   static SettingsManager& Get();
   static void Init();
   static void Shutdown();
+  [[nodiscard]] uint32_t CoreCount() const;
   void OnImGui();
   void Load(const std::string& path);
   void Shutdown(const std::string& path);
@@ -22,6 +23,7 @@ class SettingsManager {
   float fps_cam_fov_deg;
   float orbit_mouse_sensitivity;
   int load_distance;
+  const uint32_t core_count_;
   ~SettingsManager() = default;
 
  private:
