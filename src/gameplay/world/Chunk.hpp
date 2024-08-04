@@ -9,9 +9,11 @@ class Chunk {
 
   [[nodiscard]] const glm::ivec3& GetPos() const;
   ChunkData& GetData();
-  Mesh& GetMesh();
+  [[nodiscard]] BlockType GetBlock(const glm::ivec3& pos) const;
+  [[nodiscard]] const Mesh& GetMesh() const;
 
  private:
+  friend class ChunkManager;
   ChunkData data_;
   Mesh mesh_;
   glm::ivec3 pos_;

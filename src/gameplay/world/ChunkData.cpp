@@ -2,7 +2,7 @@
 
 #include <glm/vec3.hpp>
 
-BlockType ChunkData::GetBlock(const glm::ivec3& pos) { return blocks_[GetIndex(pos)]; }
+BlockType ChunkData::GetBlock(const glm::ivec3& pos) const { return blocks_[GetIndex(pos)]; }
 
 int ChunkData::GetIndex(const glm::ivec3& pos) { return GetIndex(pos.x, pos.y, pos.z); }
 

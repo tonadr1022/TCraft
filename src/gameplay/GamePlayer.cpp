@@ -1,5 +1,7 @@
 #include "GamePlayer.hpp"
 
+#include <imgui.h>
+
 #include <iostream>
 
 #include "Constants.hpp"
@@ -104,13 +106,13 @@ void GamePlayer::Update(double dt) {
         (ray_cast_non_air_pos_ == prev_frame_ray_cast_non_air_pos_ ||
          prev_frame_ray_cast_non_air_pos_ == glm::NullIVec3)) {
       if (Input::IsMouseButtonPressed(SDL_BUTTON_LEFT)) {
-        elapsed_break_time_ += dt;
+        elapsed_break_time_ += dt * mine_speed_;
         // if (elapsed_break_time_ >=
         // block_db_.GetBlockData()[chunk_manager_.GetBlock(ray_cast_non_air_pos_)].) {
         // TODO: user blockdb id for break time
         if (block_db_.GetBlockData()[0].id) {
         }
-        if (elapsed_break_time_ >= 2) {
+        if (elapsed_break_time_ >= 0.5) {
           chunk_manager_.SetBlock(ray_cast_non_air_pos_, 0);
         }
       }
@@ -120,4 +122,12 @@ void GamePlayer::Update(double dt) {
     prev_frame_ray_cast_non_air_pos_ = ray_cast_non_air_pos_;
   }
   Player::Update(dt);
+}
+
+void GamePlayer::OnImGui() {
+  Player::OnImGui();
+  ImGui::Begin("Player", nullptr,
+               ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
+  ImGui::SliderFloat("Temp Mining Speed", &mine_speed_, 0.5, 10.0);
+  ImGui::End();
 }

@@ -10,7 +10,7 @@ class Player {
   enum class CameraMode { FPS, Orbit };
   void Init() const;
   virtual void Update(double dt);
-  virtual void OnImGui() const;
+  virtual void OnImGui();
   bool OnEvent(const SDL_Event& event);
   void SetCameraFocused(bool state);
   [[nodiscard]] bool GetCameraFocused() const;

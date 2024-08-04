@@ -14,7 +14,7 @@ using ChunkArray = std::array<BlockType, ChunkVolume>;
 class ChunkData {
  public:
   void SetBlock(const glm::ivec3& pos, BlockType block);
-  BlockType GetBlock(const glm::ivec3& pos);
+  [[nodiscard]] BlockType GetBlock(const glm::ivec3& pos) const;
   [[nodiscard]] const ChunkArray& GetBlocks() const { return blocks_; }
 
   // Helpers

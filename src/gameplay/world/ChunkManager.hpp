@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 class BlockDB;
-using ChunkMap = std::unordered_map<glm::ivec3, std::unique_ptr<Chunk>>;
+using ChunkMap = std::unordered_map<glm::ivec3, Chunk>;
 
 class ChunkManager {
  public:
@@ -27,4 +27,5 @@ class ChunkManager {
   BlockDB& block_db_;
   ChunkMap chunk_map_;
   int load_distance_;
+  std::vector<glm::ivec3> remesh_chunks_;
 };

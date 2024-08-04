@@ -77,6 +77,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
 void WorldScene::Update(double dt) {
   ZoneScoped;
   player_.Update(dt);
+  chunk_manager_.Update(dt);
 }
 
 bool WorldScene::OnEvent(const SDL_Event& event) {
@@ -104,7 +105,7 @@ void WorldScene::Render() {
     ZoneScopedN("Submit chunk draw commands");
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
     for (const auto& it : chunk_manager_.GetVisibleChunks()) {
-      auto& mesh = it.second->GetMesh();
+      const auto& mesh = it.second.GetMesh();
       glm::vec3 pos = it.first * ChunkLength;
       Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.Handle());
     }

@@ -13,19 +13,35 @@
 ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {}
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
-  auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
+  auto chunk_pos = util::chunk::WorldToChunkPos(pos);
+  auto it = chunk_map_.find(chunk_pos);
   EASSERT_MSG(it != chunk_map_.end(), "Set block in non existent chunk");
-  it->second->GetData().SetBlock(util::chunk::WorldToPosInChunk(pos), block);
+  it->second.GetData().SetBlock(util::chunk::WorldToPosInChunk(pos), block);
+  remesh_chunks_.emplace_back(chunk_pos);
 }
 
 BlockType ChunkManager::GetBlock(const glm::ivec3& pos) const {
   auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
   EASSERT_MSG(it != chunk_map_.end(), "Get block in non existent chunk");
-  return it->second->GetData().GetBlock(util::chunk::WorldToPosInChunk(pos));
+  return it->second.GetBlock(util::chunk::WorldToPosInChunk(pos));
 }
 
 void ChunkManager::Update(double /*dt*/) {
-  // only update if player changes chunk location
+  // TODO: implement ticks
+  for (const auto& pos : remesh_chunks_) {
+    // Chunk already exists at this point so no check
+    auto& chunk = chunk_map_.at(pos);
+    chunk.mesh_.Free();
+
+    // TODO: use a vector for "to mesh chunks";
+    ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
+    // TODO: separate  vertices and indices from here so multithreading is possible
+    std::vector<ChunkVertex> vertices;
+    std::vector<uint32_t> indices;
+    mesher.GenerateNaive(chunk.GetData(), vertices, indices);
+    chunk.mesh_.Allocate(vertices, indices);
+  }
+  remesh_chunks_.clear();
 }
 
 void ChunkManager::Init() {
@@ -52,17 +68,17 @@ void ChunkManager::Init() {
   // int load_len = load_distance_ * 2 + 1;
   glm::ivec3 pos{0, 0, 0};
   for (int i = 0; i < load_len * load_len; i++) {
-    chunk_map_.emplace(pos, std::make_unique<Chunk>(pos));
-    Chunk* chunk = chunk_map_.at(pos).get();
+    chunk_map_.try_emplace(pos, pos);
+    Chunk& chunk = chunk_map_.at(pos);
 
-    TerrainGenerator gen{chunk->GetData()};
+    TerrainGenerator gen{chunk.GetData()};
     gen.GenerateChecker(blocks);
     ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
     // TODO: separate  vertices and indices from here so multithreading is possible
     std::vector<ChunkVertex> vertices;
     std::vector<uint32_t> indices;
-    mesher.GenerateNaive(chunk->GetData(), vertices, indices);
-    chunk->GetMesh().Allocate(vertices, indices);
+    mesher.GenerateNaive(chunk.GetData(), vertices, indices);
+    chunk.mesh_.Allocate(vertices, indices);
 
     direction_steps_counter++;
     pos.x += Dx[direction];

@@ -61,7 +61,7 @@ void Player::Update(double dt) {
   }
 }
 
-void Player::OnImGui() const {
+void Player::OnImGui() {
   ZoneScoped;
   ImGui::Begin("Player", nullptr,
                ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
