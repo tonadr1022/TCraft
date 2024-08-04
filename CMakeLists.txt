@@ -16,6 +16,7 @@ find_package(spdlog CONFIG REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(Tracy CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(thread-pool CONFIG REQUIRED)
 
 add_compile_definitions(TRACY_ENABLE)
 option(TRACY_ENABLE "" ON)

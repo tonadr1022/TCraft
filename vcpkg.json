@@ -6,6 +6,7 @@
     "spdlog",
     "sdl2",
     "nlohmann-json",
+    "dp-thread-pool",
     {
       "name": "imgui",
       "features": ["opengl3-binding", "sdl2-binding"]

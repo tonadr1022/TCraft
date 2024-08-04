@@ -44,7 +44,6 @@ set(SOURCES
     util/LoadFile.cpp
     util/StringUtil.cpp
     util/JsonUtil.cpp
-    util/ThreadPool.cpp
 
     EAssert.cpp
     pch.cpp
@@ -63,4 +62,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Tracy::TracyClient
     spdlog::spdlog
     nlohmann_json::nlohmann_json
+    dp::thread-pool
 )

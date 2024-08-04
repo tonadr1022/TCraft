@@ -2,8 +2,6 @@
 
 #include <imgui.h>
 
-#include <iostream>
-
 #include "Constants.hpp"
 #include "application/Input.hpp"
 #include "gameplay/world/BlockDB.hpp"
@@ -100,27 +98,25 @@ not_found:
 const glm::ivec3& GamePlayer::GetRayCastBlockPos() const { return ray_cast_non_air_pos_; }
 
 void GamePlayer::Update(double dt) {
-  if (camera_focused_) {
-    RayCast();
-    if (ray_cast_non_air_pos_ != glm::NullIVec3 &&
-        (ray_cast_non_air_pos_ == prev_frame_ray_cast_non_air_pos_ ||
-         prev_frame_ray_cast_non_air_pos_ == glm::NullIVec3)) {
-      if (Input::IsMouseButtonPressed(SDL_BUTTON_LEFT)) {
-        elapsed_break_time_ += dt * mine_speed_;
-        // if (elapsed_break_time_ >=
-        // block_db_.GetBlockData()[chunk_manager_.GetBlock(ray_cast_non_air_pos_)].) {
-        // TODO: user blockdb id for break time
-        if (block_db_.GetBlockData()[0].id) {
-        }
-        if (elapsed_break_time_ >= 0.5) {
-          chunk_manager_.SetBlock(ray_cast_non_air_pos_, 0);
-        }
+  RayCast();
+  if (ray_cast_non_air_pos_ != glm::NullIVec3 &&
+      (ray_cast_non_air_pos_ == prev_frame_ray_cast_non_air_pos_ ||
+       prev_frame_ray_cast_non_air_pos_ == glm::NullIVec3)) {
+    if (Input::IsMouseButtonPressed(SDL_BUTTON_LEFT)) {
+      elapsed_break_time_ += dt * mine_speed_;
+      // if (elapsed_break_time_ >=
+      // block_db_.GetBlockData()[chunk_manager_.GetBlock(ray_cast_non_air_pos_)].) {
+      // TODO: user blockdb id for break time
+      if (block_db_.GetBlockData()[0].id) {
       }
-    } else {
-      elapsed_break_time_ = 0;
+      if (elapsed_break_time_ >= 0.5) {
+        chunk_manager_.SetBlock(ray_cast_non_air_pos_, 0);
+      }
     }
-    prev_frame_ray_cast_non_air_pos_ = ray_cast_non_air_pos_;
+  } else {
+    elapsed_break_time_ = 0;
   }
+  prev_frame_ray_cast_non_air_pos_ = ray_cast_non_air_pos_;
   Player::Update(dt);
 }
 

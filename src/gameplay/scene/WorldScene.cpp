@@ -98,16 +98,16 @@ void WorldScene::Render() {
   ZoneScoped;
   RenderInfo render_info{.vp_matrix = player_.GetCamera().GetProjection(window_.GetAspectRatio()) *
                                       player_.GetCamera().GetView()};
-
   auto win_center = window_.GetWindowCenter();
   Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
   {
     ZoneScopedN("Submit chunk draw commands");
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
     for (const auto& it : chunk_manager_.GetVisibleChunks()) {
-      const auto& mesh = it.second.GetMesh();
+      if (!it.second.mesh.IsAllocated()) continue;
       glm::vec3 pos = it.first * ChunkLength;
-      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos), mesh.Handle());
+      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos),
+                                             it.second.mesh.Handle());
     }
   }
 

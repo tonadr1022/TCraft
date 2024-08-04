@@ -27,7 +27,8 @@ class Mesh {
   [[nodiscard]] uint32_t Handle() const;
   [[nodiscard]] inline bool IsAllocated() const { return handle_ != 0; };
 
- private:
   uint32_t handle_{0};
+
+ private:
   Type type_{Mesh::Type::Regular};
 };

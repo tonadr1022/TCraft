@@ -10,42 +10,76 @@
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
 
-ChunkManager::ChunkManager(BlockDB& block_db)
-    : thread_pool_(SettingsManager::Get().CoreCount()), block_db_(block_db) {}
+namespace {
+
+dp::thread_pool thread_pool;
+
+}
+ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {}
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   auto chunk_pos = util::chunk::WorldToChunkPos(pos);
   auto it = chunk_map_.find(chunk_pos);
   EASSERT_MSG(it != chunk_map_.end(), "Set block in non existent chunk");
-  it->second.GetData().SetBlock(util::chunk::WorldToPosInChunk(pos), block);
-  remesh_chunks_.emplace_back(chunk_pos);
+  it->second.data.SetBlock(util::chunk::WorldToPosInChunk(pos), block);
+  immediate_remesh_chunk_positions_.emplace_back(chunk_pos);
 }
 
 BlockType ChunkManager::GetBlock(const glm::ivec3& pos) const {
   auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
   EASSERT_MSG(it != chunk_map_.end(), "Get block in non existent chunk");
-  return it->second.GetBlock(util::chunk::WorldToPosInChunk(pos));
+  return it->second.data.GetBlock(util::chunk::WorldToPosInChunk(pos));
 }
 
 void ChunkManager::Update(double /*dt*/) {
   // TODO: implement ticks
-  for (const auto& pos : remesh_chunks_) {
+
+  // process remesh chunks
+  for (const auto& pos : remesh_chunks_positions_) {
     // Chunk already exists at this point so no check
     auto& chunk = chunk_map_.at(pos);
-    chunk.mesh_.Free();
+    if (chunk.mesh.IsAllocated()) chunk.mesh.Free();
 
-    // TODO: use a vector for "to mesh chunks";
-    ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
-    // TODO: separate  vertices and indices from here so multithreading is possible
+    // Copy the data for immutability
+    // TODO: copy the neighbor chunks so the mesher can use them
+    ChunkData data = chunk.data;
+    auto position = pos;
+    thread_pool.enqueue_detach([this, data, position] {
+      ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
+      std::vector<ChunkVertex> vertices;
+      std::vector<uint32_t> indices;
+      mesher.GenerateNaive(data, vertices, indices);
+      {
+        std::lock_guard<std::mutex> lock(queue_mutex_);
+        finished_chunk_meshes_.emplace(vertices, indices, position);
+      }
+    });
+  }
+  remesh_chunks_positions_.clear();
+
+  while (!finished_chunk_meshes_.empty()) {
+    auto& task = finished_chunk_meshes_.front();
+    total_vertex_count_ += task.vertices.size();
+    total_index_count_ += task.indices.size();
+    num_mesh_creations_++;
+    auto& chunk = chunk_map_.at(finished_chunk_meshes_.front().pos);
+    chunk.mesh.Allocate(task.vertices, task.indices);
+    finished_chunk_meshes_.pop();
+  }
+
+  for (const auto& pos : immediate_remesh_chunk_positions_) {
+    auto& chunk = chunk_map_.at(pos);
+    if (chunk.mesh.IsAllocated()) chunk.mesh.Free();
     std::vector<ChunkVertex> vertices;
     std::vector<uint32_t> indices;
-    mesher.GenerateNaive(chunk.GetData(), vertices, indices);
+    ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
+    mesher.GenerateNaive(chunk.data, vertices, indices);
     total_vertex_count_ += vertices.size();
     total_index_count_ += indices.size();
     num_mesh_creations_++;
-    chunk.mesh_.Allocate(vertices, indices);
+    chunk.mesh.Allocate(vertices, indices);
   }
-  remesh_chunks_.clear();
+  immediate_remesh_chunk_positions_.clear();
 }
 
 void ChunkManager::Init() {
@@ -76,19 +110,11 @@ void ChunkManager::Init() {
     Chunk& chunk = chunk_map_.at(pos);
     // Place chunk in tasks
 
-    TerrainGenerator gen{chunk.GetData()};
+    TerrainGenerator gen{chunk.data};
     // gen.GenerateLayers(blocks);
     gen.GenerateSolid(1);
-    ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
-    // TODO: separate  vertices and indices from here so multithreading is possible
-    std::vector<ChunkVertex> vertices;
-    std::vector<uint32_t> indices;
-    mesher.GenerateNaive(chunk.GetData(), vertices, indices);
-    total_vertex_count_ += vertices.size();
-    total_index_count_ += indices.size();
-    num_mesh_creations_++;
+    remesh_chunks_positions_.emplace_back(pos);
 
-    chunk.mesh_.Allocate(vertices, indices);
     direction_steps_counter++;
     pos.x += Dx[direction];
     pos.z += Dy[direction];
@@ -108,8 +134,10 @@ ChunkManager::~ChunkManager() {
 void ChunkManager::OnImGui() {
   if (ImGui::CollapsingHeader("Chunk Manager", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SliderInt("Load Distance", &load_distance_, 1, 32);
-    ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
-    ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);
+    if (num_mesh_creations_ > 0) {
+      ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
+      ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);
+    }
   }
 }
 

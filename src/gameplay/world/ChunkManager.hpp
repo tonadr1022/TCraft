@@ -1,9 +1,13 @@
 #pragma once
 
+#include <queue>
+
 #include "gameplay/world/Chunk.hpp"
-#include "util/ThreadPool.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
+
+#include <thread_pool/thread_pool.h>
+
 #include <glm/gtx/hash.hpp>
 #include <glm/vec3.hpp>
 #include <unordered_map>
@@ -25,11 +29,13 @@ class ChunkManager {
   void OnImGui();
 
  private:
-  ThreadPool thread_pool_;
   BlockDB& block_db_;
   ChunkMap chunk_map_;
   int load_distance_;
-  std::vector<glm::ivec3> remesh_chunks_;
+  std::mutex queue_mutex_;
+  std::vector<glm::ivec3> remesh_chunks_positions_;
+  std::vector<glm::ivec3> immediate_remesh_chunk_positions_;
+  std::queue<ChunkMeshTask> finished_chunk_meshes_;
 
   uint32_t num_mesh_creations_{0};
   uint32_t total_vertex_count_{0};
