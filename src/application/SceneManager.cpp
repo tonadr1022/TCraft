@@ -40,7 +40,10 @@ Scene& SceneManager::GetActiveScene() {
   return *active_scene_;
 }
 
-void SceneManager::Shutdown() { active_scene_ = nullptr; }
+void SceneManager::Shutdown() {
+  ZoneScoped;
+  active_scene_ = nullptr;
+}
 
 void SceneManager::LoadWorld(std::string_view path) {
   // call destructor of active scene

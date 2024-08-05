@@ -34,6 +34,18 @@ void TerrainGenerator::GenerateChecker(std::vector<BlockType>& blocks) {
     }
   }
 }
+void TerrainGenerator::GenerateLayers(BlockType block) {
+  ZoneScoped;
+  // glm::ivec3 iter;
+  chunk.blocks_[0] = block;
+  // for (iter.y = 0; iter.y < ChunkLength; iter.y += 2) {
+  //   for (iter.z = 0; iter.z < ChunkLength; iter.z++) {
+  //     for (iter.x = 0; iter.x < ChunkLength; iter.x++) {
+  //       chunk.blocks_[ChunkData::GetIndex(iter)] = block;
+  //     }
+  //   }
+  // }
+}
 void TerrainGenerator::GenerateLayers(std::vector<BlockType>& blocks) {
   ZoneScoped;
   glm::ivec3 iter;

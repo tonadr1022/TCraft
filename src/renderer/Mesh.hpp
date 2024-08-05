@@ -3,6 +3,8 @@
 #include <glm/vec3.hpp>
 
 struct ChunkVertex {
+  // uint32_t data1;
+  // uint32_t data2;
   glm::vec3 position;
   glm::vec3 tex_coords;
 };

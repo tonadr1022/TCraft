@@ -22,6 +22,7 @@ void SettingsManager::Init() {
 }
 
 void SettingsManager::Shutdown() {
+  ZoneScoped;
   EASSERT_MSG(instance_ != nullptr, "Can't shutdown before initializing");
   delete instance_;
 }
@@ -37,6 +38,7 @@ void SettingsManager::Load(const std::string& path) {
 }
 
 void SettingsManager::Shutdown(const std::string& path) {
+  ZoneScoped;
   // save main settings
   settings_json_["main"] = {{"mouse_sensitivity", mouse_sensitivity},
                             {"fps_cam_fov_deg", fps_cam_fov_deg},

@@ -7,6 +7,7 @@
 DynamicBuffer::DynamicBuffer() = default;
 
 DynamicBuffer::~DynamicBuffer() {
+  ZoneScoped;
   if (id_) {
     glDeleteBuffers(1, &id_);
   }

@@ -85,7 +85,7 @@ void Application::Run() {
   SettingsManager::Shutdown();
 }
 
-Application::~Application() = default;
+Application::~Application() { ZoneScoped; };
 
 void Application::OnEvent(const SDL_Event& event) {
   ZoneScoped;

@@ -33,9 +33,14 @@ class ChunkManager {
   ChunkMap chunk_map_;
   int load_distance_;
   std::mutex queue_mutex_;
-  std::vector<glm::ivec3> remesh_chunks_positions_;
-  std::vector<glm::ivec3> immediate_remesh_chunk_positions_;
-  std::queue<ChunkMeshTask> finished_chunk_meshes_;
+  std::vector<glm::ivec3> remesh_chunk_tasks_positions_;
+  std::vector<glm::ivec3> immediate_remesh_chunk_task_positions_;
+  std::queue<ChunkMeshTask> finished_chunk_mesh_tasks_;
+
+  std::vector<glm::ivec3> chunk_terrain_task_positions_;
+  std::queue<std::pair<glm::ivec3, ChunkData>> finished_chunk_terrain_tasks_;
+
+  std::vector<glm::ivec3> meshing_candidate_positions_;
 
   uint32_t num_mesh_creations_{0};
   uint32_t total_vertex_count_{0};

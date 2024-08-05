@@ -46,15 +46,34 @@ constexpr int VertexLookup[120] = {
 };
 /* clang-format on */
 
+// uint32_t GetVertexData1(uint8_t x, uint8_t y, uint8_t z, uint8_t, uint8_t, uint8_t) {
+//   // return (x | y << 6 | z << 12 | u << 18 | v << 19 | tex_idx << 20);
+//   return (x | y << 6 | z << 12);
+// }
+//
+// uint32_t GetVertexData2(uint8_t x, uint8_t y, uint8_t z) { return (x | y << 6 | z << 12); }
+//
 }  // namespace
 
-void ChunkMesher::AddQuad(int face_idx, const glm::ivec3& block_pos,
+void ChunkMesher::AddQuad(uint8_t face_idx, const glm::ivec3& block_pos,
                           std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
-                          int tex_idx) {
-  int base_vertex_idx = vertices.size();
-  for (int vertex_idx = 0, lookup_offset = 0; vertex_idx < 4; vertex_idx++, lookup_offset += 5) {
-    ChunkVertex vertex;
+                          uint32_t tex_idx) {
+  ZoneScoped;
+  uint32_t base_vertex_idx = vertices.size();
+  for (uint8_t vertex_idx = 0, lookup_offset = 0; vertex_idx < 4;
+       vertex_idx++, lookup_offset += 5) {
     int combined_offset = face_idx * 20 + lookup_offset;
+    // vertices.emplace_back(GetVertexData1(block_pos.x + VertexLookup[combined_offset],
+    //                                      block_pos.y + VertexLookup[combined_offset + 1],
+    //                                      block_pos.z + VertexLookup[combined_offset + 2],
+    //                                      VertexLookup[combined_offset + 3],
+    //                                      VertexLookup[combined_offset + 4], tex_idx),
+    //                       GetVertexData2(block_pos.x + VertexLookup[combined_offset],
+    //                                      block_pos.y + VertexLookup[combined_offset + 1],
+    //                                      block_pos.z + VertexLookup[combined_offset + 2]));
+    ChunkVertex vertex;
+    // spdlog::info("{} {}", vertices[vertices.size() - 1].data1, vertices[vertices.size() -
+    // 1].data2);
     vertex.position.x = block_pos.x + VertexLookup[combined_offset];
     vertex.position.y = block_pos.y + VertexLookup[combined_offset + 1];
     vertex.position.z = block_pos.z + VertexLookup[combined_offset + 2];
@@ -105,14 +124,17 @@ void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVe
     return blocks[ChunkData::GetIndex(x, y, z)];
   };
 
+  int idx = 0;
   for (int y = 0; y < ChunkLength; y++) {
     for (int z = 0; z < ChunkLength; z++) {
-      for (int x = 0; x < ChunkLength; x++) {
-        BlockType block = blocks[ChunkData::GetIndex(x, y, z)];
+      for (int x = 0; x < ChunkLength; x++, idx++) {
+        ZoneScopedN("for loop iter");
+        BlockType block = blocks[idx];
         if (block == 0) continue;
         static constexpr const int Offsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
                                                     {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
         for (int face_idx = 0; face_idx < 6; face_idx++) {
+          ZoneScopedN("Face idx");
           int nx = x + Offsets[face_idx][0];
           int ny = y + Offsets[face_idx][1];
           int nz = z + Offsets[face_idx][2];
@@ -127,3 +149,6 @@ void ChunkMesher::GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVe
     }
   }
 }
+
+// void ChunkMesher::GenerateGreedy(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
+//                                  std::vector<uint32_t>& indices) {}

@@ -27,7 +27,7 @@ Renderer::Renderer(Window& window) : window_(window) {
   instance_ = this;
 }
 
-Renderer::~Renderer() { ZoneScoped; }
+Renderer::~Renderer() { ZoneScopedN("Destroy Renderer"); }
 
 void Renderer::ShutdownInternal() {
   spdlog::info("chunk vbo allocs: {},chunk ebo allocs: {}", chunk_vbo_.NumAllocs(),
@@ -45,9 +45,10 @@ void Renderer::Init(Window& window) {
 }
 
 void Renderer::Shutdown() {
+  ZoneScoped;
   EASSERT_MSG(instance_ != nullptr, "Can't shutdown before initializing");
   instance_->ShutdownInternal();
-  delete instance_;
+  // delete instance_;
 }
 
 void Renderer::Init() {
@@ -62,11 +63,13 @@ void Renderer::Init() {
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
 
   chunk_vao_.Init();
+  // chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   chunk_vao_.EnableAttribute<float>(0, 3, offsetof(ChunkVertex, position));
   chunk_vao_.EnableAttribute<float>(1, 3, offsetof(ChunkVertex, tex_coords));
+
   // TODO: fine tune or make resizeable
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 100'00'000, sizeof(ChunkVertex));
-  chunk_ebo_.Init(sizeof(uint32_t) * 100'000'000, sizeof(uint32_t));
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 100'000'000, sizeof(ChunkVertex));
+  chunk_ebo_.Init(sizeof(uint32_t) * 20'000'0000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
   chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxChunkDrawCmds, GL_DYNAMIC_STORAGE_BIT);

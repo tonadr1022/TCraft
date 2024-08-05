@@ -239,14 +239,23 @@ void Window::EndRenderFrame(bool imgui_enabled) const {
 }
 
 void Window::Shutdown() {
+  ZoneScoped;
   // Cleanup
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplSDL2_Shutdown();
-  ImGui::DestroyContext();
-
-  SDL_GL_DeleteContext(gl_context);
-  SDL_DestroyWindow(window_);
-  SDL_Quit();
+  {
+    ZoneScopedN("imgui destroy");
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+  }
+  {
+    ZoneScopedN("sdl gl");
+    SDL_GL_DeleteContext(gl_context);
+  }
+  {
+    ZoneScopedN("sdl window");
+    SDL_DestroyWindow(window_);
+    SDL_Quit();
+  }
 }
 void Window::CenterCursor() {
   auto dims = GetWindowSize();

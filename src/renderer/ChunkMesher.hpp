@@ -13,6 +13,8 @@ class ChunkMesher {
               const std::vector<BlockMeshData>& db_mesh_data);
   void GenerateNaive(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
                      std::vector<uint32_t>& indices);
+  // void GenerateGreedy(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
+  //                     std::vector<uint32_t>& indices);
   void GetIndexPadded(const glm::ivec3& pos);
   void GetIndexPadded(int x, int y, int z);
 
@@ -23,8 +25,9 @@ class ChunkMesher {
   const std::vector<BlockMeshData>& db_mesh_data;
 
  private:
-  static void AddQuad(int face_idx, const glm::ivec3& block_pos, std::vector<ChunkVertex>& vertices,
-                      std::vector<uint32_t>& indices, int tex_idx);
+  static void AddQuad(uint8_t face_idx, const glm::ivec3& block_pos,
+                      std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
+                      uint32_t tex_idx);
 };
 
 class BlockMesher {

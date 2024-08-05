@@ -14,6 +14,7 @@ void MaterialManager::Init() {
 }
 
 void MaterialManager::Shutdown() {
+  ZoneScoped;
   EASSERT_MSG(instance_ != nullptr, "Can't shutdown before initializing");
   delete instance_;
 }

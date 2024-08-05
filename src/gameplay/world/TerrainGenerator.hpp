@@ -10,6 +10,7 @@ class TerrainGenerator {
   void GenerateChecker(BlockType block);
   void GenerateChecker(std::vector<BlockType>& blocks);
   void GenerateLayers(std::vector<BlockType>& blocks);
+  void GenerateLayers(BlockType block);
   void GeneratePyramid(std::vector<BlockType>& blocks);
 
   ChunkData& chunk;

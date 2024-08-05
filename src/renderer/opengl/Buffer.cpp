@@ -5,6 +5,7 @@
 Buffer::Buffer() = default;
 
 Buffer::~Buffer() {
+  ZoneScoped;
   EASSERT_MSG(!mapped_, "buffer can't be mapped on deletion");
   if (id_) {
     glDeleteBuffers(1, &id_);
