@@ -1,6 +1,7 @@
 #include "Mesh.hpp"
 
 #include "renderer/Renderer.hpp"
+#include "renderer/Vertex.hpp"
 
 Mesh::Mesh(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices) {
   Allocate(vertices, indices);
@@ -13,12 +14,16 @@ Mesh::Mesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
 void Mesh::Allocate(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices) {
   EASSERT_MSG(!IsAllocated(), "Cannot be allocated already");
   handle_ = Renderer::Get().AllocateMesh(vertices, indices);
+  vertex_count_ = vertices.size();
+  index_count_ = indices.size();
   type_ = Type::Chunk;
 }
 
 void Mesh::Allocate(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
   EASSERT_MSG(!IsAllocated(), "Cannot be allocated already");
   handle_ = Renderer::Get().AllocateMesh(vertices, indices);
+  vertex_count_ = vertices.size();
+  index_count_ = indices.size();
   type_ = Type::Regular;
 }
 

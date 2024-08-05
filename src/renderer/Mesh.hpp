@@ -3,11 +3,12 @@
 #include <glm/vec3.hpp>
 
 struct ChunkVertex {
-  // uint32_t data1;
-  // uint32_t data2;
-  glm::vec3 position;
-  glm::vec3 tex_coords;
+  uint32_t data1;
+  uint32_t data2;
+  // glm::vec3 position;
+  // glm::vec3 tex_coords;
 };
+
 struct Vertex;
 
 class Mesh {
@@ -30,6 +31,8 @@ class Mesh {
   [[nodiscard]] inline bool IsAllocated() const { return handle_ != 0; };
 
   uint32_t handle_{0};
+  uint32_t vertex_count_;
+  uint32_t index_count_;
 
  private:
   Type type_{Mesh::Type::Regular};

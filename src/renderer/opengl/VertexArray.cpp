@@ -22,8 +22,12 @@ void VertexArray::AttachElementBuffer(uint32_t buffer_id) const {
 }
 
 void VertexArray::EnableAttributeInternal(size_t index, size_t size, uint32_t relative_offset,
-                                          uint32_t type) const {
+                                          uint32_t type, bool is_integral) const {
   glEnableVertexArrayAttrib(id_, index);
-  glVertexArrayAttribFormat(id_, index, size, type, GL_FALSE, relative_offset);
+  if (is_integral) {
+    glVertexArrayAttribIFormat(id_, index, size, type, relative_offset);
+  } else {
+    glVertexArrayAttribFormat(id_, index, size, type, GL_FALSE, relative_offset);
+  }
   glVertexArrayAttribBinding(id_, index, 0);
 }

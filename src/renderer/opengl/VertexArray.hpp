@@ -16,19 +16,19 @@ class VertexArray {
   void EnableAttribute(size_t index, size_t size, uint32_t relative_offset) {
     uint32_t type;
     if constexpr (std::is_floating_point_v<T>) {
-      type = 5126;  // GL_FLOAT
+      type = GL_FLOAT;
     } else if constexpr (std::is_integral_v<T>) {
       if constexpr (std::is_signed_v<T>) {
-        type = 5124;  // GL_INT
+        type = GL_INT;
       } else {
-        type = 5125;  // GL_UNSIGNED_INT
+        type = GL_UNSIGNED_INT;
       }
     }
-    EnableAttributeInternal(index, size, relative_offset, type);
+    EnableAttributeInternal(index, size, relative_offset, type, !std::is_floating_point_v<T>);
   }
 
  private:
   uint32_t id_{0};
-  void EnableAttributeInternal(size_t index, size_t size, uint32_t relative_offset,
-                               uint32_t type) const;
+  void EnableAttributeInternal(size_t index, size_t size, uint32_t relative_offset, uint32_t type,
+                               bool is_integral) const;
 };

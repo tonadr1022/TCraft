@@ -4,8 +4,6 @@
 
 using namespace std::chrono;
 
-namespace engine {
-
 class Timer {
  public:
   Timer() { Start(); }
@@ -30,5 +28,3 @@ class Timer {
   uint64_t start_, end_;
   time_point<high_resolution_clock> start_time_;
 };
-
-}  // namespace engine

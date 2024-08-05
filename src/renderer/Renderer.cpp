@@ -63,13 +63,13 @@ void Renderer::Init() {
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
 
   chunk_vao_.Init();
-  // chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
-  chunk_vao_.EnableAttribute<float>(0, 3, offsetof(ChunkVertex, position));
-  chunk_vao_.EnableAttribute<float>(1, 3, offsetof(ChunkVertex, tex_coords));
+  chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
+  // chunk_vao_.EnableAttribute<float>(0, 3, offsetof(ChunkVertex, position));
+  // chunk_vao_.EnableAttribute<float>(1, 3, offsetof(ChunkVertex, tex_coords));
 
   // TODO: fine tune or make resizeable
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 100'000'000, sizeof(ChunkVertex));
-  chunk_ebo_.Init(sizeof(uint32_t) * 20'000'0000, sizeof(uint32_t));
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 50'000'000, sizeof(ChunkVertex));
+  chunk_ebo_.Init(sizeof(uint32_t) * 50'000'000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
   chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxChunkDrawCmds, GL_DYNAMIC_STORAGE_BIT);
@@ -256,13 +256,23 @@ uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
   uint32_t chunk_ebo_offset;
   // uint32_t id = dei_cmds_.size();
   uint32_t id = rand();
-  chunk_allocs_.try_emplace(
-      id, MeshAlloc{
-              .vbo_handle = chunk_vbo_.Allocate(sizeof(ChunkVertex) * vertices.size(),
-                                                vertices.data(), chunk_vbo_offset),
-              .ebo_handle = chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(),
-                                                chunk_ebo_offset),
-          });
+  uint32_t vbo_handle;
+  uint32_t ebo_handle;
+  {
+    ZoneScopedN("vbo alloc");
+    vbo_handle = chunk_vbo_.Allocate(sizeof(ChunkVertex) * vertices.size(), vertices.data(),
+                                     chunk_vbo_offset);
+  }
+  {
+    ZoneScopedN("ebo alloc");
+    ebo_handle =
+        chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(), chunk_ebo_offset);
+  }
+
+  chunk_allocs_.try_emplace(id, MeshAlloc{
+                                    .vbo_handle = vbo_handle,
+                                    .ebo_handle = ebo_handle,
+                                });
   chunk_dei_cmds_.try_emplace(
       id, DrawElementsIndirectCommand{
               .count = static_cast<uint32_t>(indices.size()),

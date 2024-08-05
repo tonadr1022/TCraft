@@ -8,6 +8,9 @@
 constexpr const int ChunkLength = 32;
 constexpr const int ChunkArea = ChunkLength * ChunkLength;
 constexpr const int ChunkVolume = ChunkArea * ChunkLength;
+constexpr const int MeshChunkLength = ChunkLength + 2;
+constexpr const int MeshChunkArea = MeshChunkLength * MeshChunkLength;
+constexpr const int MeshChunkVolume = MeshChunkArea * MeshChunkLength;
 
 using ChunkArray = std::array<BlockType, ChunkVolume>;
 

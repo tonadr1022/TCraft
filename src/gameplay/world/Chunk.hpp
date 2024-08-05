@@ -17,6 +17,10 @@ class Chunk {
   ChunkData data;
   Mesh mesh;
 
+  enum class State { NotFinished, Queued, Finished };
+  State terrain_state{State::NotFinished};
+  State mesh_state{State::NotFinished};
+
  private:
   glm::ivec3 pos_;
 };

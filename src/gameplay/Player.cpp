@@ -67,6 +67,7 @@ void Player::OnImGui() {
                ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
   ImGui::Text("Position %f, %f, %f", position_.x, position_.y, position_.z);
   ImGui::Text("Camera Focused: %s", camera_focused_ ? "true" : "false");
+  ImGui::SliderFloat("Move Speed", &move_speed_, 1.f, 100.f);
   if (camera_mode == CameraMode::FPS) {
     if (ImGui::CollapsingHeader("FPS Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
       fps_camera_.OnImGui();

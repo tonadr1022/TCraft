@@ -1,7 +1,6 @@
 #version 460 core
 
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aTexCoord;
+layout(location = 0) in uvec2 data;
 
 layout(location = 0) out VS_OUT {
     vec3 pos_world_space;
@@ -14,14 +13,21 @@ struct UniformData {
     mat4 model;
 };
 
-layout(std430, binding = 0) readonly buffer data {
+layout(std430, binding = 0) readonly buffer uniform_data_buffer {
     UniformData uniforms[];
 };
 
 void main() {
+    float x = float(bitfieldExtract(data.x, 0, 6));
+    float y = float(bitfieldExtract(data.x, 6, 6));
+    float z = float(bitfieldExtract(data.x, 12, 6));
+    uint u = bitfieldExtract(data.x, 18, 1);
+    uint v = bitfieldExtract(data.x, 19, 1);
+    uint tex_idx = bitfieldExtract(data.x, 20, 12);
     UniformData uniform_data = uniforms[gl_DrawID + gl_InstanceID];
-    vec4 pos_world_space = uniform_data.model * vec4(aPosition, 1.0);
+    vec3 pos = vec3(x, y, z);
+    vec4 pos_world_space = uniform_data.model * vec4(pos, 1.0);
     gl_Position = vp_matrix * pos_world_space;
     vs_out.pos_world_space = vec3(pos_world_space);
-    vs_out.tex_coords = aTexCoord;
+    vs_out.tex_coords = vec3(u, v, tex_idx);
 }

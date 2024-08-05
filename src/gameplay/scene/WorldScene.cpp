@@ -72,6 +72,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     block_db_.LoadMeshData(tex_name_to_idx);
   }
   chunk_manager_.Init();
+  // player_.SetCameraFocused(true);
 }
 
 void WorldScene::Update(double dt) {

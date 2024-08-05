@@ -3,6 +3,7 @@
 #include <queue>
 
 #include "gameplay/world/Chunk.hpp"
+#include "util/MemoryPool.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 
@@ -14,6 +15,7 @@
 
 class BlockDB;
 using ChunkMap = std::unordered_map<glm::ivec3, Chunk>;
+using ChunkNeighborArray = std::array<ChunkArray, 27>;
 
 class ChunkManager {
  public:
@@ -28,21 +30,29 @@ class ChunkManager {
   bool BlockPosExists(const glm::ivec3& world_pos) const;
   void OnImGui();
 
+  glm::ivec3 center_;
+
  private:
   BlockDB& block_db_;
   ChunkMap chunk_map_;
   int load_distance_;
-  std::mutex queue_mutex_;
-  std::vector<glm::ivec3> remesh_chunk_tasks_positions_;
-  std::vector<glm::ivec3> immediate_remesh_chunk_task_positions_;
-  std::queue<ChunkMeshTask> finished_chunk_mesh_tasks_;
+  std::mutex mutex_;
+  std::vector<glm::ivec3> chunk_mesh_queue_;
+  std::unordered_set<glm::ivec3> chunk_mesh_queue_immediate_;
+  std::queue<ChunkMeshTask> chunk_mesh_finished_queue_;
 
-  std::vector<glm::ivec3> chunk_terrain_task_positions_;
-  std::queue<std::pair<glm::ivec3, ChunkData>> finished_chunk_terrain_tasks_;
-
-  std::vector<glm::ivec3> meshing_candidate_positions_;
+  std::vector<glm::ivec3> chunk_terrain_queue_;
+  std::queue<std::pair<glm::ivec3, ChunkData>> finished_chunk_terrain_queue_;
 
   uint32_t num_mesh_creations_{0};
   uint32_t total_vertex_count_{0};
   uint32_t total_index_count_{0};
+
+  MemoryPool<ChunkNeighborArray> meshing_mem_pool_;
+
+  void PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, const glm::ivec3& pos);
+  static void AddRelatedChunks(const glm::ivec3& block_pos_in_chunk, const glm::ivec3& chunk_pos,
+                               std::unordered_set<glm::ivec3>& chunk_set);
+  // void PopulateChunkNeighborDataArray(ChunkData* chunk_data[27],
+  //                                     std::vector<BlockType>& block_data);
 };
