@@ -15,7 +15,7 @@
 
 namespace {
 
-dp::thread_pool thread_pool(std::thread::hardware_concurrency());
+dp::thread_pool thread_pool(std::thread::hardware_concurrency() - 4);
 
 constexpr const int ChunkNeighborOffsets[27][3] = {
     {-1, -1, -1}, {-1, -1, 0}, {-1, -1, 1}, {-1, 0, -1}, {-1, 0, 0},  {-1, 0, 1}, {-1, 1, -1},
@@ -277,7 +277,7 @@ void ChunkManager::PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array,
   ZoneScoped;
   for (const auto& off : ChunkNeighborOffsets) {
     neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] =
-        chunk_map_.at({pos.x + off[0], pos.y + off[1], pos.z + off[2]}).data.GetBlocks();
+        &chunk_map_.at({pos.x + off[0], pos.y + off[1], pos.z + off[2]}).data.GetBlocks();
     // TODO: remove, not relevant to the function
     EASSERT(chunk_map_.at({pos.x + off[0], pos.y + off[1], pos.z + off[2]}).terrain_state ==
             Chunk::State::Finished);

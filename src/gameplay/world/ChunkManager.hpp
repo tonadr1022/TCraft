@@ -15,7 +15,7 @@
 
 class BlockDB;
 using ChunkMap = std::unordered_map<glm::ivec3, Chunk>;
-using ChunkNeighborArray = std::array<ChunkArray, 27>;
+using ChunkNeighborArray = std::array<ChunkArray*, 27>;
 
 class ChunkManager {
  public:

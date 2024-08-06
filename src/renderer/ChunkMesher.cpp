@@ -58,7 +58,6 @@ uint32_t GetVertexData1(uint8_t x, uint8_t y, uint8_t z, uint8_t u, uint8_t v, u
 void ChunkMesher::AddQuad(uint8_t face_idx, uint8_t x, uint8_t y, uint8_t z,
                           std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
                           uint32_t tex_idx) {
-  ZoneScoped;
   uint32_t base_vertex_idx = vertices.size();
   for (uint8_t vertex_idx = 0, lookup_offset = 0; vertex_idx < 4;
        vertex_idx++, lookup_offset += 5) {
@@ -160,37 +159,40 @@ uint8_t PosInChunkMeshToChunkNeighborOffset(int x, int y, int z) {
 
   return ChunkNeighborOffsetToIdx(x, y, z);
 }
+constexpr const int Offsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
+                                     {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
 }  // namespace
 
-void ChunkMesher::GenerateSmart(const std::array<ChunkArray, 27>& chunks,
+void ChunkMesher::GenerateSmart(const std::array<ChunkArray*, 27>& chunks,
                                 std::vector<ChunkVertex>& vertices,
                                 std::vector<uint32_t>& indices) {
-  ZoneScoped;
-  // auto get_block_type = [&chunks](int x, int y, int z) -> BlockType {
-  //   return chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)]
-  //                [chunk::GetIndex(PositiveModulo(x, ChunkLength), PositiveModulo(y, ChunkLength),
-  //                                 PositiveModulo(z, ChunkLength))];
-  // };
-
   int idx = 0;
-  const ChunkArray& mesh_chunk_blocks = chunks[13];
-  for (int y = 0; y < ChunkLength; y++) {
-    for (int z = 0; z < ChunkLength; z++) {
-      for (int x = 0; x < ChunkLength; x++, idx++) {
-        ZoneScopedN("for loop iter");
+  int nx;
+  int ny;
+  int nz;
+  int x;
+  int y;
+  int z;
+  int face_idx;
+  const ChunkArray& mesh_chunk_blocks = *chunks[13];
+  for (y = 0; y < ChunkLength; y++) {
+    for (z = 0; z < ChunkLength; z++) {
+      for (x = 0; x < ChunkLength; x++, idx++) {
         BlockType block = mesh_chunk_blocks[idx];
         if (block == 0) continue;
-        static constexpr const int Offsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
-                                                    {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
-        for (int face_idx = 0; face_idx < 6; face_idx++) {
-          ZoneScopedN("Face idx");
-          int nx = x + Offsets[face_idx][0];
-          int ny = y + Offsets[face_idx][1];
-          int nz = z + Offsets[face_idx][2];
-          {
-            if (chunks[PosInChunkMeshToChunkNeighborOffset(nx, ny, nz)][chunk::GetIndex(
+        for (face_idx = 0; face_idx < 6; face_idx++) {
+          nx = x + Offsets[face_idx][0];
+          ny = y + Offsets[face_idx][1];
+          nz = z + Offsets[face_idx][2];
+          if (ChunkData::IsOutOfBounds(nx, ny, nz)) {
+            if ((*chunks.at(PosInChunkMeshToChunkNeighborOffset(nx, ny, nz)))[chunk::GetIndex(
                     PositiveModulo(nx, ChunkLength), PositiveModulo(ny, ChunkLength),
                     PositiveModulo(nz, ChunkLength))] == 0) {
+              AddQuad(face_idx, x, y, z, vertices, indices,
+                      db_mesh_data[static_cast<uint32_t>(block)].texture_indices[face_idx]);
+            }
+          } else {
+            if ((*chunks[13])[chunk::GetIndex(nx, ny, nz)] == 0) {
               AddQuad(face_idx, x, y, z, vertices, indices,
                       db_mesh_data[static_cast<uint32_t>(block)].texture_indices[face_idx]);
             }
@@ -201,5 +203,6 @@ void ChunkMesher::GenerateSmart(const std::array<ChunkArray, 27>& chunks,
   }
 }
 
-// void ChunkMesher::GenerateGreedy(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
+// void ChunkMesher::GenerateGreedy(const ChunkData& chunk_data, std::vector<ChunkVertex>&
+// vertices,
 //                                  std::vector<uint32_t>& indices) {}

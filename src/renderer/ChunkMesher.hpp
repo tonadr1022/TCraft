@@ -15,7 +15,7 @@ class ChunkMesher {
               const std::vector<BlockMeshData>& db_mesh_data);
   void GenerateNaive(const ChunkArray& blocks, std::vector<ChunkVertex>& vertices,
                      std::vector<uint32_t>& indices);
-  void GenerateSmart(const std::array<ChunkArray, 27>& chunks, std::vector<ChunkVertex>& vertices,
+  void GenerateSmart(const std::array<ChunkArray*, 27>& chunks, std::vector<ChunkVertex>& vertices,
                      std::vector<uint32_t>& indices);
 
   // void GenerateGreedy(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
