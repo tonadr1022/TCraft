@@ -144,7 +144,7 @@ void ChunkManager::Update(double /*dt*/) {
         ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
         std::vector<ChunkVertex> vertices;
         std::vector<uint32_t> indices;
-        mesher.GenerateSmart(*a, vertices, indices);
+        mesher.GenerateGreedy(*a, vertices, indices);
         {
           std::lock_guard<std::mutex> lock(mutex_);
           chunk_mesh_finished_queue_.emplace(vertices, indices, pos);
@@ -193,7 +193,7 @@ void ChunkManager::Update(double /*dt*/) {
       ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
       std::vector<ChunkVertex> vertices;
       std::vector<uint32_t> indices;
-      mesher.GenerateSmart(*a, vertices, indices);
+      mesher.GenerateGreedy(*a, vertices, indices);
       meshing_mem_pool_.Free(a);
       total_vertex_count_ += vertices.size();
       total_index_count_ += indices.size();

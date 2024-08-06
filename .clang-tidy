@@ -95,6 +95,7 @@ Checks: >
   portability-*,
   readability-*,
   -google-readability-braces-around-statements,
+  -google-readability-namespace-comments,
   -google-runtime-references,
   -misc-non-private-member-variables-in-classes,
   -modernize-use-trailing-return-type,
@@ -112,8 +113,7 @@ Checks: >
   -readability-implicit-bool-conversion,
   -readability-function-cognitive-complexity,
   -performance-no-int-to-ptr,
-  -readability-convert-member-functions-to-static,
-  -google-readability-todo
+  -readability-isolate-declaration
 # Turn all the warnings from the checks above into errors.
 WarningsAsErrors: "*"
 
@@ -127,7 +127,7 @@ CheckOptions:
       key: readability-identifier-naming.TemplateParameterCase,
       value: CamelCase,
     }
-  - { key: readability-identifier-naming.FunctionCase, value: aNy_CasE }
+  - { key: readability-identifier-naming.FunctionCase, value: lower_case }
   - { key: readability-identifier-naming.VariableCase, value: lower_case }
   - { key: readability-identifier-naming.ClassMemberCase, value: lower_case }
   - { key: readability-identifier-naming.ClassMemberSuffix, value: _ }
