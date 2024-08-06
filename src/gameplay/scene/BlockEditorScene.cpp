@@ -71,7 +71,8 @@ void BlockEditorScene::Reload() {
                                              .internal_format = GL_RGBA8,
                                              .format = GL_RGBA,
                                              .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
-                                             .filter_mode_max = GL_NEAREST});
+                                             .filter_mode_max = GL_NEAREST,
+                                             .texture_wrap = GL_REPEAT});
   }
   block_db_.Init();
   block_db_.LoadMeshData(tex_name_to_idx_);

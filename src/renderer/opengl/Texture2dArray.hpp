@@ -10,6 +10,7 @@ struct Texture2dArrayCreateParams {
   uint32_t format;
   uint32_t filter_mode_min;
   uint32_t filter_mode_max;
+  uint32_t texture_wrap{0x812F};
 };
 
 class Texture2dArray {

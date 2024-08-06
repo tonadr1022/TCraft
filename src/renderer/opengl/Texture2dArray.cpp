@@ -30,9 +30,9 @@ void Texture2dArray::LoadFromParams(const Texture2dArrayCreateParams& params) {
 
   dims_ = params.dims;
   glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &id_);
-  glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTextureParameteri(id_, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  glTextureParameteri(id_, GL_TEXTURE_WRAP_S, params.texture_wrap);
+  glTextureParameteri(id_, GL_TEXTURE_WRAP_T, params.texture_wrap);
+  glTextureParameteri(id_, GL_TEXTURE_WRAP_R, params.texture_wrap);
   glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, params.filter_mode_min);
   glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, params.filter_mode_max);
 

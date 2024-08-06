@@ -357,7 +357,5 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   spdlog::info("{} {}", curr, total / count);
 }
 bool ChunkMesher::ShouldShowFace(BlockType curr_block, BlockType compare_block) {
-  if (curr_block == 0) return false;
-  if (compare_block == 0) return true;
-  return true;
+  return curr_block != compare_block;
 }
