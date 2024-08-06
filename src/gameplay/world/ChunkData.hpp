@@ -1,25 +1,14 @@
 #pragma once
 
-#include <array>
 #include <glm/vec3.hpp>
 
-#include "Block.hpp"
-
-constexpr const int ChunkLength = 32;
-constexpr const int ChunkLengthM1 = ChunkLength - 1;
-constexpr const int ChunkArea = ChunkLength * ChunkLength;
-constexpr const int ChunkVolume = ChunkArea * ChunkLength;
-constexpr const int MeshChunkLength = ChunkLength + 2;
-constexpr const int MeshChunkArea = MeshChunkLength * MeshChunkLength;
-constexpr const int MeshChunkVolume = MeshChunkArea * MeshChunkLength;
-
-using ChunkArray = std::array<BlockType, ChunkVolume>;
+#include "gameplay/world/ChunkDef.hpp"
 
 class ChunkData {
  public:
   void SetBlock(const glm::ivec3& pos, BlockType block);
   [[nodiscard]] BlockType GetBlock(const glm::ivec3& pos) const;
-  [[nodiscard]] ChunkArray& GetBlocks() { return blocks_; }
+  [[nodiscard]] BlockTypeArray& GetBlocks() { return blocks_; }
 
   [[nodiscard]] static inline int GetIndex(glm::ivec3 pos) {
     return pos.y << 10 | pos.z << 5 | pos.x;
@@ -36,7 +25,7 @@ class ChunkData {
   }
 
   // TODO: remove getter if this is going to remain public
-  ChunkArray blocks_{0};
+  BlockTypeArray blocks_{0};
 
  private:
   friend class TerrainGenerator;

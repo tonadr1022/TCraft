@@ -2,13 +2,12 @@
 
 #include <glm/vec3.hpp>
 
-#include "Block.hpp"
 #include "gameplay/world/ChunkData.hpp"
 
 TerrainGenerator::TerrainGenerator(ChunkData& chunk) : chunk(chunk) {}
 
 void TerrainGenerator::GenerateSolid(BlockType block) {
-  std::fill(chunk.blocks_.begin(), chunk.blocks_.end(), block);
+  std::fill(chunk.blocks_, chunk.blocks_ + ChunkVolume, block);
 }
 
 void TerrainGenerator::GenerateChecker(BlockType block) {

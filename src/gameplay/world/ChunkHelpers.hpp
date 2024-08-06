@@ -16,5 +16,3 @@ static inline int GetIndex(glm::ivec3 pos) { return pos.y << 10 | pos.z << 5 | p
 static inline int GetIndex(int x, int y, int z) { return y << 10 | z << 5 | x; }
 
 }  // namespace chunk
-
-static inline int PositiveModulo(int i, int n) { return (i % n + n) % n; }

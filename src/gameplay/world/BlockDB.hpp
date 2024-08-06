@@ -3,7 +3,7 @@
 #include <array>
 #include <nlohmann/json_fwd.hpp>
 
-#include "gameplay/world/Block.hpp"
+#include "gameplay/world/ChunkDef.hpp"
 
 struct BlockMeshData {
   // pos x,neg x, pos y, neg y, pos z, neg z

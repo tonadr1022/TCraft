@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gameplay/world/Block.hpp"
+#include "gameplay/world/ChunkDef.hpp"
 class ChunkData;
 
 class TerrainGenerator {

@@ -7,8 +7,8 @@
   },
   "main": {
     "fps_cam_fov_deg": 73.00000762939453,
-    "load_distance": 31791,
-    "mouse_sensitivity": 1.8700000047683716,
+    "load_distance": 29215,
+    "mouse_sensitivity": 2.9000000953674316,
     "orbit_mouse_sensitivity": 0.4580000042915344
   },
   "renderer": {

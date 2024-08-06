@@ -3,8 +3,8 @@
 #include "../gameplay/world/BlockDB.hpp"
 #include "../gameplay/world/ChunkData.hpp"
 #include "Mesh.hpp"
-#include "gameplay/world/Block.hpp"
 #include "gameplay/world/ChunkHelpers.hpp"
+#include "util/Timer.hpp"
 
 ChunkMesher::ChunkMesher(const std::vector<BlockData>& db_block_data,
                          const std::vector<BlockMeshData>& db_mesh_data)
@@ -102,7 +102,7 @@ void ChunkMesher::GenerateBlock(std::vector<ChunkVertex>& vertices, std::vector<
   }
 }
 
-void ChunkMesher::GenerateNaive(const ChunkArray& blocks, std::vector<ChunkVertex>& vertices,
+void ChunkMesher::GenerateNaive(const BlockTypeArray& blocks, std::vector<ChunkVertex>& vertices,
                                 std::vector<uint32_t>& indices) {
   ZoneScoped;
   auto get_block_type = [&blocks](int x, int y, int z) -> BlockType {
@@ -163,9 +163,10 @@ constexpr const int Offsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
                                      {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
 }  // namespace
 
-void ChunkMesher::GenerateSmart(const std::array<ChunkArray*, 27>& chunks,
+void ChunkMesher::GenerateSmart(const ChunkNeighborArray& chunks,
                                 std::vector<ChunkVertex>& vertices,
                                 std::vector<uint32_t>& indices) {
+  Timer timer;
   int idx = 0;
   int nx;
   int ny;
@@ -174,7 +175,7 @@ void ChunkMesher::GenerateSmart(const std::array<ChunkArray*, 27>& chunks,
   int y;
   int z;
   int face_idx;
-  const ChunkArray& mesh_chunk_blocks = *chunks[13];
+  const BlockTypeArray& mesh_chunk_blocks = *chunks[13];
   for (y = 0; y < ChunkLength; y++) {
     for (z = 0; z < ChunkLength; z++) {
       for (x = 0; x < ChunkLength; x++, idx++) {
@@ -185,11 +186,11 @@ void ChunkMesher::GenerateSmart(const std::array<ChunkArray*, 27>& chunks,
           ny = y + Offsets[face_idx][1];
           nz = z + Offsets[face_idx][2];
           if (ChunkData::IsOutOfBounds(nx, ny, nz)) {
-            if ((*chunks.at(PosInChunkMeshToChunkNeighborOffset(nx, ny, nz)))[chunk::GetIndex(
-                    PositiveModulo(nx, ChunkLength), PositiveModulo(ny, ChunkLength),
-                    PositiveModulo(nz, ChunkLength))] == 0) {
+            if ((*chunks[PosInChunkMeshToChunkNeighborOffset(nx, ny, nz)])[chunk::GetIndex(
+                    (nx + ChunkLength) % ChunkLength, (ny + ChunkLength) % ChunkLength,
+                    (nz + ChunkLength) % ChunkLength)] == 0) {
               AddQuad(face_idx, x, y, z, vertices, indices,
-                      db_mesh_data[static_cast<uint32_t>(block)].texture_indices[face_idx]);
+                      db_mesh_data[block].texture_indices[face_idx]);
             }
           } else {
             if ((*chunks[13])[chunk::GetIndex(nx, ny, nz)] == 0) {
@@ -201,6 +202,12 @@ void ChunkMesher::GenerateSmart(const std::array<ChunkArray*, 27>& chunks,
       }
     }
   }
+  static double total = 0;
+  static int count = 0;
+  count++;
+  double curr = timer.ElapsedMS();
+  total += curr;
+  spdlog::info("{} {}", curr, total / count);
 }
 
 // void ChunkMesher::GenerateGreedy(const ChunkData& chunk_data, std::vector<ChunkVertex>&

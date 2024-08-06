@@ -2,7 +2,7 @@
 
 #include <glm/fwd.hpp>
 
-#include "gameplay/world/ChunkData.hpp"
+#include "gameplay/world/ChunkDef.hpp"
 
 struct ChunkVertex;
 class ChunkData;
@@ -13,9 +13,9 @@ class ChunkMesher {
  public:
   ChunkMesher(const std::vector<BlockData>& db_block_data,
               const std::vector<BlockMeshData>& db_mesh_data);
-  void GenerateNaive(const ChunkArray& blocks, std::vector<ChunkVertex>& vertices,
+  void GenerateNaive(const BlockTypeArray& blocks, std::vector<ChunkVertex>& vertices,
                      std::vector<uint32_t>& indices);
-  void GenerateSmart(const std::array<ChunkArray*, 27>& chunks, std::vector<ChunkVertex>& vertices,
+  void GenerateSmart(const ChunkNeighborArray& chunks, std::vector<ChunkVertex>& vertices,
                      std::vector<uint32_t>& indices);
 
   // void GenerateGreedy(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,

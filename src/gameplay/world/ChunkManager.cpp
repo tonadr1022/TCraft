@@ -28,7 +28,8 @@ constexpr const int ChunkNeighborOffsets[27][3] = {
 }  // namespace
 
 // TODO: find the best meshing memory pool size
-ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db), meshing_mem_pool_(100) {}
+ChunkManager::ChunkManager(BlockDB& block_db)
+    : block_db_(block_db), meshing_mem_pool_(100), chunk_data_pool_(500) {}
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   auto chunk_pos = util::chunk::WorldToChunkPos(pos);
@@ -54,8 +55,8 @@ void ChunkManager::Update(double /*dt*/) {
       // Chunk already exists at this point so no check
       thread_pool.enqueue_detach([this, pos] {
         ZoneScopedN("chunk terrain task");
-        ChunkData data;
-        TerrainGenerator gen{data};
+        ChunkData* data = chunk_data_pool_.Allocate();
+        TerrainGenerator gen{*data};
         gen.GenerateSolid(1);
         {
           std::lock_guard<std::mutex> lock(mutex_);
@@ -71,7 +72,7 @@ void ChunkManager::Update(double /*dt*/) {
     while (!finished_chunk_terrain_queue_.empty()) {
       const auto& task = finished_chunk_terrain_queue_.front();
       auto& chunk = chunk_map_.at(finished_chunk_terrain_queue_.front().first);
-      chunk.data = task.second;
+      chunk.data = *task.second;
       chunk.terrain_state = Chunk::State::Finished;
       finished_chunk_terrain_queue_.pop();
     }

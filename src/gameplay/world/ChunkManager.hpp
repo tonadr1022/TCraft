@@ -14,8 +14,8 @@
 #include <unordered_map>
 
 class BlockDB;
+
 using ChunkMap = std::unordered_map<glm::ivec3, Chunk>;
-using ChunkNeighborArray = std::array<ChunkArray*, 27>;
 
 class ChunkManager {
  public:
@@ -42,13 +42,14 @@ class ChunkManager {
   std::queue<ChunkMeshTask> chunk_mesh_finished_queue_;
 
   std::vector<glm::ivec3> chunk_terrain_queue_;
-  std::queue<std::pair<glm::ivec3, ChunkData>> finished_chunk_terrain_queue_;
+  std::queue<std::pair<glm::ivec3, ChunkData*>> finished_chunk_terrain_queue_;
 
   uint32_t num_mesh_creations_{0};
   uint32_t total_vertex_count_{0};
   uint32_t total_index_count_{0};
 
   MemoryPool<ChunkNeighborArray> meshing_mem_pool_;
+  MemoryPool<ChunkData> chunk_data_pool_;
 
   void PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, const glm::ivec3& pos);
   static void AddRelatedChunks(const glm::ivec3& block_pos_in_chunk, const glm::ivec3& chunk_pos,
