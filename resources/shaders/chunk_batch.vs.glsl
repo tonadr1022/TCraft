@@ -23,7 +23,7 @@ void main() {
     float z = float(bitfieldExtract(data.x, 12, 6));
     uint u = bitfieldExtract(data.x, 20, 6);
     uint v = bitfieldExtract(data.x, 26, 6);
-    uint tex_idx = bitfieldExtract(data.y, 0, 16);
+    uint tex_idx = bitfieldExtract(data.y, 0, 32);
     UniformData uniform_data = uniforms[gl_DrawID + gl_InstanceID];
     vec3 pos = vec3(x, y, z);
     vec4 pos_world_space = uniform_data.model * vec4(pos, 1.0);

@@ -1,7 +1,5 @@
 #include "ChunkMesher.hpp"
 
-#include <iostream>
-
 #include "../gameplay/world/BlockDB.hpp"
 #include "../gameplay/world/ChunkData.hpp"
 #include "Mesh.hpp"
@@ -50,11 +48,11 @@ constexpr int VertexLookup[120] = {
 };
 /* clang-format on */
 
-uint32_t GetVertexData1(uint8_t x, uint8_t y, uint8_t z, uint8_t ao, uint8_t u, uint8_t v) {
-  return (x | y << 6 | z << 12 | ao << 18 | u << 20 | v << 26);
+uint32_t GetVertexData1(uint8_t x, uint8_t y, uint8_t z, uint8_t u, uint8_t v) {
+  return (x | y << 6 | z << 12 | 0 << 18 | u << 20 | v << 26);
 }
 
-uint32_t GetVertexData2(uint8_t tex_idx) { return tex_idx; }
+uint32_t GetVertexData2(uint32_t tex_idx) { return tex_idx; }
 
 }  // namespace
 
@@ -68,8 +66,8 @@ void ChunkMesher::AddQuad(uint8_t face_idx, uint8_t x, uint8_t y, uint8_t z,
     vertices.emplace_back(
         GetVertexData1(x + VertexLookup[combined_offset], y + VertexLookup[combined_offset + 1],
                        z + VertexLookup[combined_offset + 2], VertexLookup[combined_offset + 3],
-                       VertexLookup[combined_offset + 4], tex_idx),
-        0);
+                       VertexLookup[combined_offset + 4]),
+        GetVertexData2(tex_idx));
   }
 
   // // check whether to flip quad based on AO
@@ -370,11 +368,11 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
               // }
 
               v_data2 = GetVertexData2(tex_idx);
-              v00_data1 = GetVertexData1(vx, vy, vz, 0, v00u, v00v);
-              v01_data1 = GetVertexData1(vx + du[0], vy + du[1], vz + du[2], 0, v01u, v01v);
+              v00_data1 = GetVertexData1(vx, vy, vz, v00u, v00v);
+              v01_data1 = GetVertexData1(vx + du[0], vy + du[1], vz + du[2], v01u, v01v);
               v10_data1 = GetVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1], vz + du[2] + dv[2],
-                                         0, v10u, v10v);
-              v11_data1 = GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], 0, v11u, v11v);
+                                         v10u, v10v);
+              v11_data1 = GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], v11u, v11v);
 
               base_vertex_idx = vertices.size();
               vertices.emplace_back(v00_data1, v_data2);
@@ -431,7 +429,7 @@ void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
     return (*chunks[13])[chunk::GetIndex(x, y, z)];
   };
 
-  int dims[3] = {ChunkLength, ChunkLength, ChunkLength};
+  constexpr const int Dims[3] = {ChunkLength, ChunkLength, ChunkLength};
   int v00u, v00v, v01u, v01v, v10u, v10v, v11u, v11v;
   uint32_t v_data2, v00_data1, v01_data1, v10_data1, v11_data1;
 
@@ -442,15 +440,14 @@ void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
     int x[3] = {0, 0, 0};  // current voxel
     int q[3] = {0, 0, 0};
     q[d] = 1;  // next voxel
-
-    int32_t block_mask[dims[u] * dims[v]];
+    int32_t block_mask[ChunkArea];
     // int* mask = new int32_t[dims[u] * dims[v]];  // 2D slice
 
     // For each slice
-    for (x[d] = -1; x[d] < dims[d];) {
+    for (x[d] = -1; x[d] < Dims[d];) {
       int counter = 0;
-      for (x[v] = 0; x[v] < dims[v]; x[v]++) {
-        for (x[u] = 0; x[u] < dims[u]; x[u]++) {
+      for (x[v] = 0; x[v] < Dims[v]; x[v]++) {
+        for (x[u] = 0; x[u] < Dims[u]; x[u]++) {
           BlockType block2 = get_block(x[0], x[1], x[2]);
           BlockType block1 = get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
           // BlockType block1 = x[d] >= 0 ? get_block(x[0], x[1], x[2]) : 0;
@@ -469,21 +466,21 @@ void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
       counter = 0;
 
       // For every block in slice
-      for (int j = 0; j < dims[v]; j++) {
-        for (int i = 0; i < dims[u];) {
+      for (int j = 0; j < Dims[v]; j++) {
+        for (int i = 0; i < Dims[u];) {
           int32_t block_type_int = block_mask[counter];
           if (block_type_int != 0) {
             int h, w;
             // Get width
-            for (w = 1; i + w < dims[u] && block_mask[counter + w] == block_type_int; w++) {
+            for (w = 1; i + w < Dims[u] && block_mask[counter + w] == block_type_int; w++) {
             }
 
             // Get height
             bool done = false;
-            for (h = 1; j + h < dims[v]; h++) {
+            for (h = 1; j + h < Dims[v]; h++) {
               for (int k = 0; k < w; k++) {
                 // Stop if hole or different color
-                if (block_mask[counter + k + h * dims[u]] != block_type_int) {
+                if (block_mask[counter + k + h * Dims[u]] != block_type_int) {
                   done = true;
                   break;
                 }
@@ -511,7 +508,7 @@ void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
             int face_num = (d << 1) | (block_type_int <= 0);
             face_num = Nums[face_num];
 
-            int tex_idx = db_mesh_data[abs(block_mask[counter])].texture_indices[face_num];
+            uint32_t tex_idx = db_mesh_data[abs(block_mask[counter])].texture_indices[face_num];
             int vx = x[0];
             int vy = x[1];
             int vz = x[2];
@@ -571,11 +568,11 @@ void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
             }
 
             v_data2 = GetVertexData2(tex_idx);
-            v00_data1 = GetVertexData1(vx, vy, vz, 0, v00u, v00v);
-            v01_data1 = GetVertexData1(vx + du[0], vy + du[1], vz + du[2], 0, v01u, v01v);
+            v00_data1 = GetVertexData1(vx, vy, vz, v00u, v00v);
+            v01_data1 = GetVertexData1(vx + du[0], vy + du[1], vz + du[2], v01u, v01v);
             v10_data1 = GetVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1], vz + du[2] + dv[2],
-                                       0, v10u, v10v);
-            v11_data1 = GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], 0, v11u, v11v);
+                                       v10u, v10v);
+            v11_data1 = GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], v11u, v11v);
 
             // Generate the indices first
             int base_vertex_idx = vertices.size();
@@ -593,7 +590,7 @@ void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
 
             // Clear part of the mask to avoid duplicated faces
             for (int l = 0; l < h; l++)
-              for (int k = 0; k < w; k++) block_mask[counter + k + l * dims[u]] = 0;
+              for (int k = 0; k < w; k++) block_mask[counter + k + l * Dims[u]] = 0;
 
             i += w;
             counter += w;

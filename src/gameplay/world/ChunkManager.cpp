@@ -29,7 +29,7 @@ constexpr const int ChunkNeighborOffsets[27][3] = {
 
 // TODO: find the best meshing memory pool size
 ChunkManager::ChunkManager(BlockDB& block_db)
-    : block_db_(block_db), meshing_mem_pool_(100), chunk_data_pool_(500) {}
+    : block_db_(block_db), meshing_mem_pool_(1000), chunk_data_pool_(3000) {}
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   auto chunk_pos = util::chunk::WorldToChunkPos(pos);
@@ -65,7 +65,8 @@ void ChunkManager::Update(double /*dt*/) {
         ZoneScopedN("chunk terrain task");
         ChunkData* data = chunk_data_pool_.Allocate();
         TerrainGenerator gen{*data};
-        gen.GenerateSolid(1);
+        // gen.GenerateSolid(1);
+        gen.GenerateLayers(1);
         {
           std::lock_guard<std::mutex> lock(mutex_);
           finished_chunk_terrain_queue_.emplace(pos, data);
@@ -235,7 +236,7 @@ void ChunkManager::Init() {
   int step_radius = 1;
   int direction_steps_counter = 0;
   int turn_counter = 0;
-  int load_len = 5 * 2 + 1;
+  int load_len = load_distance_ * 2 + 1;
   // int load_len = load_distance_ * 2 + 1;
   glm::ivec3 pos{0, 0, 0};
   for (int i = 0; i < load_len * load_len; i++) {

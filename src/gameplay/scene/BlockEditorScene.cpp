@@ -496,6 +496,8 @@ bool BlockEditorScene::OnEvent(const SDL_Event& event) {
       if (event.key.keysym.sym == SDLK_p && event.key.keysym.mod & KMOD_ALT) {
         scene_manager_.LoadScene("main_menu");
         return true;
+      } else if (event.key.keysym.sym == SDLK_q) {
+        Reload();
       }
   }
   return player_.OnEvent(event);
