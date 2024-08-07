@@ -11,6 +11,8 @@ class Camera {
   [[nodiscard]] virtual glm::mat4 GetView() const = 0;
   [[nodiscard]] inline const glm::vec3& GetFront() const { return front_; }
 
+  [[nodiscard]] virtual float GetPitch() const { return 0; };
+  [[nodiscard]] virtual float GetYaw() const { return 0; };
   virtual void Update(double dt) = 0;
   inline virtual bool OnEvent(const SDL_Event&) { return false; };
   virtual void SetPosition(const glm::vec3& pos) = 0;

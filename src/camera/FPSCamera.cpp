@@ -64,3 +64,12 @@ void FPSCamera::OnImGui() const {
   ImGui::Text("Position: %.1f, %.1f, %.1f", pos_.x, pos_.y, pos_.z);
   ImGui::Text("Front: %.2f, %.2f, %.2f", front_.x, front_.y, front_.z);
 }
+
+float FPSCamera::GetPitch() const { return pitch_; }
+float FPSCamera::GetYaw() const { return yaw_; }
+
+void FPSCamera::SetOrientation(float pitch, float yaw) {
+  pitch_ = pitch;
+  yaw_ = yaw;
+  CalculateFront();
+}

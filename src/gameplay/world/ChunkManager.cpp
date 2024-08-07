@@ -49,6 +49,14 @@ BlockType ChunkManager::GetBlock(const glm::ivec3& pos) const {
 void ChunkManager::Update(double /*dt*/) {
   // TODO: implement ticks
 
+  static int i = 0;
+  i++;
+  if (i % 4 == 0) {
+    i = 0;
+  } else {
+    // return;
+  }
+
   {
     ZoneScopedN("Process chunk terrain");
     for (const auto& pos : chunk_terrain_queue_) {
@@ -91,7 +99,7 @@ void ChunkManager::Update(double /*dt*/) {
     int direction_steps_counter = 0;
     int turn_counter = 0;
     // TODO: use load distance
-    int load_len = (3) * 2 + 1;
+    int load_len = (load_distance_ - 1) * 2 + 1;
     glm::ivec3 pos{0, 0, 0};
     for (int i = 0; i < load_len * load_len; i++) {
       Chunk& chunk = chunk_map_.at(pos);
@@ -126,7 +134,6 @@ void ChunkManager::Update(double /*dt*/) {
       step_radius += change_dir * (1 - (turn_counter % 2));
     }
   }
-  // static glm::ivec3 prev_player_chunk_pos
   {
     ZoneScopedN("Process mesh chunks");
     // process remesh chunks
@@ -145,7 +152,7 @@ void ChunkManager::Update(double /*dt*/) {
         std::vector<ChunkVertex> vertices;
         std::vector<uint32_t> indices;
         if (mesh_greedy_)
-          mesher.GenerateGreedy(*a, vertices, indices);
+          mesher.GenerateGreedy2(*a, vertices, indices);
         else
           mesher.GenerateSmart(*a, vertices, indices);
         {
@@ -179,8 +186,6 @@ void ChunkManager::Update(double /*dt*/) {
     ZoneScopedN("Immediate chunk remesh");
     for (const auto& pos : chunk_mesh_queue_immediate_) {
       auto& chunk = chunk_map_.at(pos);
-      // EASSERT_MSG(chunk.mesh_state == Chunk::State::Queued, "Invalid chunk state for meshing");
-
       bool can_mesh = true;
       for (const auto& offset : ChunkNeighborOffsets) {
         if (!chunk_map_.contains(pos + glm::ivec3{offset[0], offset[1], offset[2]})) {
@@ -197,7 +202,7 @@ void ChunkManager::Update(double /*dt*/) {
       std::vector<ChunkVertex> vertices;
       std::vector<uint32_t> indices;
       if (mesh_greedy_)
-        mesher.GenerateGreedy(*a, vertices, indices);
+        mesher.GenerateGreedy2(*a, vertices, indices);
       else
         mesher.GenerateSmart(*a, vertices, indices);
       meshing_mem_pool_.Free(a);

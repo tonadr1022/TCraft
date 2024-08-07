@@ -29,4 +29,5 @@ class WorldScene : public Scene {
  private:
   GamePlayer player_;
   uint32_t seed_{0};
+  std::string directory_path_;
 };

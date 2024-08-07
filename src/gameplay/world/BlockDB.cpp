@@ -149,19 +149,19 @@ void BlockDB::WriteBlockData(const BlockData& block_data, const std::string& mod
     properties["emits_light"] = block_data.emits_light;
   }
   block_data_json["properties"] = properties;
-  json_util::WriteJson(block_data_json, block_data.full_file_path);
+  util::json::WriteJson(block_data_json, block_data.full_file_path);
 }
 
 std::optional<BlockModelData> BlockDB::LoadBlockModelData(const std::string& model_name) {
   ZoneScoped;
   std::string path = GET_PATH("resources/data/model/" + model_name + ".json");
   json model_obj = util::LoadJsonFile(path);
-  auto block_model_type = json_util::GetString(model_obj, "type");
+  auto block_model_type = util::json::GetString(model_obj, "type");
   if (!block_model_type.has_value()) {
     return std::nullopt;
   }
 
-  auto tex_obj = json_util::GetObject(model_obj, "textures");
+  auto tex_obj = util::json::GetObject(model_obj, "textures");
   if (!tex_obj.has_value()) {
     return std::nullopt;
   }
@@ -170,7 +170,7 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelData(const std::string& mod
   }
 
   auto get_tex_name = [this, &tex_obj, &path](const std::string& type) -> std::string {
-    auto tex_name = json_util::GetString(tex_obj.value(), type);
+    auto tex_name = util::json::GetString(tex_obj.value(), type);
     if (tex_name.has_value()) {
       block_tex_names_in_use_.insert(tex_name.value());
       return tex_name.value();
@@ -207,7 +207,7 @@ std::vector<std::string> BlockDB::GetAllBlockTexturesFromAllModels() {
   for (const auto& file :
        std::filesystem::directory_iterator(GET_PATH("resources/data/model/block"))) {
     json model_obj = util::LoadJsonFile(file.path().string());
-    auto tex_obj = json_util::GetObject(model_obj, "textures");
+    auto tex_obj = util::json::GetObject(model_obj, "textures");
     if (!tex_obj.has_value() || !tex_obj.value().is_object()) {
       spdlog::error("Invalid model format: {}", file.path().string());
       continue;
@@ -242,8 +242,8 @@ std::optional<BlockModelType> BlockDB::StringToBlockModelType(const std::string&
 
 std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::string& path) {
   json model_obj = util::LoadJsonFile(path);
-  auto tex_obj = json_util::GetObject(model_obj, "textures");
-  auto type_str = json_util::GetString(model_obj, "type");
+  auto tex_obj = util::json::GetObject(model_obj, "textures");
+  auto type_str = util::json::GetString(model_obj, "type");
   if (!tex_obj.has_value() || !tex_obj.value().is_object() || !type_str.has_value()) {
     return std::nullopt;
   }
@@ -253,7 +253,7 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::str
   }
 
   if (type == BlockModelType::All) {
-    auto tex_name = json_util::GetString(tex_obj.value(), "all");
+    auto tex_name = util::json::GetString(tex_obj.value(), "all");
     if (!tex_name.has_value()) {
       return std::nullopt;
     }
@@ -261,21 +261,21 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::str
   }
 
   if (type == BlockModelType::TopBottom) {
-    auto tex_name_top = json_util::GetString(tex_obj.value(), "top");
-    auto tex_name_bot = json_util::GetString(tex_obj.value(), "bottom");
-    auto tex_name_side = json_util::GetString(tex_obj.value(), "side");
+    auto tex_name_top = util::json::GetString(tex_obj.value(), "top");
+    auto tex_name_bot = util::json::GetString(tex_obj.value(), "bottom");
+    auto tex_name_side = util::json::GetString(tex_obj.value(), "side");
     if (!tex_name_bot.has_value() || !tex_name_top.has_value() || !tex_name_side.has_value()) {
       return std::nullopt;
     }
     return BlockModelDataTopBot{tex_name_top.value(), tex_name_bot.value(), tex_name_side.value()};
   }
 
-  auto tex_name_posx = json_util::GetString(tex_obj.value(), "posx");
-  auto tex_name_negx = json_util::GetString(tex_obj.value(), "negx");
-  auto tex_name_posy = json_util::GetString(tex_obj.value(), "posy");
-  auto tex_name_negy = json_util::GetString(tex_obj.value(), "negy");
-  auto tex_name_posz = json_util::GetString(tex_obj.value(), "posz");
-  auto tex_name_negz = json_util::GetString(tex_obj.value(), "negz");
+  auto tex_name_posx = util::json::GetString(tex_obj.value(), "posx");
+  auto tex_name_negx = util::json::GetString(tex_obj.value(), "negx");
+  auto tex_name_posy = util::json::GetString(tex_obj.value(), "posy");
+  auto tex_name_negy = util::json::GetString(tex_obj.value(), "negy");
+  auto tex_name_posz = util::json::GetString(tex_obj.value(), "posz");
+  auto tex_name_negz = util::json::GetString(tex_obj.value(), "negz");
   if (!tex_name_posx.has_value() || !tex_name_negx.has_value() || !tex_name_posy.has_value() ||
       !tex_name_negy.has_value() || !tex_name_posz.has_value() || !tex_name_negz.has_value()) {
     return std::nullopt;
@@ -305,14 +305,14 @@ bool BlockData::operator==(const BlockData& other) const {
 void BlockDB::WriteBlockModelTypeAll(const BlockModelDataAll& data, const std::string& path) {
   nlohmann::json j = {{"type", "block/all"}, {"textures", {{"all", data.tex_all}}}};
   spdlog::info("writing all");
-  json_util::WriteJson(j, path);
+  util::json::WriteJson(j, path);
 }
 
 void BlockDB::WriteBlockModelTypeTopBot(const BlockModelDataTopBot& data, const std::string& path) {
   nlohmann::json j = {
       {"type", "block/top_bottom"},
       {"textures", {{"top", data.tex_top}, {"bottom", data.tex_bottom}, {"side", data.tex_side}}}};
-  json_util::WriteJson(j, path);
+  util::json::WriteJson(j, path);
 }
 
 void BlockDB::WriteBlockModelTypeUnique(const BlockModelDataUnique& data, const std::string& path) {
@@ -326,6 +326,6 @@ void BlockDB::WriteBlockModelTypeUnique(const BlockModelDataUnique& data, const 
                           {"posz", data.tex_pos_z},
                           {"negz", data.tex_neg_z},
                       }};
-  json_util::WriteJson(j, path);
+  util::json::WriteJson(j, path);
   // TODO: implement in block Editor scene
 }

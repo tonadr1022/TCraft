@@ -17,6 +17,8 @@ class Player {
   void SetPosition(const glm::vec3& pos);
   [[nodiscard]] const glm::vec3& Position() const;
   Camera& GetCamera();
+  FPSCamera& GetFPSCamera();
+  OrbitCamera& GetOrbitCamera();
   CameraMode camera_mode{CameraMode::FPS};
   void LookAt(const glm::vec3& pos);
 

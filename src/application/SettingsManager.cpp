@@ -44,7 +44,7 @@ void SettingsManager::Shutdown(const std::string& path) {
                             {"fps_cam_fov_deg", fps_cam_fov_deg},
                             {"load_distance", load_distance},
                             {"orbit_mouse_sensitivity", orbit_mouse_sensitivity}};
-  json_util::WriteJson(settings_json_, path);
+  util::json::WriteJson(settings_json_, path);
 }
 
 json SettingsManager::LoadSetting(std::string_view name) const {

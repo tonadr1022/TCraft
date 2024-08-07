@@ -102,7 +102,7 @@ void GamePlayer::Update(double dt) {
   if (ray_cast_non_air_pos_ != glm::NullIVec3 &&
       (ray_cast_non_air_pos_ == prev_frame_ray_cast_non_air_pos_ ||
        prev_frame_ray_cast_non_air_pos_ == glm::NullIVec3)) {
-    if (Input::IsMouseButtonPressed(SDL_BUTTON_LEFT)) {
+    if (is_mining_) {
       elapsed_break_time_ += dt * mine_speed_;
       // if (elapsed_break_time_ >=
       // block_db_.GetBlockData()[chunk_manager_.GetBlock(ray_cast_non_air_pos_)].) {
@@ -143,6 +143,13 @@ bool GamePlayer::OnEvent(const SDL_Event& event) {
           chunk_manager_.SetBlock(ray_cast_air_pos_, 2);
         }
         return true;
+      } else if (event.button.button == SDL_BUTTON_LEFT) {
+        is_mining_ = true;
+      }
+      break;
+    case SDL_MOUSEBUTTONUP:
+      if (event.button.button == SDL_BUTTON_LEFT) {
+        is_mining_ = false;
       }
   }
   return false;

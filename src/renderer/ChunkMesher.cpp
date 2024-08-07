@@ -1,5 +1,7 @@
 #include "ChunkMesher.hpp"
 
+#include <iostream>
+
 #include "../gameplay/world/BlockDB.hpp"
 #include "../gameplay/world/ChunkData.hpp"
 #include "Mesh.hpp"
@@ -403,6 +405,201 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
               i++;
               counter++;
             }
+          }
+        }
+      }
+    }
+  }
+  static double total = 0;
+  static int count = 0;
+  count++;
+  double curr = timer.ElapsedMS();
+  total += curr;
+  spdlog::info("{} {}", curr, total / count);
+}
+
+void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
+                                  std::vector<ChunkVertex>& vertices,
+                                  std::vector<uint32_t>& indices) {
+  Timer timer;
+  auto get_block = [&chunks](int x, int y, int z) -> BlockType {
+    if (ChunkData::IsOutOfBounds(x, y, z)) {
+      return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])[chunk::GetIndex(
+          (x + ChunkLength) % ChunkLength, (y + ChunkLength) % ChunkLength,
+          (z + ChunkLength) % ChunkLength)];
+    }
+    return (*chunks[13])[chunk::GetIndex(x, y, z)];
+  };
+
+  int dims[3] = {ChunkLength, ChunkLength, ChunkLength};
+  int v00u, v00v, v01u, v01v, v10u, v10v, v11u, v11v;
+  uint32_t v_data2, v00_data1, v01_data1, v10_data1, v11_data1;
+
+  // For each axis
+  for (int d = 0; d < 3; d++) {
+    int u = (d + 1) % 3;   // index axis u
+    int v = (d + 2) % 3;   // index axis v
+    int x[3] = {0, 0, 0};  // current voxel
+    int q[3] = {0, 0, 0};
+    q[d] = 1;  // next voxel
+
+    int32_t block_mask[dims[u] * dims[v]];
+    // int* mask = new int32_t[dims[u] * dims[v]];  // 2D slice
+
+    // For each slice
+    for (x[d] = -1; x[d] < dims[d];) {
+      int counter = 0;
+      for (x[v] = 0; x[v] < dims[v]; x[v]++) {
+        for (x[u] = 0; x[u] < dims[u]; x[u]++) {
+          BlockType block2 = get_block(x[0], x[1], x[2]);
+          BlockType block1 = get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
+          // BlockType block1 = x[d] >= 0 ? get_block(x[0], x[1], x[2]) : 0;
+          // BlockType block2 =
+          //     x[d] < dims[d] - 1 ? get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2]) : 0;
+          if ((block1 != 0) == (block2 != 0))
+            block_mask[counter] = 0;
+          else if (block1 != 0)
+            block_mask[counter] = block1;
+          else
+            block_mask[counter] = -block2;
+          counter++;
+        }
+      }
+      x[d]++;
+      counter = 0;
+
+      // For every block in slice
+      for (int j = 0; j < dims[v]; j++) {
+        for (int i = 0; i < dims[u];) {
+          int32_t block_type_int = block_mask[counter];
+          if (block_type_int != 0) {
+            int h, w;
+            // Get width
+            for (w = 1; i + w < dims[u] && block_mask[counter + w] == block_type_int; w++) {
+            }
+
+            // Get height
+            bool done = false;
+            for (h = 1; j + h < dims[v]; h++) {
+              for (int k = 0; k < w; k++) {
+                // Stop if hole or different color
+                if (block_mask[counter + k + h * dims[u]] != block_type_int) {
+                  done = true;
+                  break;
+                }
+              }
+              if (done) break;
+            }
+
+            x[u] = i;
+            x[v] = j;
+
+            // Size and orientation of this face
+            int du[3] = {0, 0, 0};
+            int dv[3] = {0, 0, 0};
+
+            if (block_type_int < 0) {
+              du[u] = w;
+              dv[v] = h;
+            } else {
+              du[v] = h;
+              dv[u] = w;
+            }
+            constexpr static int Nums[6] = {
+                4, 5, 2, 3, 0, 1,
+            };
+            int face_num = (d << 1) | (block_type_int <= 0);
+            face_num = Nums[face_num];
+
+            int tex_idx = db_mesh_data[abs(block_mask[counter])].texture_indices[face_num];
+            int vx = x[0];
+            int vy = x[1];
+            int vz = x[2];
+            if (face_num == 0) {
+              v01u = du[u] + dv[u];
+              v01v = du[v] + dv[v];
+              v00u = dv[u];
+              v00v = dv[v];
+              v11u = 0;
+              v11v = 0;
+              v10u = du[u];
+              v10v = du[v];
+            } else if (face_num == 1) {
+              v10u = du[u] + dv[u];
+              v10v = du[v] + dv[v];
+              v11u = dv[u];
+              v11v = dv[v];
+              v00u = 0;
+              v00v = 0;
+              v01u = du[u];
+              v01v = du[v];
+            } else if (face_num == 5) {
+              v10v = du[u] + dv[u];
+              v01u = du[v] + dv[v];
+              v11v = dv[u];
+              v00u = dv[v];
+              v11u = 0;
+              v00v = 0;
+              v01v = du[u];
+              v10u = du[v];
+            } else if (face_num == 4) {
+              v10v = du[u] + dv[u];
+              v10u = du[v] + dv[v];
+              v11v = dv[u];
+              v11u = dv[v];
+              v00u = 0;
+              v00v = 0;
+              v01v = du[u];
+              v01u = du[v];
+              // v10u = du[u] + dv[u];
+              // v10v = du[v] + dv[v];
+              // v11u = dv[u];
+              // v11v = dv[v];
+              // v00u = 0;
+              // v00v = 0;
+              // v01u = du[u];
+              // v01v = du[v];
+            } else {
+              v00u = du[u] + dv[u];
+              v00v = du[v] + dv[v];
+              v01u = dv[u];
+              v01v = dv[v];
+              v10u = 0;
+              v10v = 0;
+              v11u = du[u];
+              v11v = du[v];
+            }
+
+            v_data2 = GetVertexData2(tex_idx);
+            v00_data1 = GetVertexData1(vx, vy, vz, 0, v00u, v00v);
+            v01_data1 = GetVertexData1(vx + du[0], vy + du[1], vz + du[2], 0, v01u, v01v);
+            v10_data1 = GetVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1], vz + du[2] + dv[2],
+                                       0, v10u, v10v);
+            v11_data1 = GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], 0, v11u, v11v);
+
+            // Generate the indices first
+            int base_vertex_idx = vertices.size();
+            vertices.emplace_back(v00_data1, v_data2);
+            vertices.emplace_back(v01_data1, v_data2);
+            vertices.emplace_back(v10_data1, v_data2);
+            vertices.emplace_back(v11_data1, v_data2);
+
+            indices.push_back(base_vertex_idx + 1);
+            indices.push_back(base_vertex_idx + 2);
+            indices.push_back(base_vertex_idx + 3);
+            indices.push_back(base_vertex_idx);
+            indices.push_back(base_vertex_idx + 1);
+            indices.push_back(base_vertex_idx + 3);
+
+            // Clear part of the mask to avoid duplicated faces
+            for (int l = 0; l < h; l++)
+              for (int k = 0; k < w; k++) block_mask[counter + k + l * dims[u]] = 0;
+
+            i += w;
+            counter += w;
+          } else {
+            i++;
+            counter++;
           }
         }
       }

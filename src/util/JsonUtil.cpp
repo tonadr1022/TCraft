@@ -3,7 +3,7 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 
-namespace json_util {
+namespace util::json {
 
 std::optional<std::string> GetString(nlohmann::json& obj, const std::string& str) {
   if (!obj.contains(str)) {
@@ -25,4 +25,4 @@ void WriteJson(nlohmann::json& obj, const std::string& path) {
   std::ofstream f(path);
   f << std::setw(2) << obj << std::endl;
 }
-}  // namespace json_util
+}  // namespace util::json

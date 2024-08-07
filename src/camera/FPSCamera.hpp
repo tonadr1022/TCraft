@@ -14,8 +14,11 @@ class FPSCamera : public Camera {
   void Update(double dt) override;
   void OnImGui() const override;
   void LookAt(const glm::vec3& pos) override;
+  [[nodiscard]] float GetPitch() const override;
+  [[nodiscard]] float GetYaw() const override;
 
   void SetPosition(const glm::vec3& pos) override;
+  void SetOrientation(float pitch, float yaw);
 
  private:
   float yaw_{0}, pitch_{0};

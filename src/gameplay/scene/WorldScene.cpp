@@ -19,7 +19,10 @@
 #include "util/Paths.hpp"
 
 WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
-    : Scene(scene_manager), chunk_manager_(block_db_), player_(chunk_manager_, block_db_) {
+    : Scene(scene_manager),
+      chunk_manager_(block_db_),
+      player_(chunk_manager_, block_db_),
+      directory_path_(path) {
   ZoneScoped;
   EASSERT_MSG(!path.empty(), "Can't load world scene without a loaded world name");
   {
@@ -27,13 +30,17 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     try {
       auto data = util::LoadJsonFile(std::string(path) + "/data.json");
       auto level_data = util::LoadJsonFile(std::string(path) + "/level.json");
-      auto seed = json_util::GetString(level_data, "seed");
+      auto seed = util::json::GetString(level_data, "seed");
       EASSERT_MSG(seed.has_value(), "Missing seed from level.json");
       static std::hash<std::string> hasher;
       seed_ = hasher(seed.value());
       std::array<float, 3> player_pos =
           data.value("player_position", std::array<float, 3>{0, 0, 0});
       player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
+      auto camera = data["camera"];
+      float pitch = camera.value("pitch", 0);
+      float yaw = camera.value("yaw", 0);
+      player_.GetFPSCamera().SetOrientation(pitch, yaw);
     } catch (std::runtime_error& error) {
       spdlog::info("failed to load world data");
       scene_manager_.SetNextSceneOnConstructionError("main_menu");
@@ -74,7 +81,6 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     block_db_.LoadMeshData(tex_name_to_idx);
   }
   chunk_manager_.Init();
-  // player_.SetCameraFocused(true);
 }
 
 void WorldScene::Update(double dt) {
@@ -127,8 +133,14 @@ void WorldScene::Render() {
 WorldScene::~WorldScene() {
   ZoneScoped;
   auto pos = player_.Position();
+  // TODO: save world function?
   std::array<float, 3> player_pos = {pos.x, pos.y, pos.z};
-  nlohmann::json j = {{"player_position", player_pos}};
+  // TODO: player save function
+  nlohmann::json j = {
+      {"player_position", player_pos},
+      {"camera",
+       {{"pitch", player_.GetCamera().GetPitch()}, {"yaw", player_.GetCamera().GetYaw()}}}};
+  util::json::WriteJson(j, directory_path_ + "/data.json");
 }
 
 void WorldScene::OnImGui() {

@@ -9,6 +9,7 @@
 
 #include "application/Input.hpp"
 #include "application/Window.hpp"
+#include "camera/FPSCamera.hpp"
 
 void Player::Init() const {
   SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
@@ -118,6 +119,8 @@ Camera& Player::GetCamera() {
   if (camera_mode == CameraMode::FPS) return fps_camera_;
   return orbit_camera_;
 }
+FPSCamera& Player::GetFPSCamera() { return fps_camera_; }
+OrbitCamera& Player::GetOrbitCamera() { return orbit_camera_; }
 
 void Player::LookAt(const glm::vec3& pos) {
   fps_camera_.LookAt(pos);

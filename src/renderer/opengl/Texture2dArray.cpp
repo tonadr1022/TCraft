@@ -73,12 +73,12 @@ Texture2dArray::Texture2dArray(const std::string& param_path,
       {"rgb", GL_RGB},
   };
 
-  auto filter_max = json_util::GetString(data, "filter_max");
-  auto filter_min = json_util::GetString(data, "filter_min");
+  auto filter_max = util::json::GetString(data, "filter_max");
+  auto filter_min = util::json::GetString(data, "filter_min");
   uint32_t filter_mode_min = FilterModeMap.at(filter_min.value());
   uint32_t filter_mode_max = FilterModeMap.at(filter_max.value());
-  auto internal_format_str = json_util::GetString(data, "internal_format");
-  auto format_str = json_util::GetString(data, "format");
+  auto internal_format_str = util::json::GetString(data, "internal_format");
+  auto format_str = util::json::GetString(data, "format");
   uint32_t internal_format = FormatMap.at(internal_format_str.value());
   uint32_t format = FormatMap.at(format_str.value());
 
