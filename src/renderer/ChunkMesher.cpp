@@ -281,6 +281,7 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
                 }
                 if (done) break;
               }
+
               x[u] = i;
               x[v] = j;
 
@@ -308,6 +309,26 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
               int v11u = du[u];
               int v11v = du[v];
 
+              if (face_num == 0) {
+                std::swap(v00u, v01v);
+                std::swap(v00v, v01u);
+                std::swap(v11u, v10v);
+                std::swap(v11v, v10u);
+              } else if (face_num == 1) {
+                std::swap(v11u, v11v);
+                std::swap(v01u, v01v);
+                std::swap(v00u, v00v);
+                std::swap(v01u, v11u);
+                std::swap(v01v, v11v);
+                std::swap(v10u, v00u);
+                std::swap(v10v, v00v);
+              } else if (face_num == 4) {
+                std::swap(v01u, v11u);
+                std::swap(v01v, v11v);
+                std::swap(v10u, v00u);
+                std::swap(v10v, v00v);
+              }
+
               uint32_t v_data2 = GetVertexData2(tex_idx);
               uint32_t v00_data1 = GetVertexData1(vx, vy, vz, 0, v00u, v00v);
               uint32_t v01_data1 =
@@ -318,17 +339,23 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
                   GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], 0, v11u, v11v);
 
               size_t base_vertex_idx = vertices.size();
+              // if (face_num != 4) {
               vertices.emplace_back(v00_data1, v_data2);
               vertices.emplace_back(v01_data1, v_data2);
               vertices.emplace_back(v10_data1, v_data2);
               vertices.emplace_back(v11_data1, v_data2);
-
+              // 11--------10
+              //| \       |
+              //|    \    |
+              //|       \ |
+              // 00--------01
+              indices.push_back(base_vertex_idx + 1);
+              indices.push_back(base_vertex_idx + 2);
+              indices.push_back(base_vertex_idx + 3);
               indices.push_back(base_vertex_idx);
               indices.push_back(base_vertex_idx + 1);
-              indices.push_back(base_vertex_idx + 2);
-              indices.push_back(base_vertex_idx + 2);
-              indices.push_back(base_vertex_idx + 1);
               indices.push_back(base_vertex_idx + 3);
+              // }
 
               // zero out the mask for what we just added
               for (l = 0; l < height; l++) {
