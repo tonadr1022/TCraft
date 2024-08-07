@@ -20,6 +20,8 @@ class ChunkMesher {
 
   void GenerateGreedy(const ChunkNeighborArray& chunks, std::vector<ChunkVertex>& vertices,
                       std::vector<uint32_t>& indices);
+  void GenerateGreedy2(const ChunkNeighborArray& chunks, std::vector<ChunkVertex>& vertices,
+                       std::vector<uint32_t>& indices);
 
   static void GenerateBlock(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
                             const std::array<uint32_t, 6>& tex_indices);

@@ -56,4 +56,5 @@ class ChunkManager {
                                std::unordered_set<glm::ivec3>& chunk_set);
   // void PopulateChunkNeighborDataArray(ChunkData* chunk_data[27],
   //                                     std::vector<BlockType>& block_data);
+  bool mesh_greedy_{true};
 };

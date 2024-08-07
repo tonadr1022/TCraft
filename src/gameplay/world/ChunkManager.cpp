@@ -144,7 +144,10 @@ void ChunkManager::Update(double /*dt*/) {
         ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
         std::vector<ChunkVertex> vertices;
         std::vector<uint32_t> indices;
-        mesher.GenerateGreedy(*a, vertices, indices);
+        if (mesh_greedy_)
+          mesher.GenerateGreedy(*a, vertices, indices);
+        else
+          mesher.GenerateSmart(*a, vertices, indices);
         {
           std::lock_guard<std::mutex> lock(mutex_);
           chunk_mesh_finished_queue_.emplace(vertices, indices, pos);
@@ -193,7 +196,10 @@ void ChunkManager::Update(double /*dt*/) {
       ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
       std::vector<ChunkVertex> vertices;
       std::vector<uint32_t> indices;
-      mesher.GenerateGreedy(*a, vertices, indices);
+      if (mesh_greedy_)
+        mesher.GenerateGreedy(*a, vertices, indices);
+      else
+        mesher.GenerateSmart(*a, vertices, indices);
       meshing_mem_pool_.Free(a);
       total_vertex_count_ += vertices.size();
       total_index_count_ += indices.size();
@@ -260,6 +266,7 @@ ChunkManager::~ChunkManager() {
 void ChunkManager::OnImGui() {
   if (ImGui::CollapsingHeader("Chunk Manager", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SliderInt("Load Distance", &load_distance_, 1, 32);
+    ImGui::Checkbox("Greedy Meshing", &mesh_greedy_);
     if (num_mesh_creations_ > 0) {
       ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
       ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);

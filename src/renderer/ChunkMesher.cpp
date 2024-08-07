@@ -208,16 +208,22 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
     }
     return (*chunks[13])[chunk::GetIndex(x, y, z)];
   };
-  int u, v, counter, j, i, k, l, height, width;
+  int u, v, counter, j, i, k, l, height, width, axis;
   int face_num;
   int x[3];  // start point
   int q[3];  // offset
   int du[3];
   int dv[3];
   BlockType block_mask[ChunkArea];
+  BlockType block1, block2;
+
+  int v00u, v00v, v01u, v01v, v10u, v10v, v11u, v11v;
+  uint32_t v_data2, v00_data1, v01_data1, v10_data1, v11_data1;
+  size_t base_vertex_idx;
+  int tex_idx, vx, vy, vz;
 
   for (bool back_face = true, b = false; b != back_face; back_face = back_face && b, b = !b) {
-    for (int axis = 0; axis < 3; axis++) {
+    for (axis = 0; axis < 3; axis++) {
       face_num = ((axis << 1) | (back_face));
 
       u = (axis + 1) % 3;
@@ -231,8 +237,8 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
         counter = 0;
         for (x[v] = 0; x[v] < ChunkLength; x[v]++) {
           for (x[u] = 0; x[u] < ChunkLength; x[u]++, counter++) {
-            const BlockType block1 = get_block(x[0], x[1], x[2]);
-            const BlockType block2 = get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
+            block1 = get_block(x[0], x[1], x[2]);
+            block2 = get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
 
             if (!back_face) {
               if (!(x[axis] < 0) && ShouldShowFace(block1, block2)) {
@@ -295,51 +301,80 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
                 du[v] = height;
                 dv[u] = width;
               }
-              int tex_idx = db_mesh_data[block_mask[counter]].texture_indices[face_num];
-              int vx = x[0];
-              int vy = x[1];
-              int vz = x[2];
-
-              int v00u = du[u] + dv[u];
-              int v00v = du[v] + dv[v];
-              int v01u = dv[u];
-              int v01v = dv[v];
-              int v10u = 0;
-              int v10v = 0;
-              int v11u = du[u];
-              int v11v = du[v];
+              tex_idx = db_mesh_data[block_mask[counter]].texture_indices[face_num];
+              vx = x[0];
+              vy = x[1];
+              vz = x[2];
 
               if (face_num == 0) {
-                std::swap(v00u, v01v);
-                std::swap(v00v, v01u);
-                std::swap(v11u, v10v);
-                std::swap(v11v, v10u);
+                v00u = dv[v];
+                v00v = dv[u];
+                v01u = du[v] + dv[v];
+                v01v = du[u] + dv[u];
+                v10u = du[v];
+                v10v = du[u];
+                v11u = 0;
+                v11v = 0;
               } else if (face_num == 1) {
-                std::swap(v11u, v11v);
-                std::swap(v01u, v01v);
-                std::swap(v00u, v00v);
-                std::swap(v01u, v11u);
-                std::swap(v01v, v11v);
-                std::swap(v10u, v00u);
-                std::swap(v10v, v00v);
+                v10v = du[u] + dv[u];
+                v10u = du[v] + dv[v];
+                v11v = dv[u];
+                v11u = dv[v];
+                v00u = 0;
+                v00v = 0;
+                v01v = du[u];
+                v01u = du[v];
               } else if (face_num == 4) {
-                std::swap(v01u, v11u);
-                std::swap(v01v, v11v);
-                std::swap(v10u, v00u);
-                std::swap(v10v, v00v);
+                v10u = du[u] + dv[u];
+                v10v = du[v] + dv[v];
+                v11u = dv[u];
+                v11v = dv[v];
+                v00u = 0;
+                v00v = 0;
+                v01u = du[u];
+                v01v = du[v];
+              } else {
+                v00u = du[u] + dv[u];
+                v00v = du[v] + dv[v];
+                v01u = dv[u];
+                v01v = dv[v];
+                v10u = 0;
+                v10v = 0;
+                v11u = du[u];
+                v11v = du[v];
               }
 
-              uint32_t v_data2 = GetVertexData2(tex_idx);
-              uint32_t v00_data1 = GetVertexData1(vx, vy, vz, 0, v00u, v00v);
-              uint32_t v01_data1 =
-                  GetVertexData1(vx + du[0], vy + du[1], vz + du[2], 0, v01u, v01v);
-              uint32_t v10_data1 = GetVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1],
-                                                  vz + du[2] + dv[2], 0, v10u, v10v);
-              uint32_t v11_data1 =
-                  GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], 0, v11u, v11v);
+              // NOTE:  Keep comment, it specifies how the above data is assigned in relation to
+              // not swapped
 
-              size_t base_vertex_idx = vertices.size();
-              // if (face_num != 4) {
+              // if (face_num == 0) {
+              // std::swap(v00u, v01v);
+              // std::swap(v00v, v01u);
+              // std::swap(v11u, v10v);
+              // std::swap(v11v, v10u);
+              // } else if (face_num == 1) {
+              // std::swap(v11u, v11v);
+              // std::swap(v01u, v01v);
+              // std::swap(v00u, v00v);
+              // std::swap(v01u, v11u);
+              // std::swap(v01v, v11v);
+              // std::swap(v10u, v00u);
+              // std::swap(v10v, v00v);
+              // else if (face_num == 4) {
+              // std::swap(v01u, v11u);
+              // std::swap(v01v, v11v);
+              // std::swap(v10u, v00u);
+              // std::swap(v10v, v00v);
+              // }
+
+              v_data2 = GetVertexData2(tex_idx);
+              v00_data1 = GetVertexData1(vx, vy, vz, 0, v00u, v00v);
+              v01_data1 = GetVertexData1(vx + du[0], vy + du[1], vz + du[2], 0, v01u, v01v);
+              v10_data1 = GetVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1], vz + du[2] + dv[2],
+                                         0, v10u, v10v);
+              v11_data1 = GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], 0, v11u, v11v);
+
+              base_vertex_idx = vertices.size();
               vertices.emplace_back(v00_data1, v_data2);
               vertices.emplace_back(v01_data1, v_data2);
               vertices.emplace_back(v10_data1, v_data2);
@@ -355,14 +390,11 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
               indices.push_back(base_vertex_idx);
               indices.push_back(base_vertex_idx + 1);
               indices.push_back(base_vertex_idx + 3);
-              // }
 
               // zero out the mask for what we just added
               for (l = 0; l < height; l++) {
                 for (k = 0; k < width; k++) {
-                  size_t index = counter + k + l * ChunkLength;
-                  // infoMask[index] = nullptr;
-                  block_mask[index] = 0;
+                  block_mask[counter + k + l * ChunkLength] = 0;
                 }
               }
               i += width;
@@ -383,6 +415,7 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   total += curr;
   spdlog::info("{} {}", curr, total / count);
 }
+
 bool ChunkMesher::ShouldShowFace(BlockType curr_block, BlockType compare_block) {
   return curr_block != compare_block;
 }

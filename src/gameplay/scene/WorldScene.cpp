@@ -79,8 +79,8 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
 
 void WorldScene::Update(double dt) {
   ZoneScoped;
-  player_.Update(dt);
   chunk_manager_.Update(dt);
+  player_.Update(dt);
 }
 
 bool WorldScene::OnEvent(const SDL_Event& event) {
