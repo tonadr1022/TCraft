@@ -34,6 +34,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
       EASSERT_MSG(seed.has_value(), "Missing seed from level.json");
       static std::hash<std::string> hasher;
       seed_ = hasher(seed.value());
+      chunk_manager_->SetSeed(seed_);
       std::array<float, 3> player_pos =
           data.value("player_position", std::array<float, 3>{0, 0, 0});
       player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
@@ -103,6 +104,7 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
       if (event.key.keysym.sym == SDLK_r && event.key.keysym.mod & KMOD_CTRL &&
           event.key.keysym.mod & KMOD_SHIFT) {
         chunk_manager_ = std::make_unique<ChunkManager>(block_db_);
+        chunk_manager_->SetSeed(seed_);
         chunk_manager_->Init();
       }
   }

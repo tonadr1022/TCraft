@@ -3,7 +3,6 @@
 #include <deque>
 
 #include "gameplay/world/Chunk.hpp"
-#include "util/MemoryPool.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 
@@ -26,6 +25,8 @@ class ChunkManager {
 
   void Update(double dt);
   void Init();
+  // TODO: either make non trivial or remove
+  void SetSeed(int seed);
   const ChunkMap& GetVisibleChunks() const { return chunk_map_; }
   void SetBlock(const glm::ivec3& pos, BlockType block);
   BlockType GetBlock(const glm::ivec3& pos) const;
@@ -37,6 +38,7 @@ class ChunkManager {
  private:
   BlockDB& block_db_;
   ChunkMap chunk_map_;
+  int seed_;
   int load_distance_;
   glm::ivec3 center_;
   glm::ivec3 prev_center_;
@@ -59,4 +61,6 @@ class ChunkManager {
   // void PopulateChunkNeighborDataArray(ChunkData* chunk_data[27],
   //                                     std::vector<BlockType>& block_data);
   bool mesh_greedy_{true};
+
+  float frequency_;
 };

@@ -3,11 +3,12 @@
     "imgui_enabled": true
   },
   "chunk_manager": {
-    "load_distance": 4
+    "frequency": 0.008333333767950535,
+    "load_distance": 22
   },
   "main": {
     "fps_cam_fov_deg": 73.00000762939453,
-    "load_distance": 31478,
+    "load_distance": 0,
     "mouse_sensitivity": 2.9000000953674316,
     "orbit_mouse_sensitivity": 0.4580000042915344
   },

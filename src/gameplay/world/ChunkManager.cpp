@@ -14,7 +14,7 @@
 
 namespace {
 
-dp::thread_pool thread_pool(std::thread::hardware_concurrency() - 4);
+dp::thread_pool thread_pool(std::thread::hardware_concurrency() - 2);
 
 constexpr const int ChunkNeighborOffsets[27][3] = {
     {-1, -1, -1}, {-1, -1, 0}, {-1, -1, 1}, {-1, 0, -1}, {-1, 0, 0},  {-1, 0, 1}, {-1, 1, -1},
@@ -67,8 +67,9 @@ void ChunkManager::Update(double /*dt*/) {
       thread_pool.enqueue_detach([this, pos] {
         ZoneScopedN("chunk terrain task");
         ChunkData data;
-        TerrainGenerator gen{data, pos};
-        gen.GenerateSolid(1);
+        TerrainGenerator gen{data, pos, seed_};
+        gen.GenerateNoise(3, frequency_);
+        // gen.GenerateSolid(1);
         // gen.GenerateChecker(1);
         {
           std::lock_guard<std::mutex> lock(mutex_);
@@ -134,9 +135,6 @@ void ChunkManager::Update(double /*dt*/) {
             if (neighbor_it == chunk_map_.end() ||
                 it->second.terrain_state != Chunk::State::Finished) {
               // spdlog::info("{} {} {}, {} {} {}", pos.x, pos.y, pos.z, nei.x, nei.y, nei.z);
-              if (pos == center_) {
-                spdlog::info("{} {} {}", pos.x, pos.y, pos.z);
-              }
               valid = false;
               break;
             }
@@ -206,7 +204,9 @@ void ChunkManager::Update(double /*dt*/) {
         total_vertex_count_ += task.vertices.size();
         total_index_count_ += task.indices.size();
         num_mesh_creations_++;
-        it->second.mesh.Allocate(task.vertices, task.indices);
+        if (!task.vertices.empty()) {
+          it->second.mesh.Allocate(task.vertices, task.indices);
+        }
         it->second.mesh_state = Chunk::State::Finished;
       }
       chunk_mesh_finished_queue_.pop_front();
@@ -264,6 +264,7 @@ void ChunkManager::Update(double /*dt*/) {
 void ChunkManager::Init() {
   auto settings = SettingsManager::Get().LoadSetting("chunk_manager");
   load_distance_ = settings.value("load_distance", 16);
+  frequency_ = settings.value("frequency", 1.0);
   if (load_distance_ >= 32) load_distance_ = 32;
   if (load_distance_ <= 0) load_distance_ = 1;
 
@@ -277,7 +278,7 @@ void ChunkManager::Init() {
 }
 
 ChunkManager::~ChunkManager() {
-  nlohmann::json j = {{"load_distance", load_distance_}};
+  nlohmann::json j = {{"load_distance", load_distance_}, {"frequency", frequency_}};
   SettingsManager::Get().SaveSetting(j, "chunk_manager");
 }
 
@@ -285,6 +286,7 @@ void ChunkManager::OnImGui() {
   if (ImGui::CollapsingHeader("Chunk Manager", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SliderInt("Load Distance", &load_distance_, 1, 32);
     ImGui::Checkbox("Greedy Meshing", &mesh_greedy_);
+    ImGui::SliderFloat("Frequency", &frequency_, 0.1, 10);
     if (ImGui::CollapsingHeader("Stats##chunk_manager_stats", ImGuiTreeNodeFlags_DefaultOpen)) {
       ImGui::Text("Center: %i %i %i", center_.x, center_.y, center_.z);
       ImGui::Text("Prev Center: %i %i %i", prev_center_.x, prev_center_.y, prev_center_.z);
@@ -369,3 +371,5 @@ void ChunkManager::SetCenter(const glm::vec3& world_pos) {
   prev_center_ = center_;
   center_ = util::chunk::WorldToChunkPos(world_pos);
 }
+
+void ChunkManager::SetSeed(int seed) { seed_ = seed; }
