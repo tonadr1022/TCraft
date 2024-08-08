@@ -22,7 +22,7 @@ class WorldScene : public Scene {
   BlockDB block_db_;
 
   ChunkRenderParams chunk_render_params_;
-  ChunkManager chunk_manager_;
+  std::unique_ptr<ChunkManager> chunk_manager_;
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
 

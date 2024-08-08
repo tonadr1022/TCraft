@@ -161,7 +161,7 @@ void ChunkMesher::GenerateSmart(const ChunkNeighborArray& chunks,
   int y;
   int z;
   int face_idx;
-  const BlockTypeArray& mesh_chunk_blocks = *chunks[13];
+  const BlockTypeArray& mesh_chunk_blocks = *chunks[13]->blocks_;
   for (y = 0; y < ChunkLength; y++) {
     for (z = 0; z < ChunkLength; z++) {
       for (x = 0; x < ChunkLength; x++, idx++) {
@@ -172,9 +172,9 @@ void ChunkMesher::GenerateSmart(const ChunkNeighborArray& chunks,
           ny = y + Offsets[face_idx][1];
           nz = z + Offsets[face_idx][2];
           if (ChunkData::IsOutOfBounds(nx, ny, nz)) {
-            if ((*chunks[PosInChunkMeshToChunkNeighborOffset(nx, ny, nz)])[chunk::GetIndex(
-                    (nx + ChunkLength) % ChunkLength, (ny + ChunkLength) % ChunkLength,
-                    (nz + ChunkLength) % ChunkLength)] == 0) {
+            if ((*chunks[PosInChunkMeshToChunkNeighborOffset(nx, ny, nz)])
+                    .GetBlock((nx + ChunkLength) % ChunkLength, (ny + ChunkLength) % ChunkLength,
+                              (nz + ChunkLength) % ChunkLength) == 0) {
               // AddQuad(face_idx, x, y, z, vertices, indices,
               //         db_mesh_data[block].texture_indices[face_idx]);
               AddQuad(face_idx, x, y, z, vertices, indices, 0);
@@ -202,11 +202,11 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   Timer timer;
   auto get_block = [&chunks](int x, int y, int z) -> BlockType {
     if (ChunkData::IsOutOfBounds(x, y, z)) {
-      return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])[chunk::GetIndex(
-          (x + ChunkLength) % ChunkLength, (y + ChunkLength) % ChunkLength,
-          (z + ChunkLength) % ChunkLength)];
+      return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])
+          .GetBlock((x + ChunkLength) % ChunkLength, (y + ChunkLength) % ChunkLength,
+                    (z + ChunkLength) % ChunkLength);
     }
-    return (*chunks[13])[chunk::GetIndex(x, y, z)];
+    return (*chunks[13]).GetBlock(x, y, z);
   };
   int u, v, counter, j, i, k, l, height, width, axis;
   int face_num;
@@ -419,14 +419,14 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
 void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
                                   std::vector<ChunkVertex>& vertices,
                                   std::vector<uint32_t>& indices) {
-  Timer timer;
+  // Timer timer;
   auto get_block = [&chunks](int x, int y, int z) -> BlockType {
     if (ChunkData::IsOutOfBounds(x, y, z)) {
-      return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])[chunk::GetIndex(
-          (x + ChunkLength) % ChunkLength, (y + ChunkLength) % ChunkLength,
-          (z + ChunkLength) % ChunkLength)];
+      return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])
+          .GetBlock((x + ChunkLength) % ChunkLength, (y + ChunkLength) % ChunkLength,
+                    (z + ChunkLength) % ChunkLength);
     }
-    return (*chunks[13])[chunk::GetIndex(x, y, z)];
+    return (*chunks[13]).GetBlock(x, y, z);
   };
 
   constexpr const int Dims[3] = {ChunkLength, ChunkLength, ChunkLength};
@@ -602,12 +602,12 @@ void ChunkMesher::GenerateGreedy2(const ChunkNeighborArray& chunks,
       }
     }
   }
-  static double total = 0;
-  static int count = 0;
-  count++;
-  double curr = timer.ElapsedMS();
-  total += curr;
-  spdlog::info("{} {}", curr, total / count);
+  // static double total = 0;
+  // static int count = 0;
+  // count++;
+  // double curr = timer.ElapsedMS();
+  // total += curr;
+  // spdlog::info("{} {}", curr, total / count);
 }
 
 bool ChunkMesher::ShouldShowFace(BlockType curr_block, BlockType compare_block) {

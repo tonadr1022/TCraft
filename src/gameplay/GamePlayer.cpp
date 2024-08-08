@@ -129,6 +129,30 @@ void GamePlayer::OnImGui() {
     ImGui::Text(
         "Block Type: %s",
         block_db_.GetBlockData()[chunk_manager_.GetBlock(ray_cast_non_air_pos_)].name.c_str());
+    Chunk* chunk = chunk_manager_.GetChunk(ray_cast_non_air_pos_);
+    if (chunk) {
+      ImGui::Text("Aim Chunk Terrain State: %s",
+                  chunk->terrain_state == Chunk::State::Finished ? "Finished"
+                  : chunk->terrain_state == Chunk::State::Queued ? "Queued"
+                                                                 : "Not Finished");
+      ImGui::Text("Aim Chunk Mesh State: %s",
+                  chunk->mesh_state == Chunk::State::Finished ? "Finished"
+                  : chunk->mesh_state == Chunk::State::Queued ? "Queued"
+                                                              : "Not Finished");
+    }
+  }
+  {
+    Chunk* chunk = chunk_manager_.GetChunk(glm::ivec3(position_));
+    if (chunk) {
+      ImGui::Text("Pos Chunk Terrain State: %s",
+                  chunk->terrain_state == Chunk::State::Finished ? "Finished"
+                  : chunk->terrain_state == Chunk::State::Queued ? "Queued"
+                                                                 : "Not Finished");
+      ImGui::Text("Pos Chunk Mesh State: %s",
+                  chunk->mesh_state == Chunk::State::Finished ? "Finished"
+                  : chunk->mesh_state == Chunk::State::Queued ? "Queued"
+                                                              : "Not Finished");
+    }
   }
   ImGui::End();
 }

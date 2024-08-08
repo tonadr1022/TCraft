@@ -8,6 +8,7 @@ constexpr const int MeshChunkLength = ChunkLength + 2;
 constexpr const int MeshChunkArea = MeshChunkLength * MeshChunkLength;
 constexpr const int MeshChunkVolume = MeshChunkArea * MeshChunkLength;
 using BlockType = uint16_t;
+class ChunkData;
 
-using BlockTypeArray = BlockType[ChunkVolume];
-using ChunkNeighborArray = BlockType (*[27])[ChunkVolume];
+using BlockTypeArray = std::array<BlockType, ChunkVolume>;
+using ChunkNeighborArray = std::array<ChunkData*, 27>;

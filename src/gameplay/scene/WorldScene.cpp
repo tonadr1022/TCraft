@@ -20,8 +20,8 @@
 
 WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     : Scene(scene_manager),
-      chunk_manager_(block_db_),
-      player_(chunk_manager_, block_db_),
+      chunk_manager_(std::make_unique<ChunkManager>(block_db_)),
+      player_(*chunk_manager_, block_db_),
       directory_path_(path) {
   ZoneScoped;
   EASSERT_MSG(!path.empty(), "Can't load world scene without a loaded world name");
@@ -80,12 +80,13 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
 
     block_db_.LoadMeshData(tex_name_to_idx);
   }
-  chunk_manager_.Init();
+  chunk_manager_->Init();
 }
 
 void WorldScene::Update(double dt) {
   ZoneScoped;
-  chunk_manager_.Update(dt);
+  chunk_manager_->SetCenter(player_.Position());
+  chunk_manager_->Update(dt);
   player_.Update(dt);
 }
 
@@ -98,6 +99,11 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
       if (event.key.keysym.sym == SDLK_p && event.key.keysym.mod & KMOD_ALT) {
         scene_manager_.LoadScene("main_menu");
         return true;
+      }
+      if (event.key.keysym.sym == SDLK_r && event.key.keysym.mod & KMOD_CTRL &&
+          event.key.keysym.mod & KMOD_SHIFT) {
+        chunk_manager_ = std::make_unique<ChunkManager>(block_db_);
+        chunk_manager_->Init();
       }
   }
   return false;
@@ -112,7 +118,7 @@ void WorldScene::Render() {
   {
     ZoneScopedN("Submit chunk draw commands");
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
-    for (const auto& it : chunk_manager_.GetVisibleChunks()) {
+    for (const auto& it : chunk_manager_->GetVisibleChunks()) {
       if (!it.second.mesh.IsAllocated()) continue;
       glm::vec3 pos = it.first * ChunkLength;
       Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos),
@@ -145,6 +151,6 @@ WorldScene::~WorldScene() {
 
 void WorldScene::OnImGui() {
   ZoneScoped;
-  chunk_manager_.OnImGui();
+  chunk_manager_->OnImGui();
   player_.OnImGui();
 }

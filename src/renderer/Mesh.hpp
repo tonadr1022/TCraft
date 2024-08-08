@@ -31,8 +31,8 @@ class Mesh {
   [[nodiscard]] inline bool IsAllocated() const { return handle_ != 0; };
 
   uint32_t handle_{0};
-  uint32_t vertex_count_;
-  uint32_t index_count_;
+  uint32_t vertex_count_{0};
+  uint32_t index_count_{0};
 
  private:
   Type type_{Mesh::Type::Regular};

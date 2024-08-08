@@ -1,14 +1,18 @@
 #pragma once
 
 #include <glm/vec3.hpp>
+#include <memory>
 
 #include "gameplay/world/ChunkDef.hpp"
 
 class ChunkData {
  public:
   void SetBlock(const glm::ivec3& pos, BlockType block);
+  void SetBlockNoCheck(const glm::ivec3& pos, BlockType block);
+  [[nodiscard]] BlockType GetBlockNoCheck(const glm::ivec3& pos) const;
   [[nodiscard]] BlockType GetBlock(const glm::ivec3& pos) const;
-  [[nodiscard]] BlockTypeArray& GetBlocks() { return blocks_; }
+  [[nodiscard]] BlockType GetBlock(int x, int y, int z) const;
+  [[nodiscard]] BlockTypeArray* GetBlocks() const { return blocks_.get(); }
 
   [[nodiscard]] static inline int GetIndex(glm::ivec3 pos) {
     return pos.y << 10 | pos.z << 5 | pos.x;
@@ -25,9 +29,10 @@ class ChunkData {
   }
 
   // TODO: remove getter if this is going to remain public
-  BlockTypeArray blocks_{0};
+  // BlockTypeArray blocks_{0};
+  std::unique_ptr<std::array<BlockType, ChunkVolume>> blocks_{nullptr};
 
  private:
   friend class TerrainGenerator;
-  int non_air_block_count_{0};
+  int block_count_{0};
 };
