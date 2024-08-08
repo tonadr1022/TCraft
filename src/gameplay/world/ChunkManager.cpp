@@ -51,13 +51,12 @@ Chunk* ChunkManager::GetChunk(const glm::ivec3& pos) {
 }
 
 void ChunkManager::Update(double /*dt*/) {
+  bool pos_changed = center_ != prev_center_;
   ZoneScoped;
-  // TODO: implement ticks
-
+  // TODO: implement better tick system
   static int tick_count = 0;
   tick_count++;
-  bool tick = tick_count % 4 == 0;
-  if (tick_count % 4 == 0) {
+  if (tick_count == 4) {
     tick_count = 0;
   }
 
@@ -93,10 +92,6 @@ void ChunkManager::Update(double /*dt*/) {
     }
   }
 
-  // static glm::ivec3 center = util::chunk::WorldToChunkPos(center_);
-  // static glm::ivec3 prev_center = center;
-  // center = util::chunk::WorldToChunkPos(center_);
-  // bool pos_changed = center == prev_center;
   if (tick_count == 0) {
     ZoneScopedN("Add to mesh queue");
     constexpr static int Dx[] = {1, 0, -1, 0};
@@ -105,12 +100,10 @@ void ChunkManager::Update(double /*dt*/) {
     int step_radius = 1;
     int direction_steps_counter = 0;
     int turn_counter = 0;
-    // TODO: use load distance
     int load_len = (load_distance_) * 2 + 1;
     glm::ivec3 pos = center_;
     // TODO: infinite load length
     pos.y = 0;
-    int j = 0;
     for (int i = 0; i < load_len * load_len; i++) {
       auto it = chunk_map_.find(pos);
       if (it == chunk_map_.end()) {
@@ -166,18 +159,6 @@ void ChunkManager::Update(double /*dt*/) {
     }
   }
 
-  if (tick_count == 3) {
-    ZoneScopedN("Chunk map iteration");
-    for (auto it = chunk_map_.begin(); it != chunk_map_.end();) {
-      if (abs(it->first.x - center_.x) > load_distance_ ||
-          abs(it->first.y - center_.y) > load_distance_ ||
-          abs(it->first.z - center_.z) > load_distance_) {
-        it = chunk_map_.erase(it);
-      } else {
-        it++;
-      }
-    }
-  }
   if (tick_count == 2) {
     ZoneScopedN("Process mesh chunks");
     // process remesh chunks
@@ -264,6 +245,19 @@ void ChunkManager::Update(double /*dt*/) {
       chunk.mesh_state = Chunk::State::Finished;
     }
     chunk_mesh_queue_immediate_.clear();
+  }
+
+  if (pos_changed) {
+    ZoneScopedN("Chunk map iteration");
+    for (auto it = chunk_map_.begin(); it != chunk_map_.end();) {
+      if (abs(it->first.x - center_.x) > load_distance_ ||
+          abs(it->first.y - center_.y) > load_distance_ ||
+          abs(it->first.z - center_.z) > load_distance_) {
+        it = chunk_map_.erase(it);
+      } else {
+        it++;
+      }
+    }
   }
 }
 
