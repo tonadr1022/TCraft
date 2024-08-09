@@ -21,3 +21,4 @@ void ChunkData::SetBlock(const glm::ivec3& pos, BlockType block) {
   block_count_ -= (curr != 0 && block == 0);
   (*blocks_)[index] = block;
 }
+int ChunkData::GetBlockCount() const { return block_count_; }

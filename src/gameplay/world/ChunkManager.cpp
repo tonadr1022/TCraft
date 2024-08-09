@@ -170,9 +170,9 @@ void ChunkManager::Update(double /*dt*/) {
       if (chunk.mesh.IsAllocated()) chunk.mesh.Free();
       // TODO: copy the neighbor chunks so the mesher can use them
 
-      thread_pool.enqueue_detach([this, pos] {
-        ChunkNeighborArray a;
-        PopulateChunkNeighbors(a, pos, true);
+      ChunkNeighborArray a;
+      PopulateChunkNeighbors(a, pos, true);
+      thread_pool.enqueue_detach([this, a, pos] {
         ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
         std::vector<ChunkVertex> vertices;
         std::vector<uint32_t> indices;

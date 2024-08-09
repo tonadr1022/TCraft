@@ -64,11 +64,9 @@ void Renderer::Init() {
 
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
-  // chunk_vao_.EnableAttribute<float>(0, 3, offsetof(ChunkVertex, position));
-  // chunk_vao_.EnableAttribute<float>(1, 3, offsetof(ChunkVertex, tex_coords));
 
   // TODO: fine tune or make resizeable
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 50'000'000, sizeof(ChunkVertex));
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
   chunk_ebo_.Init(sizeof(uint32_t) * 50'000'000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
@@ -269,11 +267,11 @@ uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
         chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(), chunk_ebo_offset);
   }
 
-  chunk_allocs_.try_emplace(id, MeshAlloc{
-                                    .vbo_handle = vbo_handle,
-                                    .ebo_handle = ebo_handle,
-                                });
-  chunk_dei_cmds_.try_emplace(
+  chunk_allocs_.emplace(id, MeshAlloc{
+                                .vbo_handle = vbo_handle,
+                                .ebo_handle = ebo_handle,
+                            });
+  chunk_dei_cmds_.emplace(
       id, DrawElementsIndirectCommand{
               .count = static_cast<uint32_t>(indices.size()),
               .instance_count = 0,
@@ -319,12 +317,6 @@ uint32_t Renderer::AllocateMaterial(TextureMaterialData& material) {
   material_allocs_.emplace(handle, offset / sizeof(TextureMaterialData));
   return handle;
 }
-
-// uint32_t Renderer::AllocateTextureMaterial(uint32_t texture_handle) {
-//   ZoneScoped;
-//   TextureMaterialData mat{.texture_handle = texture_handle};
-//   return AllocateMaterial(mat);
-// }
 
 void Renderer::FreeMaterial(uint32_t material_handle) {
   ZoneScoped;

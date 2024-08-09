@@ -17,7 +17,6 @@ class ChunkMesher {
                      std::vector<uint32_t>& indices);
   void GenerateSmart(const ChunkNeighborArray& chunks, std::vector<ChunkVertex>& vertices,
                      std::vector<uint32_t>& indices);
-
   void GenerateGreedy(const ChunkNeighborArray& chunks, std::vector<ChunkVertex>& vertices,
                       std::vector<uint32_t>& indices);
   void GenerateGreedy2(const ChunkNeighborArray& chunks, std::vector<ChunkVertex>& vertices,
@@ -34,8 +33,4 @@ class ChunkMesher {
                       std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
                       uint32_t tex_idx);
   static bool ShouldShowFace(BlockType curr_block, BlockType compare_block);
-};
-
-class BlockMesher {
- public:
 };

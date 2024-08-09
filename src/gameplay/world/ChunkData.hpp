@@ -31,6 +31,7 @@ class ChunkData {
   // TODO: remove getter if this is going to remain public
   // BlockTypeArray blocks_{0};
   std::unique_ptr<std::array<BlockType, ChunkVolume>> blocks_{nullptr};
+  [[nodiscard]] int GetBlockCount() const;
 
  private:
   friend class TerrainGenerator;
