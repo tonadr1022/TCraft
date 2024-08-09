@@ -22,4 +22,5 @@ class TerrainGenerator {
   int seed_;
   void SetBlock(int x, int y, int z, BlockType block);
   void SetBlock(const glm::ivec3& pos, BlockType block);
+  std::vector<int> GetHeights(float frequency, float multiplier) const;
 };

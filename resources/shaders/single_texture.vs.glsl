@@ -8,8 +8,13 @@ layout(location = 0) out VS_OUT {
     flat uint material_index;
 } vs_out;
 
-// TDOO: UBO for vp matrix and other uniforms across shaders
-uniform mat4 vp_matrix;
+// std140 explicitly states the memory layout.
+// https://registry.khronos.org/OpenGL/extensions/ARB/ARB_uniform_buffer_object.txt
+layout(std140, binding = 0) uniform Matrices
+{
+    mat4 vp_matrix;
+    vec3 cam_pos;
+};
 
 struct UniformData {
     mat4 model;

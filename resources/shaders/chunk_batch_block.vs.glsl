@@ -5,7 +5,6 @@ layout(location = 0) in uvec2 data;
 layout(location = 0) out VS_OUT {
     vec3 pos_world_space;
     vec3 tex_coords;
-    vec3 color;
 } vs_out;
 
 // std140 explicitly states the memory layout.
@@ -38,5 +37,4 @@ void main() {
     gl_Position = vp_matrix * pos_world_space;
     vs_out.pos_world_space = vec3(pos_world_space);
     vs_out.tex_coords = vec3(u, v, tex_idx);
-    vs_out.color = vec3(AOcurve[bitfieldExtract(data.x, 18, 2)]);
 }

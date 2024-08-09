@@ -64,6 +64,7 @@ void BlockEditorScene::Reload() {
       all_texture_pixel_data.emplace_back(image.pixels);
     }
 
+    chunk_render_params_.shader_name = "chunk_batch_block";
     chunk_render_params_.chunk_tex_array_handle =
         TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
                                              .dims = glm::ivec2{32, 32},

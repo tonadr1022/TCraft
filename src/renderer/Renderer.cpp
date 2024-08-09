@@ -62,6 +62,8 @@ void Renderer::Init() {
   LoadShaders();
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
 
+  uniform_ubo_.Init(sizeof(UBOUniforms), GL_DYNAMIC_STORAGE_BIT);
+
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
 
@@ -112,48 +114,8 @@ void Renderer::Init() {
   tex_materials_buffer_.Init(sizeof(TextureMaterialData) * 1000, GL_DYNAMIC_STORAGE_BIT);
 }
 
-void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
+void Renderer::RenderQuads() {
   ZoneScoped;
-  if (chunk_frame_draw_cmd_uniforms_.size() > 0) {
-    ZoneScopedN("Chunk render");
-    chunk_uniform_ssbo_.ResetOffset();
-    chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
-                                chunk_frame_draw_cmd_uniforms_.data());
-    chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    SetMeshFrameDrawCommands(chunk_draw_indirect_buffer_, chunk_frame_draw_cmd_uniforms_,
-                             chunk_frame_draw_cmd_mesh_ids_, chunk_frame_dei_cmds_,
-                             chunk_dei_cmds_);
-    auto shader = shader_manager_.GetShader("chunk_batch");
-    shader->Bind();
-    shader->SetMat4("vp_matrix", render_info.vp_matrix);
-    const auto& chunk_tex_arr =
-        TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
-    chunk_tex_arr.Bind(0);
-    chunk_vao_.Bind();
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
-                                chunk_frame_dei_cmds_.size(), 0);
-  }
-
-  if (reg_mesh_frame_draw_cmd_uniforms_.size() > 0) {
-    ZoneScopedN("Reg Mesh render");
-    reg_mesh_uniform_ssbo_.ResetOffset();
-    reg_mesh_uniform_ssbo_.SubData(
-        sizeof(DrawCmdUniform) * reg_mesh_frame_draw_cmd_uniforms_.size(),
-        reg_mesh_frame_draw_cmd_uniforms_.data());
-    reg_mesh_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    SetMeshFrameDrawCommands(reg_mesh_draw_indirect_buffer_, reg_mesh_frame_draw_cmd_uniforms_,
-                             reg_mesh_frame_draw_cmd_mesh_ids_, reg_mesh_frame_dei_cmds_,
-                             reg_mesh_dei_cmds_);
-    auto shader = shader_manager_.GetShader("single_texture");
-    shader->Bind();
-    shader->SetMat4("vp_matrix", render_info.vp_matrix);
-    reg_mesh_vao_.Bind();
-    tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
-    // spdlog::info("size {}", reg_mesh_dei_cmds_.size());
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
-                                reg_mesh_frame_dei_cmds_.size(), 0);
-  }
-
   glDepthFunc(GL_ALWAYS);
   stats_.quad_draw_calls += static_quad_uniforms_.size();
   if (stats_.quad_draw_calls > 0) {
@@ -163,8 +125,10 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
     shader->Bind();
     // TODO: use window size
     auto window_dims = window_.GetWindowSize();
-    shader->SetMat4("vp_matrix", glm::ortho(0.f, static_cast<float>(window_dims.x), 0.f,
-                                            static_cast<float>(window_dims.y)));
+    uniform_ubo_.ResetOffset();
+    UBOUniforms uniform_data{.vp_matrix = glm::ortho(0.f, static_cast<float>(window_dims.x), 0.f,
+                                                     static_cast<float>(window_dims.y))};
+    uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
     quad_vao_.Bind();
     quad_uniform_ssbo_.ResetOffset();
     quad_uniform_ssbo_.SubData(sizeof(DrawCmdUniform) * static_quad_uniforms_.size(),
@@ -186,6 +150,53 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
     glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
   }
   glDepthFunc(GL_LESS);
+}
+void Renderer::RenderRegMeshes() {}
+
+void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
+  ZoneScoped;
+  uniform_ubo_.ResetOffset();
+  uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
+  UBOUniforms uniform_data{.vp_matrix = render_info.vp_matrix};
+  uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
+  if (chunk_frame_draw_cmd_uniforms_.size() > 0) {
+    ZoneScopedN("Chunk render");
+    chunk_uniform_ssbo_.ResetOffset();
+    chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
+                                chunk_frame_draw_cmd_uniforms_.data());
+    chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    SetMeshFrameDrawCommands(chunk_draw_indirect_buffer_, chunk_frame_draw_cmd_uniforms_,
+                             chunk_frame_draw_cmd_mesh_ids_, chunk_frame_dei_cmds_,
+                             chunk_dei_cmds_);
+    auto shader = shader_manager_.GetShader(render_params.shader_name);
+    shader->Bind();
+    const auto& chunk_tex_arr =
+        TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
+    chunk_tex_arr.Bind(0);
+    chunk_vao_.Bind();
+    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
+                                chunk_frame_dei_cmds_.size(), 0);
+  }
+
+  if (reg_mesh_frame_draw_cmd_uniforms_.size() > 0) {
+    ZoneScopedN("Reg Mesh render");
+    reg_mesh_uniform_ssbo_.ResetOffset();
+    reg_mesh_uniform_ssbo_.SubData(
+        sizeof(DrawCmdUniform) * reg_mesh_frame_draw_cmd_uniforms_.size(),
+        reg_mesh_frame_draw_cmd_uniforms_.data());
+    reg_mesh_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    SetMeshFrameDrawCommands(reg_mesh_draw_indirect_buffer_, reg_mesh_frame_draw_cmd_uniforms_,
+                             reg_mesh_frame_draw_cmd_mesh_ids_, reg_mesh_frame_dei_cmds_,
+                             reg_mesh_dei_cmds_);
+    auto shader = shader_manager_.GetShader("single_texture");
+    shader->Bind();
+    reg_mesh_vao_.Bind();
+    tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
+    // spdlog::info("size {}", reg_mesh_dei_cmds_.size());
+    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
+                                reg_mesh_frame_dei_cmds_.size(), 0);
+  }
+  RenderQuads();
 }
 
 template <typename UniformType>
@@ -397,6 +408,9 @@ bool Renderer::OnEvent(const SDL_Event& event) {
 void Renderer::LoadShaders() {
   shader_manager_.AddShader("color", {{GET_SHADER_PATH("color.vs.glsl"), ShaderType::Vertex},
                                       {GET_SHADER_PATH("color.fs.glsl"), ShaderType::Fragment}});
+  shader_manager_.AddShader("chunk_batch_block",
+                            {{GET_SHADER_PATH("chunk_batch_block.vs.glsl"), ShaderType::Vertex},
+                             {GET_SHADER_PATH("chunk_batch_block.fs.glsl"), ShaderType::Fragment}});
   shader_manager_.AddShader("chunk_batch",
                             {{GET_SHADER_PATH("chunk_batch.vs.glsl"), ShaderType::Vertex},
                              {GET_SHADER_PATH("chunk_batch.fs.glsl"), ShaderType::Fragment}});

@@ -12,21 +12,28 @@ TerrainGenerator::TerrainGenerator(ChunkData& chunk, const glm::ivec3& chunk_wor
   chunk.blocks_ = std::make_unique<BlockTypeArray>();
 }
 
-void TerrainGenerator::GenerateNoise(BlockType block, float frequency) {
+std::vector<int> TerrainGenerator::GetHeights(float frequency, float multiplier) const {
   ZoneScoped;
   std::vector<float> height_floats(ChunkArea);
   auto fn_simplex = FastNoise::New<FastNoise::Simplex>();
   auto fn_fractal = FastNoise::New<FastNoise::FractalFBm>();
-  fn_fractal->SetSource(fn_simplex);
-  fn_fractal->SetOctaveCount(5);
-  fn_fractal->GenUniformGrid2D(height_floats.data(), chunk_world_pos_.x * ChunkLength,
-                               chunk_world_pos_.z * ChunkLength, ChunkLength, ChunkLength,
-                               frequency, seed_);
-  int height[ChunkArea];
-
-  for (int i = 0; i < ChunkArea; i++) {
-    height[i] = floor((height_floats[i] + 1) * .5 * 22);
+  {
+    ZoneScopedN("Get grid call");
+    fn_fractal->SetSource(fn_simplex);
+    fn_fractal->SetOctaveCount(5);
+    fn_fractal->GenUniformGrid2D(height_floats.data(), chunk_world_pos_.x, chunk_world_pos_.z,
+                                 ChunkLength, ChunkLength, frequency, seed_);
   }
+  std::vector<int> height(ChunkArea);
+  for (int i = 0; i < ChunkArea; i++) {
+    height[i] = floor((height_floats[i] + 1) * .5 * multiplier);
+  }
+  return height;
+}
+
+void TerrainGenerator::GenerateNoise(BlockType block, float frequency) {
+  ZoneScoped;
+  auto height = GetHeights(frequency, 22);
   for (int y = 0; y < ChunkLength; y++) {
     int i = 0;
     for (int z = 0; z < ChunkLength; z++) {

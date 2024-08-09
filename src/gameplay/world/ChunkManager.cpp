@@ -67,7 +67,7 @@ void ChunkManager::Update(double /*dt*/) {
       thread_pool.enqueue_detach([this, pos] {
         ZoneScopedN("chunk terrain task");
         ChunkData data;
-        TerrainGenerator gen{data, pos, seed_};
+        TerrainGenerator gen{data, pos * ChunkLength, seed_};
         gen.GenerateNoise(3, frequency_);
         // gen.GenerateSolid(1);
         // gen.GenerateChecker(1);

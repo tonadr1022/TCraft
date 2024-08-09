@@ -71,6 +71,9 @@ class Renderer {
   void DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
                         const glm::mat4& projection);
 
+  void RenderQuads();
+  void RenderRegMeshes();
+
  private:
   friend class Application;
   static Renderer* instance_;
@@ -97,6 +100,13 @@ class Renderer {
     uint32_t vbo_handle;
     uint32_t ebo_handle;
   };
+
+  struct alignas(16) UBOUniforms {
+    glm::mat4 vp_matrix;
+    glm::vec3 cam_pos;
+    float pad;
+  };
+  Buffer uniform_ubo_;
 
   VertexArray chunk_vao_;
   DynamicBuffer chunk_vbo_;

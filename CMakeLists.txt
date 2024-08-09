@@ -22,8 +22,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nan-infinity-disabled")
 set(FASTNOISE2_NOISETOOL OFF CACHE BOOL "Build Noise Tool" FORCE) #example if don't need the graph tool
 add_subdirectory(dep/FastNoise2)
 
-# add_compile_definitions(TRACY_ENABLE)
-# option(TRACY_ENABLE "" ON)
+add_compile_definitions(TRACY_ENABLE)
+option(TRACY_ENABLE "" ON)
 
 
 add_compile_definitions(SHADER_PATH="${CMAKE_SOURCE_DIR}/resources/shaders/")
