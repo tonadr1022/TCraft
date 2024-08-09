@@ -314,10 +314,11 @@ void ChunkManager::PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, co
                                           bool add_new_chunks) {
   ZoneScoped;
   for (const auto& off : ChunkNeighborOffsets) {
-    auto neighbor_it = chunk_map_.find({pos.x + off[0], pos.y + off[1], pos.z + off[2]});
+    glm::ivec3 neighbor_pos = {pos.x + off[0], pos.y + off[1], pos.z + off[2]};
+    auto neighbor_it = chunk_map_.find(neighbor_pos);
     if (neighbor_it == chunk_map_.end()) {
       if (add_new_chunks) {
-        auto new_chunk = chunk_map_.try_emplace(neighbor_it->first, neighbor_it->first);
+        auto new_chunk = chunk_map_.try_emplace(neighbor_pos, neighbor_pos);
         neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] =
             &new_chunk.first->second.data;
       } else {

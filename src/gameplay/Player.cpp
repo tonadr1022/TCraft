@@ -29,7 +29,7 @@ void Player::SetPosition(const glm::vec3& pos) {
 }
 
 void Player::Update(double dt) {
-  if (!camera_focused_) return;
+  if (!camera_focused_ && !override_movement_) return;
   if (camera_mode == CameraMode::FPS) {
     fps_camera_.SetPosition(position_);
     float movement_offset = move_speed_ * dt;
@@ -56,9 +56,9 @@ void Player::Update(double dt) {
       movement = glm::normalize(movement) * movement_offset;
       position_ += movement;
     }
-    fps_camera_.Update(dt);
+    if (camera_focused_) fps_camera_.Update(dt);
   } else {
-    orbit_camera_.Update(dt);
+    if (camera_focused_) orbit_camera_.Update(dt);
   }
 }
 
@@ -92,6 +92,11 @@ bool Player::OnEvent(const SDL_Event& event) {
         case SDLK_m:
           if (event.key.keysym.mod & KMOD_ALT) {
             camera_mode = camera_mode == CameraMode::FPS ? CameraMode::Orbit : CameraMode::FPS;
+            return true;
+          }
+        case SDLK_x:
+          if (event.key.keysym.mod & KMOD_ALT) {
+            override_movement_ = !override_movement_;
             return true;
           }
       }

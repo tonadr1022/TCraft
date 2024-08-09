@@ -122,37 +122,36 @@ void DynamicBuffer::Free(uint32_t handle) {
   --num_allocs_;
 }
 
-void DynamicBuffer::Coalesce(Iterator& alloc) {
+void DynamicBuffer::Coalesce(Iterator& it) {
   ZoneScoped;
-  EASSERT_MSG(alloc != allocs_.end(), "Don't coalesce a non-existent allocation");
+  EASSERT_MSG(it != allocs_.end(), "Don't coalesce a non-existent allocation");
 
-  auto prev_alloc = alloc;
-  auto next_alloc = alloc;
+  bool remove_it = false;
+  bool remove_next = false;
 
-  // if no previous or the previous is allocated, can't coalesce previous
-  if (prev_alloc != allocs_.begin()) {
-    --prev_alloc;
-    if (prev_alloc->handle != 0) {
-      prev_alloc = allocs_.end();
+  // merge with next alloc
+  if (it != allocs_.end() - 1) {
+    auto next = it + 1;
+    if (next->handle == 0) {
+      it->size_bytes += next->size_bytes;
+      remove_next = true;
     }
-  } else {
-    prev_alloc = allocs_.end();
   }
 
-  // if next alloc doesn't exist or isn't free, can't coalesce it
-  ++next_alloc;
-  if (next_alloc == allocs_.end() || next_alloc->handle != 0) {
-    next_alloc = allocs_.end();
+  // merge with previous alloc
+  if (it != allocs_.begin()) {
+    auto prev = it - 1;
+    if (prev->handle == 0) {
+      prev->size_bytes += it->size_bytes;
+      remove_it = true;
+    }
   }
 
-  if (prev_alloc != allocs_.end() && next_alloc != allocs_.end()) {
-    prev_alloc->size_bytes += alloc->size_bytes + next_alloc->size_bytes;
-    allocs_.erase(alloc, next_alloc);
-  } else if (prev_alloc != allocs_.end()) {
-    prev_alloc->size_bytes += alloc->size_bytes;
-    allocs_.erase(alloc);
-  } else if (next_alloc != allocs_.end()) {
-    alloc->size_bytes += next_alloc->size_bytes;
-    allocs_.erase(next_alloc);
-  }
+  // erase merged allocations
+  if (remove_it && remove_next)
+    allocs_.erase(it, it + 2);  // curr and next
+  else if (remove_it)
+    allocs_.erase(it);  // only curr
+  else if (remove_next)
+    allocs_.erase(it + 1);  // only next
 }

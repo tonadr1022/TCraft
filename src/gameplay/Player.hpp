@@ -27,5 +27,6 @@ class Player {
   FPSCamera fps_camera_;
   OrbitCamera orbit_camera_;
   bool camera_focused_{false};
-  float move_speed_{10.f};
+  float move_speed_{100.f};
+  bool override_movement_{true};
 };

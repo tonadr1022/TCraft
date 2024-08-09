@@ -35,5 +35,5 @@ class DynamicBuffer {
 
   std::vector<Allocation> allocs_;
   using Iterator = decltype(allocs_.begin());
-  void Coalesce(Iterator& alloc);
+  void Coalesce(Iterator& it);
 };
