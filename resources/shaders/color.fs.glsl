@@ -1,9 +1,11 @@
 #version 460
 
-uniform vec3 color;
+layout(location = 0) in VS_OUT {
+    vec3 color;
+} fs_in;
 
 out vec4 o_Color;
 
 void main() {
-    o_Color = vec4(color, 1.0);
+    o_Color = vec4(fs_in.color, 1.0);
 }

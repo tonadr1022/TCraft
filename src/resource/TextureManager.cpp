@@ -44,6 +44,18 @@ const Texture2dArray& TextureManager::GetTexture2dArray(TextureHandle handle) {
 
 void TextureManager::Remove2dArray(uint32_t handle) { texture_2d_array_map_.erase(handle); }
 
+std::shared_ptr<Texture2D> TextureManager::Load(const std::string& name,
+                                                const Texture2DCreateParamsEmpty& params) {
+  EASSERT_MSG(name != "", "Name cannot be empty");
+  auto it = texture_2d_map_.find(name);
+  if (it != texture_2d_map_.end()) {
+    return it->second;
+  }
+  auto tex = std::make_shared<Texture2D>(params);
+  texture_2d_map_.emplace(name, tex);
+  return tex;
+}
+
 std::shared_ptr<Texture2D> TextureManager::Load(const Texture2DCreateParams& params) {
   auto it = texture_2d_map_.find(params.filepath);
   if (it != texture_2d_map_.end()) {

@@ -1,15 +1,31 @@
 #version 460 core
 
-layout(location = 0) in vec3 v_Position;
+layout(location = 0) in vec3 aPosition;
+layout(location = 1) in vec2 aTexCoord;
 
-/* layout(std140, binding = 0) uniform Matrices {
+layout(location = 0) out VS_OUT {
+    vec3 color;
+} vs_out;
+
+struct UniformData {
+    mat4 model;
+    vec3 color;
+};
+
+layout(std430, binding = 0) readonly buffer data {
+    UniformData uniforms[];
+};
+
+// std140 explicitly states the memory layout.
+// https://registry.khronos.org/OpenGL/extensions/ARB/ARB_uniform_buffer_object.txt
+layout(std140, binding = 0) uniform Matrices
+{
     mat4 vp_matrix;
     vec3 cam_pos;
-}
-    */
-uniform mat4 model_matrix;
-uniform mat4 vp_matrix;
+};
 
 void main() {
-    gl_Position = vp_matrix * model_matrix * vec4(v_Position, 1.0);
+    UniformData uniform_data = uniforms[gl_DrawID + gl_InstanceID];
+    gl_Position = vp_matrix * uniform_data.model * vec4(aPosition, 1.0);
+    vs_out.color = uniform_data.color;
 }

@@ -16,6 +16,7 @@ TextureMaterial::TextureMaterial() = default;
 
 TextureMaterial::TextureMaterial(TextureMaterialData& data, std::shared_ptr<Texture2D> tex)
     : tex_(std::move(tex)) {
+  EASSERT_MSG(tex_ != nullptr, "TextureMaterial: texture cannot be null");
   handle_ = Renderer::Get().AllocateMaterial(data);
 };
 
@@ -32,3 +33,5 @@ uint32_t TextureMaterial::Handle() const {
   EASSERT_MSG(handle_, "Don't get a null handle");
   return handle_;
 }
+
+Texture2D& TextureMaterial::GetTexture() { return *tex_; }

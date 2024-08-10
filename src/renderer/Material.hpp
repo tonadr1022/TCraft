@@ -2,7 +2,7 @@
 
 class Texture2D;
 
-struct alignas(16) TextureMaterialData {
+struct TextureMaterialData {
   uint64_t texture_handle{0};
 };
 
@@ -16,6 +16,7 @@ class TextureMaterial {
   TextureMaterial& operator=(TextureMaterial& other) = delete;
   TextureMaterial(TextureMaterial&& other) noexcept;
   TextureMaterial& operator=(TextureMaterial&& other) noexcept;
+  Texture2D& GetTexture();
 
   [[nodiscard]] uint32_t Handle() const;
   [[nodiscard]] inline bool IsAllocated() const { return handle_ != 0; };

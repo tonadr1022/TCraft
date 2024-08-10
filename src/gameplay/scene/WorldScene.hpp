@@ -25,6 +25,8 @@ class WorldScene : public Scene {
   std::unique_ptr<ChunkManager> chunk_manager_;
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
+  std::shared_ptr<TextureMaterial> chunk_state_tex_;
+  std::shared_ptr<TextureMaterial> test_mat_;
 
  private:
   GamePlayer player_;

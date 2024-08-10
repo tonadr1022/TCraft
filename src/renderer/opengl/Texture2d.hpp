@@ -13,8 +13,18 @@ struct Texture2DCreateParams {
   bool flip{true};
 };
 
+struct Texture2DCreateParamsEmpty {
+  uint32_t width;
+  uint32_t height;
+  uint32_t filter_mode_min{GL_NEAREST};
+  uint32_t filter_mode_max{GL_NEAREST};
+  bool bindless{true};
+  bool generate_mipmaps{false};
+};
+
 class Texture2D {
  public:
+  explicit Texture2D(const Texture2DCreateParamsEmpty& params);
   explicit Texture2D(const Texture2DCreateParams& params);
   Texture2D(const Texture2D& other) = delete;
   Texture2D operator=(const Texture2D& other) = delete;
@@ -24,7 +34,8 @@ class Texture2D {
   [[nodiscard]] uint32_t Id() const { return id_; }
   [[nodiscard]] glm::ivec2 Dims() const { return dims_; }
   [[nodiscard]] uint64_t BindlessHandle() const { return bindless_handle_; }
-  void MakeNonResident() const;
+  void MakeNonResident();
+  void MakeResident();
   [[nodiscard]] bool IsValid() const;
 
   void Bind() const;
@@ -32,5 +43,6 @@ class Texture2D {
  private:
   uint32_t id_{0};
   uint32_t bindless_handle_{0};
+  bool resident_{false};
   glm::ivec2 dims_{};
 };

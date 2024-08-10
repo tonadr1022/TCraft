@@ -11,7 +11,7 @@
 #include "application/Window.hpp"
 #include "camera/FPSCamera.hpp"
 
-void Player::Init() const {
+Player::Player() {
   SDL_SetRelativeMouseMode(camera_focused_ ? SDL_TRUE : SDL_FALSE);
   if (camera_focused_) {
     Window::DisableImGuiInputs();

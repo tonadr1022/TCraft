@@ -11,6 +11,7 @@
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Renderer.hpp"
+#include "renderer/opengl/Texture2d.hpp"
 #include "resource/Image.hpp"
 #include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
@@ -18,6 +19,10 @@
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
+namespace {
+constexpr const uint32_t ChunkMapTexWidth = 500;
+constexpr const uint32_t ChunkMapTexHeight = 500;
+}  // namespace
 WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     : Scene(scene_manager),
       chunk_manager_(std::make_unique<ChunkManager>(block_db_)),
@@ -50,11 +55,16 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
   }
   {
     ZoneScopedN("Texture load");
+    spdlog::info("tex load");
     cross_hair_mat_ =
         MaterialManager::Get().LoadTextureMaterial({.filepath = GET_TEXTURE_PATH("crosshair.png")});
+    // TODO: don't need name here
+    // chunk_state_tex_ = MaterialManager::Get().LoadTextureMaterial(
+    //     "chunk_state_map",
+    //     Texture2DCreateParamsEmpty{
+    //         .width = ChunkMapTexWidth, .height = ChunkMapTexHeight, .bindless = true});
   }
 
-  player_.Init();
   block_db_.Init();
   {
     ZoneScopedN("Load block mesh data");
@@ -81,7 +91,6 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
 
     block_db_.LoadMeshData(tex_name_to_idx);
   }
-  chunk_manager_->Init();
 }
 
 void WorldScene::Update(double dt) {
@@ -105,7 +114,6 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
           event.key.keysym.mod & KMOD_SHIFT) {
         chunk_manager_ = std::make_unique<ChunkManager>(block_db_);
         chunk_manager_->SetSeed(seed_);
-        chunk_manager_->Init();
       }
   }
   return false;
@@ -134,7 +142,38 @@ void WorldScene::Render() {
         ray_cast_pos, player_.GetCamera().GetView(),
         player_.GetCamera().GetProjection(Window::Get().GetAspectRatio()));
   }
+  {
+    ZoneScopedN("Chunk state render");
+    // const auto& chunk_states = chunk_manager_->GetChunkStates();
+    // int area = ChunkMapTexWidth * ChunkMapTexHeight;
+    // std::vector<unsigned char> pixels(area * 4);
+    // for (int i = 0; i < area * 4; i += 4) {
+    //   pixels[i] = 255;
+    //   pixels[i + 1] = 255;
+    //   pixels[i + 2] = 255;
+    //   pixels[i + 3] = 255;
+    // }
 
+    uint32_t width, height;
+    static uint32_t prev_width = 0, prev_height = 0;
+    const auto& pixels = chunk_manager_->GetChunkStateTexData(width, height);
+    if (width != prev_width || height != prev_height) {
+      spdlog::info("erasing and creating");
+      MaterialManager::Get().Erase("chunk_state_map");
+      chunk_state_tex_ = MaterialManager::Get().LoadTextureMaterial(
+          "chunk_state_map",
+          Texture2DCreateParamsEmpty{.width = width, .height = height, .bindless = true});
+    }
+    glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, width, height, GL_RGBA,
+                        GL_UNSIGNED_BYTE, pixels.data());
+    prev_height = height;
+    prev_width = width;
+
+    // glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, ChunkMapTexWidth,
+    //                     ChunkMapTexHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    // Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {500, 500}, {100, 100});
+    Renderer::Get().DrawQuad(chunk_state_tex_->Handle(), {250, 250}, {500, 500});
+  }
   Renderer::Get().RenderWorld(chunk_render_params_, render_info);
 }
 

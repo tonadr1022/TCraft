@@ -52,7 +52,6 @@ const std::unordered_set<std::string>& BlockDB::GetTextureNamesInUse() const {
 
 void BlockDB::Init() {
   ZoneScoped;
-
   {
     // Default data load cannot fail.
     ZoneScopedN("Load default block data");

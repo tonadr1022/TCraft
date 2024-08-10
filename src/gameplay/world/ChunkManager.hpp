@@ -17,6 +17,7 @@
 class BlockDB;
 
 using ChunkMap = std::unordered_map<glm::ivec3, Chunk>;
+using ChunkStateArray = std::vector<ChunkState>;
 
 class ChunkManager {
  public:
@@ -24,7 +25,6 @@ class ChunkManager {
   ~ChunkManager();
 
   void Update(double dt);
-  void Init();
   // TODO: either make non trivial or remove
   void SetSeed(int seed);
   const ChunkMap& GetVisibleChunks() const { return chunk_map_; }
@@ -34,6 +34,8 @@ class ChunkManager {
   bool BlockPosExists(const glm::ivec3& world_pos) const;
   void OnImGui();
   void SetCenter(const glm::vec3& world_pos);
+  const ChunkStateArray& GetChunkStates();
+  const std::vector<unsigned char>& GetChunkStateTexData(uint32_t& width, uint32_t& height) const;
 
  private:
   BlockDB& block_db_;
@@ -63,4 +65,6 @@ class ChunkManager {
   bool mesh_greedy_{true};
 
   float frequency_;
+  ChunkStateArray chunk_state_arr_;
+  std::vector<unsigned char> chunk_state_pixels_;
 };

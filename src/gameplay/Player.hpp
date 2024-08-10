@@ -7,8 +7,8 @@
 
 class Player {
  public:
+  Player();
   enum class CameraMode { FPS, Orbit };
-  void Init() const;
   virtual void Update(double dt);
   virtual void OnImGui();
   virtual bool OnEvent(const SDL_Event& event);

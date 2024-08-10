@@ -82,7 +82,6 @@ uint32_t DynamicBuffer::Allocate(uint32_t size_bytes, void* data, uint32_t& offs
   Allocation new_alloc;
   new_alloc.handle = next_handle_++;
   new_alloc.offset = smallest_free_alloc->offset;
-  offset = new_alloc.offset;
   new_alloc.size_bytes = size_bytes;
 
   // update free allocation
@@ -102,6 +101,7 @@ uint32_t DynamicBuffer::Allocate(uint32_t size_bytes, void* data, uint32_t& offs
     ZoneScopedN("glNamedBufferSubData");
     glNamedBufferSubData(id_, new_alloc.offset, size_bytes, data);
   }
+  offset = new_alloc.offset;
   return new_alloc.handle;
 }
 

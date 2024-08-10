@@ -18,6 +18,12 @@
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
 
+namespace {
+glm::mat4 CenterSizeToModel(const glm::vec2& center, const glm::vec2& size) {
+  return glm::scale(glm::translate(glm::mat4{1}, {center.x, center.y, 0}), {size.x, size.y, 1});
+}
+}  // namespace
+
 Renderer* Renderer::instance_ = nullptr;
 
 Renderer& Renderer::Get() { return *instance_; }
@@ -84,7 +90,7 @@ void Renderer::Init() {
   reg_mesh_ebo_.Init(sizeof(uint32_t) * 1'000'000, sizeof(uint32_t));
   reg_mesh_vao_.AttachVertexBuffer(reg_mesh_vbo_.Id(), 0, 0, sizeof(Vertex));
   reg_mesh_vao_.AttachElementBuffer(reg_mesh_ebo_.Id());
-  reg_mesh_uniform_ssbo_.Init(sizeof(DrawCmdUniform) * MaxDrawCmds / 10, GL_DYNAMIC_STORAGE_BIT);
+  reg_mesh_uniform_ssbo_.Init(sizeof(MaterialUniforms) * MaxDrawCmds / 10, GL_DYNAMIC_STORAGE_BIT);
   reg_mesh_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxDrawCmds / 10,
                                       GL_DYNAMIC_STORAGE_BIT);
 
@@ -99,7 +105,8 @@ void Renderer::Init() {
   quad_vao_.AttachVertexBuffer(quad_vbo_.Id(), 0, 0, sizeof(Vertex));
   quad_vao_.AttachElementBuffer(quad_ebo_.Id());
   quad_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand), GL_DYNAMIC_STORAGE_BIT);
-  quad_uniform_ssbo_.Init(sizeof(DrawCmdUniform) * 10000, GL_DYNAMIC_STORAGE_BIT);
+  textured_quad_uniform_ssbo_.Init(sizeof(MaterialUniforms) * 1000, GL_DYNAMIC_STORAGE_BIT);
+  quad_color_uniform_ssbo_.Init(sizeof(ColorUniforms) * 10000, GL_DYNAMIC_STORAGE_BIT);
 
   cube_vao_.Init();
   cube_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
@@ -116,30 +123,58 @@ void Renderer::Init() {
 
 void Renderer::RenderQuads() {
   ZoneScoped;
+  stats_.textured_quad_draw_calls += static_textured_quad_uniforms_.size();
+  if (stats_.textured_quad_draw_calls == 0 && stats_.color_quad_draw_calls == 0) return;
+
+  // UBO to ortho
+  auto window_dims = window_.GetWindowSize();
+  uniform_ubo_.ResetOffset();
+  UBOUniforms uniform_data;
+  uniform_data.vp_matrix =
+      glm::ortho(0.f, static_cast<float>(window_dims.x), 0.f, static_cast<float>(window_dims.y));
+  uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
+
+  quad_vao_.Bind();
   glDepthFunc(GL_ALWAYS);
-  stats_.quad_draw_calls += static_quad_uniforms_.size();
-  if (stats_.quad_draw_calls > 0) {
+  if (stats_.textured_quad_draw_calls > 0) {
     ZoneScopedN("Quad render");
     // Uses a single draw elements indirect command using instancing
-    auto shader = shader_manager_.GetShader("single_texture");
-    shader->Bind();
-    // TODO: use window size
-    auto window_dims = window_.GetWindowSize();
-    uniform_ubo_.ResetOffset();
-    UBOUniforms uniform_data{.vp_matrix = glm::ortho(0.f, static_cast<float>(window_dims.x), 0.f,
-                                                     static_cast<float>(window_dims.y))};
-    uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
-    quad_vao_.Bind();
-    quad_uniform_ssbo_.ResetOffset();
-    quad_uniform_ssbo_.SubData(sizeof(DrawCmdUniform) * static_quad_uniforms_.size(),
-                               static_quad_uniforms_.data());
-    quad_uniform_ssbo_.SubData(sizeof(DrawCmdUniform) * quad_uniforms_.size(),
-                               quad_uniforms_.data());
-    quad_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    shader_manager_.GetShader("single_texture")->Bind();
+    textured_quad_uniform_ssbo_.ResetOffset();
+    if (static_textured_quad_uniforms_.size()) {
+      textured_quad_uniform_ssbo_.SubData(
+          sizeof(MaterialUniforms) * static_textured_quad_uniforms_.size(),
+          static_textured_quad_uniforms_.data());
+    }
+    if (quad_textured_uniforms_.size()) {
+      textured_quad_uniform_ssbo_.SubData(sizeof(MaterialUniforms) * quad_textured_uniforms_.size(),
+                                          quad_textured_uniforms_.data());
+    }
+    textured_quad_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
     DrawElementsIndirectCommand cmd{
         .count = 6,
-        .instance_count = stats_.quad_draw_calls,
+        .instance_count = stats_.textured_quad_draw_calls,
+        .first_index = 0,
+        .base_vertex = 0,
+        .base_instance = 0,
+    };
+    quad_draw_indirect_buffer_.ResetOffset();
+    quad_draw_indirect_buffer_.SubData(sizeof(DrawElementsIndirectCommand), &cmd);
+    quad_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
+  }
+
+  // TODO: static color quads
+  if (stats_.color_quad_draw_calls > 0) {
+    shader_manager_.GetShader("color")->Bind();
+    quad_color_uniform_ssbo_.ResetOffset();
+    quad_color_uniform_ssbo_.SubData(sizeof(ColorUniforms) * quad_color_uniforms_.size(),
+                                     quad_color_uniforms_.data());
+    quad_color_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    DrawElementsIndirectCommand cmd{
+        .count = 6,
+        .instance_count = stats_.color_quad_draw_calls,
         .first_index = 0,
         .base_vertex = 0,
         .base_instance = 0,
@@ -150,14 +185,19 @@ void Renderer::RenderQuads() {
     glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
   }
   glDepthFunc(GL_LESS);
+  quad_textured_uniforms_.clear();
+  quad_color_uniforms_.clear();
 }
+
 void Renderer::RenderRegMeshes() {}
 
 void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
   ZoneScoped;
   uniform_ubo_.ResetOffset();
   uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
-  UBOUniforms uniform_data{.vp_matrix = render_info.vp_matrix};
+  UBOUniforms uniform_data;
+  uniform_data.vp_matrix = render_info.vp_matrix;
+
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
   if (chunk_frame_draw_cmd_uniforms_.size() > 0) {
     ZoneScopedN("Chunk render");
@@ -168,8 +208,7 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
     SetMeshFrameDrawCommands(chunk_draw_indirect_buffer_, chunk_frame_draw_cmd_uniforms_,
                              chunk_frame_draw_cmd_mesh_ids_, chunk_frame_dei_cmds_,
                              chunk_dei_cmds_);
-    auto shader = shader_manager_.GetShader(render_params.shader_name);
-    shader->Bind();
+    shader_manager_.GetShader(render_params.shader_name)->Bind();
     const auto& chunk_tex_arr =
         TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
     chunk_tex_arr.Bind(0);
@@ -182,7 +221,7 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
     ZoneScopedN("Reg Mesh render");
     reg_mesh_uniform_ssbo_.ResetOffset();
     reg_mesh_uniform_ssbo_.SubData(
-        sizeof(DrawCmdUniform) * reg_mesh_frame_draw_cmd_uniforms_.size(),
+        sizeof(MaterialUniforms) * reg_mesh_frame_draw_cmd_uniforms_.size(),
         reg_mesh_frame_draw_cmd_uniforms_.data());
     reg_mesh_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     SetMeshFrameDrawCommands(reg_mesh_draw_indirect_buffer_, reg_mesh_frame_draw_cmd_uniforms_,
@@ -243,19 +282,21 @@ void Renderer::SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_ha
 }
 
 void Renderer::DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size) {
-  ZoneScoped;
   // TODO: handle gracefully no material handle
-  quad_uniforms_.emplace_back(
-      glm::scale(glm::translate(glm::mat4{1}, {center.x, center.y, 0}), {size.x, size.y, 1}),
-      material_allocs_.at(material_handle));
-  stats_.quad_draw_calls++;
+  quad_textured_uniforms_.emplace_back(CenterSizeToModel(center, size),
+                                       material_allocs_.at(material_handle));
+  stats_.textured_quad_draw_calls++;
+}
+
+void Renderer::DrawQuad(const glm::vec3& color, const glm::vec2& center, const glm::vec2& size) {
+  quad_color_uniforms_.emplace_back(CenterSizeToModel(center, size), color);
+  stats_.color_quad_draw_calls++;
 }
 
 void Renderer::AddStaticQuad(uint32_t material_handle, const glm::vec2& center,
                              const glm::vec2& size) {
-  static_quad_uniforms_.emplace_back(
-      glm::scale(glm::translate(glm::mat4{1}, {center.x, center.y, 0}), {size.x, size.y, 1}),
-      material_allocs_.at(material_handle));
+  static_textured_quad_uniforms_.emplace_back(CenterSizeToModel(center, size),
+                                              material_allocs_.at(material_handle));
 }
 
 uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
@@ -364,8 +405,8 @@ void Renderer::FreeChunkMesh(uint32_t handle) {
 }
 
 void Renderer::ClearStaticData() {
-  static_quad_uniforms_.clear();
-  stats_.quad_draw_calls = 0;
+  static_textured_quad_uniforms_.clear();
+  stats_.textured_quad_draw_calls = 0;
 }
 
 void Renderer::StartFrame(const Window& window) {
@@ -376,7 +417,6 @@ void Renderer::StartFrame(const Window& window) {
     chunk_frame_draw_cmd_uniforms_.clear();
     reg_mesh_frame_draw_cmd_mesh_ids_.clear();
     reg_mesh_frame_draw_cmd_uniforms_.clear();
-    quad_uniforms_.clear();
     stats_ = {};
   }
 

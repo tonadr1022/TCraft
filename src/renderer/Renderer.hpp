@@ -55,6 +55,7 @@ class Renderer {
   [[nodiscard]] uint32_t AllocateMesh(std::vector<Vertex>& vertices,
                                       std::vector<uint32_t>& indices);
   void DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size);
+  void DrawQuad(const glm::vec3& color, const glm::vec2& center, const glm::vec2& size);
   void AddStaticQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size);
   void AddStaticQuads(std::vector<UserDrawCommand>& static_quad_draw_cmds);
   void ClearStaticData();
@@ -91,9 +92,14 @@ class Renderer {
   };
 
   // TODO: try without alignas
-  struct alignas(16) DrawCmdUniform {
+  struct alignas(16) MaterialUniforms {
     glm::mat4 model;
     uint64_t material_index;
+  };
+
+  struct alignas(16) ColorUniforms {
+    glm::mat4 model;
+    glm::vec3 color;
   };
 
   struct MeshAlloc {
@@ -127,7 +133,7 @@ class Renderer {
   std::unordered_map<uint32_t, MeshAlloc> reg_mesh_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> reg_mesh_dei_cmds_;
   std::vector<uint32_t> reg_mesh_frame_draw_cmd_mesh_ids_;
-  std::vector<DrawCmdUniform> reg_mesh_frame_draw_cmd_uniforms_;
+  std::vector<MaterialUniforms> reg_mesh_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> reg_mesh_frame_dei_cmds_;
 
   DynamicBuffer tex_materials_buffer_;
@@ -137,17 +143,21 @@ class Renderer {
   VertexArray quad_vao_;
   Buffer quad_vbo_;
   Buffer quad_ebo_;
-  Buffer quad_uniform_ssbo_;
-  std::vector<DrawCmdUniform> quad_uniforms_;
+  Buffer textured_quad_uniform_ssbo_;
+  std::vector<MaterialUniforms> quad_textured_uniforms_;
   Buffer quad_draw_indirect_buffer_;
-  std::vector<DrawCmdUniform> static_quad_uniforms_;
+  std::vector<MaterialUniforms> static_textured_quad_uniforms_;
+
+  Buffer quad_color_uniform_ssbo_;
+  std::vector<ColorUniforms> quad_color_uniforms_;
 
   VertexArray cube_vao_;
   Buffer cube_vbo_;
   Buffer cube_ebo_;
 
   struct Stats {
-    uint32_t quad_draw_calls{0};
+    uint32_t textured_quad_draw_calls{0};
+    uint32_t color_quad_draw_calls{0};
   };
   Stats stats_;
 

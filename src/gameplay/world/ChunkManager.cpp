@@ -27,7 +27,13 @@ constexpr const int ChunkNeighborOffsets[27][3] = {
 }  // namespace
 
 // TODO: find the best meshing memory pool size
-ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {}
+ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {
+  auto settings = SettingsManager::Get().LoadSetting("chunk_manager");
+  load_distance_ = settings.value("load_distance", 16);
+  frequency_ = settings.value("frequency", 1.0);
+  if (load_distance_ >= 32) load_distance_ = 32;
+  if (load_distance_ <= 0) load_distance_ = 1;
+}
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   auto chunk_pos = util::chunk::WorldToChunkPos(pos);
@@ -259,22 +265,52 @@ void ChunkManager::Update(double /*dt*/) {
       }
     }
   }
-}
 
-void ChunkManager::Init() {
-  auto settings = SettingsManager::Get().LoadSetting("chunk_manager");
-  load_distance_ = settings.value("load_distance", 16);
-  frequency_ = settings.value("frequency", 1.0);
-  if (load_distance_ >= 32) load_distance_ = 32;
-  if (load_distance_ <= 0) load_distance_ = 1;
-
-  // // gather vector of blocks
-  // std::vector<BlockType> blocks;
-  // const auto& block_data = block_db_.GetBlockData();
-  // blocks.reserve(block_data.size());
-  // for (size_t i = 1; i < block_data.size(); i++) {
-  //   blocks.emplace_back(i);
-  // }
+  {
+    ZoneScopedN("Chunk States");
+    int length = (load_distance_) * 2 + 1;
+    glm::ivec3 iter;
+    iter.y = 0;
+    chunk_state_pixels_.clear();
+    chunk_state_pixels_.reserve(length * length * 4);
+    for (iter.z = center_.z - load_distance_; iter.z <= center_.z + load_distance_; iter.z++) {
+      for (iter.x = center_.x - load_distance_; iter.x <= center_.x + load_distance_; iter.x++) {
+        if (iter.x == center_.x && iter.z == center_.z) {
+          chunk_state_pixels_.emplace_back(255);
+          chunk_state_pixels_.emplace_back(255);
+          chunk_state_pixels_.emplace_back(255);
+        } else {
+          auto it = chunk_map_.find(iter);
+          if (it == chunk_map_.end()) {
+            chunk_state_pixels_.emplace_back(0);
+            chunk_state_pixels_.emplace_back(0);
+            chunk_state_pixels_.emplace_back(0);
+          } else {
+            Chunk& chunk = it->second;
+            if (chunk.mesh.IsAllocated()) {
+              chunk_state_pixels_.emplace_back(0);
+              chunk_state_pixels_.emplace_back(0);
+              chunk_state_pixels_.emplace_back(255);
+            } else if (chunk.mesh_state == Chunk::State::Finished) {
+              chunk_state_pixels_.emplace_back(0);
+              chunk_state_pixels_.emplace_back(255);
+              chunk_state_pixels_.emplace_back(0);
+            } else if (chunk.terrain_state == Chunk::State::Finished) {
+              chunk_state_pixels_.emplace_back(255);
+              chunk_state_pixels_.emplace_back(0);
+              chunk_state_pixels_.emplace_back(0);
+            } else {
+              chunk_state_pixels_.emplace_back(0);
+              chunk_state_pixels_.emplace_back(255);
+              chunk_state_pixels_.emplace_back(255);
+            }
+          }
+        }
+        // Alpha
+        chunk_state_pixels_.emplace_back(255);
+      }
+    }
+  }
 }
 
 ChunkManager::~ChunkManager() {
@@ -374,3 +410,11 @@ void ChunkManager::SetCenter(const glm::vec3& world_pos) {
 }
 
 void ChunkManager::SetSeed(int seed) { seed_ = seed; }
+
+const std::vector<unsigned char>& ChunkManager::GetChunkStateTexData(uint32_t& width,
+                                                                     uint32_t& height) const {
+  int len = (load_distance_) * 2 + 1;
+  width = len;
+  height = len;
+  return chunk_state_pixels_;
+}

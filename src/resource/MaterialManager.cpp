@@ -19,6 +19,22 @@ void MaterialManager::Shutdown() {
   delete instance_;
 }
 
+void MaterialManager::Erase(const std::string& name) { texture_mat_map_.erase(name); }
+
+std::shared_ptr<TextureMaterial> MaterialManager::LoadTextureMaterial(
+    const std::string& name, const Texture2DCreateParamsEmpty& params) {
+  auto tex = TextureManager::Get().Load(name, params);
+  auto it = texture_mat_map_.find(name);
+  if (it != texture_mat_map_.end()) {
+    return it->second;
+  }
+
+  TextureMaterialData data{tex->BindlessHandle()};
+  auto mat = std::make_shared<TextureMaterial>(data, tex);
+  texture_mat_map_.emplace(name, mat);
+  return mat;
+}
+
 std::shared_ptr<TextureMaterial> MaterialManager::LoadTextureMaterial(
     const Texture2DCreateParams& params) {
   auto tex = TextureManager::Get().Load(params);

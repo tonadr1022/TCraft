@@ -3,6 +3,7 @@
 #include "renderer/Material.hpp"
 
 struct Texture2DCreateParams;
+struct Texture2DCreateParamsEmpty;
 
 class MaterialManager {
  public:
@@ -10,6 +11,9 @@ class MaterialManager {
   static void Init();
   static void Shutdown();
   std::shared_ptr<TextureMaterial> LoadTextureMaterial(const Texture2DCreateParams& params);
+  std::shared_ptr<TextureMaterial> LoadTextureMaterial(const std::string& name,
+                                                       const Texture2DCreateParamsEmpty& params);
+  void Erase(const std::string& name);
   void RemoveUnused();
 
  private:
