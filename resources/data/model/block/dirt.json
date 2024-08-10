@@ -1,6 +1,6 @@
 {
   "textures": {
-    "all": "block/acacia_log"
+    "all": "block/dirt"
   },
   "type": "block/all"
 }

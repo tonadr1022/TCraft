@@ -4,13 +4,20 @@
 
 #include "application/SceneManager.hpp"
 #include "application/WorldManager.hpp"
+#include "gameplay/world/BlockDB.hpp"
+#include "gameplay/world/Terrain.hpp"
 
 namespace {
 void ClearField(char* data, size_t size) { memset(data, '\0', size); }
 }  // namespace
 
 MainMenuScene::MainMenuScene(SceneManager& scene_manager)
-    : Scene(scene_manager), world_manager_(std::make_unique<WorldManager>()) {}
+    : Scene(scene_manager), world_manager_(std::make_unique<WorldManager>()) {
+  BlockDB block_db;
+  block_db.Init();
+  Terrain ter;
+  ter.Load(block_db);
+}
 
 MainMenuScene::~MainMenuScene() = default;
 

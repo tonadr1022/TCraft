@@ -37,6 +37,7 @@ set(SOURCES
     gameplay/world/BlockDB.cpp
     gameplay/world/ChunkManager.cpp
     gameplay/world/ChunkUtil.cpp
+    gameplay/world/Terrain.cpp
 
     resource/TextureManager.cpp
     resource/MaterialManager.cpp

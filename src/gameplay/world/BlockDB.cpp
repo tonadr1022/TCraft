@@ -50,6 +50,12 @@ const std::unordered_set<std::string>& BlockDB::GetTextureNamesInUse() const {
   return block_tex_names_in_use_;
 }
 
+const BlockData* BlockDB::GetBlockData(const std::string& name) const {
+  auto it = block_name_to_data_idx_.find(name);
+  if (it == block_name_to_data_idx_.end()) return nullptr;
+  return &block_data_arr_[it->second];
+}
+
 void BlockDB::Init() {
   ZoneScoped;
   {
@@ -132,6 +138,7 @@ void BlockDB::LoadBlockData() {
   for (uint32_t i = 1; i < id; i++) {
     block_data_arr_.emplace_back(block_id_to_data[i]);
     block_model_names_.emplace_back(block_id_to_model_name[i]);
+    block_name_to_data_idx_.emplace(block_id_to_data[i].name, i);
   }
 }
 

@@ -59,6 +59,7 @@ class BlockDB {
   static void WriteBlockModelTypeTopBot(const BlockModelDataTopBot& data, const std::string& path);
   static void WriteBlockModelTypeUnique(const BlockModelDataUnique& data, const std::string& path);
   void LoadBlockData();
+  const BlockData* GetBlockData(const std::string& name) const;
 
   [[nodiscard]] static std::vector<std::string> GetAllBlockTexturesFromAllModels();
   [[nodiscard]] static std::vector<std::string> GetAllBlockModelNames();
@@ -89,4 +90,5 @@ class BlockDB {
 
   std::unordered_set<std::string> block_tex_names_in_use_;
   std::unordered_map<std::string, BlockModelData> model_name_to_model_data_;
+  std::unordered_map<std::string, uint32_t> block_name_to_data_idx_;
 };
