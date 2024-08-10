@@ -104,7 +104,8 @@ void BlockDB::LoadBlockData() {
   for (const auto& file : std::filesystem::directory_iterator(GET_PATH("resources/data/block"))) {
     auto block_data = util::LoadJsonFile(file.path());
     BlockData data;
-    data.name = block_data.value("name", block_defaults_.name);
+    data.name = file.path().filename().stem();
+    data.formatted_name = block_data.value("name", block_defaults_.name);
     data.full_file_path = file.path();
     data.id = id++;
     if (block_data.contains("properties")) {

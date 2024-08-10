@@ -14,6 +14,7 @@ struct BlockData {
   BlockType id;
   std::string full_file_path;
   std::string name;
+  std::string formatted_name;
   float move_slow_multiplier;
   bool emits_light;
   bool operator==(const BlockData& other) const;
