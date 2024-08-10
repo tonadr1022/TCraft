@@ -19,8 +19,8 @@ class TextureManager {
   [[nodiscard]] std::shared_ptr<Texture2D> Load(const Texture2DCreateParams& params);
   [[nodiscard]] std::shared_ptr<Texture2D> Load(const std::string& name,
                                                 const Texture2DCreateParamsEmpty& params);
-  void RemoveTexture2D(TextureHandle handle);
-  void RemoveUnused();
+  void RemoveTexture2D(const std::string& key);
+  void RemoveUnusedTextures();
 
  private:
   static TextureManager* instance_;

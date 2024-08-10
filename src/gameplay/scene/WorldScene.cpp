@@ -19,10 +19,6 @@
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
-namespace {
-constexpr const uint32_t ChunkMapTexWidth = 500;
-constexpr const uint32_t ChunkMapTexHeight = 500;
-}  // namespace
 WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     : Scene(scene_manager),
       chunk_manager_(std::make_unique<ChunkManager>(block_db_)),
@@ -154,20 +150,20 @@ void WorldScene::Render() {
     //   pixels[i + 3] = 255;
     // }
 
-    uint32_t width, height;
-    static uint32_t prev_width = 0, prev_height = 0;
-    const auto& pixels = chunk_manager_->GetChunkStateTexData(width, height);
-    if (width != prev_width || height != prev_height) {
+    glm::ivec2 dims;
+    chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, 0, .5);
+    static glm::ivec2 prev_dims;
+    if (dims != prev_dims) {
       spdlog::info("erasing and creating");
       MaterialManager::Get().Erase("chunk_state_map");
       chunk_state_tex_ = MaterialManager::Get().LoadTextureMaterial(
-          "chunk_state_map",
-          Texture2DCreateParamsEmpty{.width = width, .height = height, .bindless = true});
+          "chunk_state_map", Texture2DCreateParamsEmpty{.width = static_cast<uint32_t>(dims.x),
+                                                        .height = static_cast<uint32_t>(dims.y),
+                                                        .bindless = true});
     }
-    glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, width, height, GL_RGBA,
-                        GL_UNSIGNED_BYTE, pixels.data());
-    prev_height = height;
-    prev_width = width;
+    glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, dims.x, dims.y, GL_RGBA,
+                        GL_UNSIGNED_BYTE, chunk_state_pixels_.data());
+    prev_dims = dims;
 
     // glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, ChunkMapTexWidth,
     //                     ChunkMapTexHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());

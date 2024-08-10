@@ -32,7 +32,7 @@ void SceneManager::LoadScene(const std::string& name) {
   }
 
   MaterialManager::Get().RemoveUnused();
-  TextureManager::Get().RemoveUnused();
+  TextureManager::Get().RemoveUnusedTextures();
 }
 
 Scene& SceneManager::GetActiveScene() {

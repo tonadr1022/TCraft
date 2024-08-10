@@ -75,7 +75,7 @@ void Renderer::Init() {
 
   // TODO: fine tune or make resizeable
   chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
-  chunk_ebo_.Init(sizeof(uint32_t) * 50'000'000, sizeof(uint32_t));
+  chunk_ebo_.Init(sizeof(uint32_t) * 80'000'000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
   chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxChunkDrawCmds, GL_DYNAMIC_STORAGE_BIT);
@@ -125,6 +125,8 @@ void Renderer::RenderQuads() {
   ZoneScoped;
   stats_.textured_quad_draw_calls += static_textured_quad_uniforms_.size();
   if (stats_.textured_quad_draw_calls == 0 && stats_.color_quad_draw_calls == 0) return;
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   // UBO to ortho
   auto window_dims = window_.GetWindowSize();
@@ -164,7 +166,6 @@ void Renderer::RenderQuads() {
     quad_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
     glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
   }
-
   // TODO: static color quads
   if (stats_.color_quad_draw_calls > 0) {
     shader_manager_.GetShader("color")->Bind();
@@ -184,6 +185,7 @@ void Renderer::RenderQuads() {
     quad_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
     glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
   }
+  glDisable(GL_BLEND);
   glDepthFunc(GL_LESS);
   quad_textured_uniforms_.clear();
   quad_color_uniforms_.clear();
@@ -424,7 +426,7 @@ void Renderer::StartFrame(const Window& window) {
     ZoneScopedN("OpenGL state");
     auto dims = window.GetWindowSize();
     glViewport(0, 0, dims.x, dims.y);
-    glClearColor(1, 0.0, 0.0, 1.0);
+    glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
   }

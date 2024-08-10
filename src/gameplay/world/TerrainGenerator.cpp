@@ -38,7 +38,10 @@ void TerrainGenerator::GenerateNoise(BlockType block, float frequency) {
     int i = 0;
     for (int z = 0; z < ChunkLength; z++) {
       for (int x = 0; x < ChunkLength; x++, i++) {
-        if (y <= height[i] + 5) {
+        if (y <= height[i] - 2) {
+          // TODO: real terrain gen
+          SetBlock(x, y, z, 1);
+        } else if (y <= height[i]) {
           SetBlock(x, y, z, block);
         }
       }

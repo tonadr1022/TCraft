@@ -21,15 +21,16 @@ class WorldScene : public Scene {
 
   BlockDB block_db_;
 
-  ChunkRenderParams chunk_render_params_;
+ private:
   std::unique_ptr<ChunkManager> chunk_manager_;
+  GamePlayer player_;
+  uint32_t seed_{0};
+  std::string directory_path_;
+  ChunkRenderParams chunk_render_params_;
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
   std::shared_ptr<TextureMaterial> chunk_state_tex_;
   std::shared_ptr<TextureMaterial> test_mat_;
 
- private:
-  GamePlayer player_;
-  uint32_t seed_{0};
-  std::string directory_path_;
+  std::vector<uint8_t> chunk_state_pixels_;
 };

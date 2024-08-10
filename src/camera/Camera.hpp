@@ -26,5 +26,5 @@ class Camera {
  protected:
   glm::vec3 pos_{0, 0, 0};
   glm::vec3 front_{0, 0, -1};
-  float near_plane_{0.1f}, far_plane_{1000.f};
+  float near_plane_{0.1f}, far_plane_{3000.f};
 };

@@ -9,6 +9,7 @@
 #include "gameplay/world/ChunkUtil.hpp"
 #include "gameplay/world/TerrainGenerator.hpp"
 #include "renderer/ChunkMesher.hpp"
+#include "renderer/Constants.hpp"
 #include "renderer/Renderer.hpp"
 #include "util/Timer.hpp"
 
@@ -31,7 +32,7 @@ ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {
   auto settings = SettingsManager::Get().LoadSetting("chunk_manager");
   load_distance_ = settings.value("load_distance", 16);
   frequency_ = settings.value("frequency", 1.0);
-  if (load_distance_ >= 32) load_distance_ = 32;
+  if (load_distance_ >= 64) load_distance_ = 64;
   if (load_distance_ <= 0) load_distance_ = 1;
 }
 
@@ -60,13 +61,13 @@ void ChunkManager::Update(double /*dt*/) {
   bool pos_changed = center_ != prev_center_;
   ZoneScoped;
   // TODO: implement better tick system
-  static int tick_count = 0;
+  static uint32_t tick_count = 0;
   tick_count++;
-  if (tick_count == 4) {
+  if (tick_count == UINT32_MAX) {
     tick_count = 0;
   }
 
-  if (tick_count == 2) {
+  if (tick_count % 2 == 0) {
     ZoneScopedN("Process chunk terrain");
     for (const auto& pos : chunk_terrain_queue_) {
       // Chunk already exists at this point so no check
@@ -86,7 +87,7 @@ void ChunkManager::Update(double /*dt*/) {
     chunk_terrain_queue_.clear();
   }
 
-  if (tick_count == 2) {
+  if (tick_count % 2 == 0) {
     ZoneScopedN("Process finsihed chunk terrain tasks");
     while (!finished_chunk_terrain_queue_.empty()) {
       auto& task = finished_chunk_terrain_queue_.front();
@@ -99,7 +100,7 @@ void ChunkManager::Update(double /*dt*/) {
     }
   }
 
-  if (tick_count == 0) {
+  if (tick_count % 2 == 0) {
     ZoneScopedN("Add to mesh queue");
     constexpr static int Dx[] = {1, 0, -1, 0};
     constexpr static int Dy[] = {0, 1, 0, -1};
@@ -163,7 +164,7 @@ void ChunkManager::Update(double /*dt*/) {
     }
   }
 
-  if (tick_count == 2) {
+  if ((tick_count + 2) % 2 == 0) {
     ZoneScopedN("Process mesh chunks");
     // process remesh chunks
     for (const auto pos : chunk_mesh_queue_) {
@@ -199,7 +200,7 @@ void ChunkManager::Update(double /*dt*/) {
     chunk_mesh_queue_.clear();
   }
 
-  if (tick_count == 2) {
+  if ((tick_count + 2) % 2 == 0) {
     ZoneScopedN("Process finished mesh chunks");
     Timer timer;
     while (!chunk_mesh_finished_queue_.empty()) {
@@ -253,61 +254,56 @@ void ChunkManager::Update(double /*dt*/) {
     chunk_mesh_queue_immediate_.clear();
   }
 
-  if (pos_changed) {
-    ZoneScopedN("Chunk map iteration");
-    for (auto it = chunk_map_.begin(); it != chunk_map_.end();) {
-      if (abs(it->first.x - center_.x) > load_distance_ ||
-          abs(it->first.y - center_.y) > load_distance_ ||
-          abs(it->first.z - center_.z) > load_distance_) {
-        it = chunk_map_.erase(it);
-      } else {
-        it++;
-      }
+  if (pos_changed) UnloadChunksOutOfRange();
+}
+void ChunkManager::UnloadChunksOutOfRange() {
+  ZoneScoped;
+  for (auto it = chunk_map_.begin(); it != chunk_map_.end();) {
+    if (abs(it->first.x - center_.x) > load_distance_ ||
+        abs(it->first.y - center_.y) > load_distance_ ||
+        abs(it->first.z - center_.z) > load_distance_) {
+      it = chunk_map_.erase(it);
+    } else {
+      it++;
     }
   }
+}
 
-  {
-    ZoneScopedN("Chunk States");
-    int length = (load_distance_) * 2 + 1;
-    glm::ivec3 iter;
-    iter.y = 0;
-    chunk_state_pixels_.clear();
-    chunk_state_pixels_.reserve(length * length * 4);
-    for (iter.z = center_.z - load_distance_; iter.z <= center_.z + load_distance_; iter.z++) {
-      for (iter.x = center_.x - load_distance_; iter.x <= center_.x + load_distance_; iter.x++) {
-        if (iter.x == center_.x && iter.z == center_.z) {
-          chunk_state_pixels_.emplace_back(255);
-          chunk_state_pixels_.emplace_back(255);
-          chunk_state_pixels_.emplace_back(255);
+void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::ivec2& out_dims,
+                                            int y_level, float opacity) {
+  ZoneScoped;
+  int length = (load_distance_) * 2 + 1;
+  out_dims.x = length;
+  out_dims.y = length;
+  glm::ivec3 iter;
+  iter.y = y_level;
+  pixels.clear();
+  pixels.reserve(length * length * 4);
+  auto alpha = static_cast<uint8_t>(opacity * 255);
+  auto add_color = [&pixels, &alpha](const std::array<uint8_t, 3>& col) {
+    pixels.insert(pixels.end(), col.begin(), col.end());
+    pixels.emplace_back(alpha);
+  };
+  for (iter.z = center_.z - load_distance_; iter.z <= center_.z + load_distance_; iter.z++) {
+    for (iter.x = center_.x - load_distance_; iter.x <= center_.x + load_distance_; iter.x++) {
+      if (iter.x == center_.x && iter.z == center_.z) {
+        add_color(White);
+      } else {
+        auto it = chunk_map_.find(iter);
+        if (it == chunk_map_.end()) {
+          add_color(Black);
         } else {
-          auto it = chunk_map_.find(iter);
-          if (it == chunk_map_.end()) {
-            chunk_state_pixels_.emplace_back(0);
-            chunk_state_pixels_.emplace_back(0);
-            chunk_state_pixels_.emplace_back(0);
+          Chunk& chunk = it->second;
+          if (chunk.mesh.IsAllocated()) {
+            add_color(Blue);
+          } else if (chunk.mesh_state == Chunk::State::Finished) {
+            add_color(Green);
+          } else if (chunk.terrain_state == Chunk::State::Finished) {
+            add_color(Red);
           } else {
-            Chunk& chunk = it->second;
-            if (chunk.mesh.IsAllocated()) {
-              chunk_state_pixels_.emplace_back(0);
-              chunk_state_pixels_.emplace_back(0);
-              chunk_state_pixels_.emplace_back(255);
-            } else if (chunk.mesh_state == Chunk::State::Finished) {
-              chunk_state_pixels_.emplace_back(0);
-              chunk_state_pixels_.emplace_back(255);
-              chunk_state_pixels_.emplace_back(0);
-            } else if (chunk.terrain_state == Chunk::State::Finished) {
-              chunk_state_pixels_.emplace_back(255);
-              chunk_state_pixels_.emplace_back(0);
-              chunk_state_pixels_.emplace_back(0);
-            } else {
-              chunk_state_pixels_.emplace_back(0);
-              chunk_state_pixels_.emplace_back(255);
-              chunk_state_pixels_.emplace_back(255);
-            }
+            add_color(Cyan);
           }
         }
-        // Alpha
-        chunk_state_pixels_.emplace_back(255);
       }
     }
   }
@@ -320,7 +316,9 @@ ChunkManager::~ChunkManager() {
 
 void ChunkManager::OnImGui() {
   if (ImGui::CollapsingHeader("Chunk Manager", ImGuiTreeNodeFlags_DefaultOpen)) {
-    ImGui::SliderInt("Load Distance", &load_distance_, 1, 32);
+    if (ImGui::SliderInt("Load Distance", &load_distance_, 1, 56)) {
+      UnloadChunksOutOfRange();
+    }
     ImGui::Checkbox("Greedy Meshing", &mesh_greedy_);
     ImGui::SliderFloat("Frequency", &frequency_, 0.1, 10);
     if (ImGui::CollapsingHeader("Stats##chunk_manager_stats", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -410,11 +408,3 @@ void ChunkManager::SetCenter(const glm::vec3& world_pos) {
 }
 
 void ChunkManager::SetSeed(int seed) { seed_ = seed; }
-
-const std::vector<unsigned char>& ChunkManager::GetChunkStateTexData(uint32_t& width,
-                                                                     uint32_t& height) const {
-  int len = (load_distance_) * 2 + 1;
-  width = len;
-  height = len;
-  return chunk_state_pixels_;
-}
