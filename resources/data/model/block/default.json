@@ -1,6 +1,6 @@
 {
   "textures": {
-    "all": "block/yellow_terracotta"
+    "all": "block/default"
   },
   "type": "block/all"
 }

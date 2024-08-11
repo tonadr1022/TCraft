@@ -1,6 +1,8 @@
 {
   "textures": {
-    "all": "block/glass"
+    "bottom": "block/dirt",
+    "side": "block/dirt",
+    "top": "block/green_terracotta"
   },
-  "type": "block/all"
+  "type": "block/top_bottom"
 }
