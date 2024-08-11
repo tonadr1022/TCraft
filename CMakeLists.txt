@@ -16,7 +16,6 @@ find_package(spdlog CONFIG REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(Tracy CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(thread-pool CONFIG REQUIRED)
 find_path(BSHOSHANY_THREAD_POOL_INCLUDE_DIRS "BS_thread_pool.hpp")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nan-infinity-disabled")
