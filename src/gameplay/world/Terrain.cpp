@@ -6,12 +6,27 @@
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
+BlockType BiomeLayer::GetBlock() const {
+  float r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+  float s = 0;
+  for (size_t i = 0; i < block_type_frequencies.size(); i++) {
+    s += block_type_frequencies[i];
+    if (s >= r) return block_types[i];
+  }
+  spdlog::error("unintended {} {}", s, r);
+  return block_types[0];
+}
+
 void Terrain::Load(const BlockDB& block_db) {
+  // Should never fail
+  stone = block_db.GetBlockData("stone")->id;
+  sand = block_db.GetBlockData("sand")->id;
+
   ZoneScoped;
   std::vector<std::string> biome_names;
   auto fill_default_frequencies = [this, &biome_names]() {
     float freq = 1.0f / biome_names.size();
-    for (int i = 0; i < biome_names.size(); i++) {
+    for (size_t i = 0; i < biome_names.size(); i++) {
       biom_frequencies.emplace_back(freq);
     }
   };
@@ -58,7 +73,7 @@ void Terrain::Load(const BlockDB& block_db) {
       spdlog::error("Biome {}: no layers array");
       continue;
     }
-    const BlockData* default_block_data = block_db.GetBlockData("default");
+    const BlockData* default_block_data = block_db.GetBlockData("default_block");
     EASSERT_MSG(default_block_data != nullptr, "Failed to laod default block data");
     for (auto& layer_data : layer_arr) {
       if (!layer_data.is_object()) {
@@ -88,10 +103,10 @@ void Terrain::Load(const BlockDB& block_db) {
           }
         }
 
-        auto fill_default_frequencies = [this, &layer]() {
+        auto fill_default_frequencies = [&layer]() {
           layer.block_type_frequencies.clear();
           float freq = 1.0f / layer.block_types.size();
-          for (int i = 0; i < layer.block_types.size(); i++) {
+          for (size_t i = 0; i < layer.block_types.size(); i++) {
             layer.block_type_frequencies.emplace_back(freq);
           }
         };
@@ -121,13 +136,13 @@ void Terrain::Load(const BlockDB& block_db) {
         auto name = layer_data["name"];
         if (!name.is_string()) {
           spdlog::error("invalid name type in biome {}", biome.formatted_name);
-          const BlockData* block_data = block_db.GetBlockData(name);
-          if (!block_data) {
-            spdlog::error("block name {} not found", std::string(name));
-            layer.block_types.emplace_back(default_block_data->id);
-          } else {
-            layer.block_types.emplace_back(block_data->id);
-          }
+        }
+        const BlockData* block_data = block_db.GetBlockData(name);
+        if (!block_data) {
+          spdlog::error("block name {} not found", std::string(name));
+          layer.block_types.emplace_back(default_block_data->id);
+        } else {
+          layer.block_types.emplace_back(block_data->id);
         }
         layer.block_type_frequencies.emplace_back(1);
         auto y_count = layer_data["y_count"];

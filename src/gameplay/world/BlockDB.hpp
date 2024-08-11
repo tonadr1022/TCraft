@@ -48,12 +48,13 @@ using BlockModelData = std::variant<BlockModelDataAll, BlockModelDataTopBot, Blo
 
 class BlockDB {
  public:
+  BlockDB();
   [[nodiscard]] const std::vector<BlockMeshData>& GetMeshData() const;
   [[nodiscard]] const std::vector<BlockData>& GetBlockData() const;
   [[nodiscard]] const std::unordered_set<std::string>& GetTextureNamesInUse() const;
   static std::optional<BlockModelType> StringToBlockModelType(const std::string& model_type);
 
-  void Init();
+  // void Init();
   void LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
   void WriteBlockData(const BlockData& data, const std::string& model_name) const;
   static void WriteBlockModelTypeAll(const BlockModelDataAll& data, const std::string& path);

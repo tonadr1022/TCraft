@@ -4,11 +4,14 @@
 
 #include <glm/vec3.hpp>
 
+#include "EAssert.hpp"
 #include "gameplay/world/ChunkData.hpp"
 #include "gameplay/world/ChunkDef.hpp"
+#include "gameplay/world/Terrain.hpp"
 
-TerrainGenerator::TerrainGenerator(ChunkData& chunk, const glm::ivec3& chunk_world_pos, int seed)
-    : chunk_(chunk), chunk_world_pos_(chunk_world_pos), seed_(seed) {
+TerrainGenerator::TerrainGenerator(ChunkData& chunk, const glm::ivec3& chunk_world_pos, int seed,
+                                   const Terrain& terrain)
+    : chunk_(chunk), terrain_(terrain), chunk_world_pos_(chunk_world_pos), seed_(seed) {
   chunk.blocks_ = std::make_unique<BlockTypeArray>();
 }
 
@@ -29,6 +32,39 @@ std::vector<int> TerrainGenerator::GetHeights(float frequency, float multiplier)
     height[i] = floor((height_floats[i] + 1) * .5 * multiplier);
   }
   return height;
+}
+
+void TerrainGenerator::GenerateBiome() {
+  ZoneScoped;
+  EASSERT_MSG(!terrain_.biomes.empty(), "Need biomes");
+  // auto& biome = terrain_.biomes[0];
+  // spdlog::info("biome {}", biome.layers[0].block_type_frequencies[0]);
+  auto get_block = [this](uint32_t y, uint32_t max_height) -> BlockType {
+    const auto& biome = terrain_.biomes[0];
+    if (y < max_height - biome.layer_y_sum) {
+      return terrain_.stone;
+    }
+    uint32_t sum = 0;
+    for (size_t i = 0; i < biome.layers.size(); i++) {
+      sum += biome.layer_y_counts[i];
+      if (sum > max_height - y) {
+        return biome.layers[i].GetBlock();
+      }
+    }
+    return terrain_.sand;
+  };
+
+  auto height = GetHeights(0.0083, 22);
+  for (int y = 0; y < ChunkLength; y++) {
+    int i = 0;
+    for (int z = 0; z < ChunkLength; z++) {
+      for (int x = 0; x < ChunkLength; x++, i++) {
+        if (y <= height[i]) {
+          SetBlock(x, y, z, get_block(y, height[i]));
+        }
+      }
+    }
+  }
 }
 
 void TerrainGenerator::GenerateNoise(BlockType block, float frequency) {

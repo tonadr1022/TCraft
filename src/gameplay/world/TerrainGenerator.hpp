@@ -4,10 +4,12 @@
 
 #include "gameplay/world/ChunkDef.hpp"
 class ChunkData;
+struct Terrain;
 
 class TerrainGenerator {
  public:
-  explicit TerrainGenerator(ChunkData& chunk, const glm::ivec3& chunk_world_pos, int seed);
+  explicit TerrainGenerator(ChunkData& chunk, const glm::ivec3& chunk_world_pos, int seed,
+                            const Terrain& terrain);
   void GenerateSolid(BlockType block);
   void GenerateChecker(BlockType block);
   void GenerateChecker(std::vector<BlockType>& blocks);
@@ -15,9 +17,11 @@ class TerrainGenerator {
   void GenerateLayers(BlockType block);
   void GeneratePyramid(std::vector<BlockType>& blocks);
   void GenerateNoise(BlockType block, float frequency);
+  void GenerateBiome();
 
  private:
   ChunkData& chunk_;
+  const Terrain& terrain_;
   glm::ivec3 chunk_world_pos_;
   int seed_;
   void SetBlock(int x, int y, int z, BlockType block);

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <BS_thread_pool.hpp>
 #include <deque>
 
 #include "gameplay/world/Chunk.hpp"
+#include "gameplay/world/Terrain.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 
@@ -46,6 +48,7 @@ class ChunkManager {
  private:
   BlockDB& block_db_;
   ChunkMap chunk_map_;
+  Terrain terrain_;
   int seed_;
   int load_distance_;
   glm::ivec3 center_;
@@ -69,4 +72,6 @@ class ChunkManager {
   bool mesh_greedy_{true};
 
   float frequency_;
+
+  BS::thread_pool thread_pool_;
 };

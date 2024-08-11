@@ -26,12 +26,12 @@ void MaterialManager::Erase(const std::string& name) {
 
 std::shared_ptr<TextureMaterial> MaterialManager::LoadTextureMaterial(
     const std::string& name, const Texture2DCreateParamsEmpty& params) {
-  auto tex = TextureManager::Get().Load(name, params);
   auto it = texture_mat_map_.find(name);
   if (it != texture_mat_map_.end()) {
     return it->second;
   }
 
+  auto tex = TextureManager::Get().Load(name, params);
   TextureMaterialData data{tex->BindlessHandle()};
   auto mat = std::make_shared<TextureMaterial>(data, tex);
   texture_mat_map_.emplace(name, mat);
@@ -55,7 +55,10 @@ std::shared_ptr<TextureMaterial> MaterialManager::LoadTextureMaterial(
 void MaterialManager::RemoveUnused() {
   std::vector<std::string> to_delete;
   for (auto& [name, mat] : texture_mat_map_) {
-    if (mat.use_count() == 1) to_delete.emplace_back(name);
+    if (mat.use_count() == 1) {
+      to_delete.emplace_back(name);
+      TextureManager::Get().RemoveTexture2D(name);
+    }
   }
 
   for (const auto& name : to_delete) {

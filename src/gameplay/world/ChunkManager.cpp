@@ -15,7 +15,7 @@
 
 namespace {
 
-dp::thread_pool thread_pool(std::thread::hardware_concurrency() - 2);
+// dp::thread_pool thread_pool(std::thread::hardware_concurrency() - 2);
 
 constexpr const int ChunkNeighborOffsets[27][3] = {
     {-1, -1, -1}, {-1, -1, 0}, {-1, -1, 1}, {-1, 0, -1}, {-1, 0, 0},  {-1, 0, 1}, {-1, 1, -1},
@@ -34,6 +34,7 @@ ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {
   frequency_ = settings.value("frequency", 1.0);
   if (load_distance_ >= 64) load_distance_ = 64;
   if (load_distance_ <= 0) load_distance_ = 1;
+  terrain_.Load(block_db);
 }
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
@@ -71,11 +72,12 @@ void ChunkManager::Update(double /*dt*/) {
     ZoneScopedN("Process chunk terrain");
     for (const auto& pos : chunk_terrain_queue_) {
       // Chunk already exists at this point so no check
-      thread_pool.enqueue_detach([this, pos] {
+      thread_pool_.detach_task([this, pos] {
         ZoneScopedN("chunk terrain task");
         ChunkData data;
-        TerrainGenerator gen{data, pos * ChunkLength, seed_};
-        gen.GenerateNoise(3, frequency_);
+        TerrainGenerator gen{data, pos * ChunkLength, seed_, terrain_};
+        // gen.GenerateNoise(3, frequency_);
+        gen.GenerateBiome();
         // gen.GenerateSolid(1);
         // gen.GenerateChecker(1);
         {
@@ -179,7 +181,7 @@ void ChunkManager::Update(double /*dt*/) {
 
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, true);
-      thread_pool.enqueue_detach([this, a, pos] {
+      thread_pool_.detach_task([this, a, pos] {
         ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
         std::vector<ChunkVertex> vertices;
         std::vector<uint32_t> indices;
@@ -310,6 +312,7 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
 }
 
 ChunkManager::~ChunkManager() {
+  thread_pool_.wait();
   nlohmann::json j = {{"load_distance", load_distance_}, {"frequency", frequency_}};
   SettingsManager::Get().SaveSetting(j, "chunk_manager");
 }

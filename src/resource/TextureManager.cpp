@@ -67,6 +67,7 @@ std::shared_ptr<Texture2D> TextureManager::Load(const Texture2DCreateParams& par
 }
 
 void TextureManager::RemoveTexture2D(const std::string& key) { texture_2d_map_.erase(key); }
+
 void TextureManager::RemoveUnusedTextures() {
   std::vector<std::string> to_delete;
   for (auto& [name, mat] : texture_2d_map_) {

@@ -43,6 +43,8 @@ Scene& SceneManager::GetActiveScene() {
 void SceneManager::Shutdown() {
   ZoneScoped;
   active_scene_ = nullptr;
+  MaterialManager::Get().RemoveUnused();
+  TextureManager::Get().RemoveUnusedTextures();
 }
 
 void SceneManager::LoadWorld(std::string_view path) {

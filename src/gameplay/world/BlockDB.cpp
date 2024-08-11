@@ -56,7 +56,7 @@ const BlockData* BlockDB::GetBlockData(const std::string& name) const {
   return &block_data_arr_[it->second];
 }
 
-void BlockDB::Init() {
+BlockDB::BlockDB() {
   ZoneScoped;
   {
     // Default data load cannot fail.
@@ -131,10 +131,11 @@ void BlockDB::LoadBlockData() {
   block_data_arr_.emplace_back(
       BlockData{.id = 0,
                 .full_file_path = "",
-                .name = "Air",
+                .name = "air",
+                .formatted_name = "Air",
                 .move_slow_multiplier = block_defaults_.move_slow_multiplier,
                 .emits_light = false});
-  block_model_names_.emplace_back("");
+  block_model_names_.emplace_back("air");
 
   for (uint32_t i = 1; i < id; i++) {
     block_data_arr_.emplace_back(block_id_to_data[i]);

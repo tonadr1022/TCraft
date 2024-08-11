@@ -33,4 +33,6 @@ class WorldScene : public Scene {
   std::shared_ptr<TextureMaterial> test_mat_;
 
   std::vector<uint8_t> chunk_state_pixels_;
+  glm::ivec2 prev_chunk_state_pixels_dims_;
+  bool first_frame_{true};
 };

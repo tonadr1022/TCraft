@@ -51,17 +51,10 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
   }
   {
     ZoneScopedN("Texture load");
-    spdlog::info("tex load");
     cross_hair_mat_ =
         MaterialManager::Get().LoadTextureMaterial({.filepath = GET_TEXTURE_PATH("crosshair.png")});
-    // TODO: don't need name here
-    // chunk_state_tex_ = MaterialManager::Get().LoadTextureMaterial(
-    //     "chunk_state_map",
-    //     Texture2DCreateParamsEmpty{
-    //         .width = ChunkMapTexWidth, .height = ChunkMapTexHeight, .bindless = true});
   }
 
-  block_db_.Init();
   {
     ZoneScopedN("Load block mesh data");
     std::unordered_map<std::string, uint32_t> tex_name_to_idx;
@@ -140,20 +133,10 @@ void WorldScene::Render() {
   }
   {
     ZoneScopedN("Chunk state render");
-    // const auto& chunk_states = chunk_manager_->GetChunkStates();
-    // int area = ChunkMapTexWidth * ChunkMapTexHeight;
-    // std::vector<unsigned char> pixels(area * 4);
-    // for (int i = 0; i < area * 4; i += 4) {
-    //   pixels[i] = 255;
-    //   pixels[i + 1] = 255;
-    //   pixels[i + 2] = 255;
-    //   pixels[i + 3] = 255;
-    // }
-
     glm::ivec2 dims;
     chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, 0, .5);
-    static glm::ivec2 prev_dims;
-    if (dims != prev_dims) {
+    if (dims != prev_chunk_state_pixels_dims_ || first_frame_) {
+      first_frame_ = false;
       spdlog::info("erasing and creating");
       MaterialManager::Get().Erase("chunk_state_map");
       chunk_state_tex_ = MaterialManager::Get().LoadTextureMaterial(
@@ -163,7 +146,7 @@ void WorldScene::Render() {
     }
     glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, dims.x, dims.y, GL_RGBA,
                         GL_UNSIGNED_BYTE, chunk_state_pixels_.data());
-    prev_dims = dims;
+    prev_chunk_state_pixels_dims_ = dims;
 
     // glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, ChunkMapTexWidth,
     //                     ChunkMapTexHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());

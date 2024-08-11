@@ -75,7 +75,7 @@ void BlockEditorScene::Reload() {
                                              .filter_mode_max = GL_NEAREST,
                                              .texture_wrap = GL_REPEAT});
   }
-  block_db_.Init();
+  // block_db_.Init();
   block_db_.LoadMeshData(tex_name_to_idx_);
 
   ResetAddModelData();
