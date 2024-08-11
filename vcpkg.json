@@ -6,7 +6,6 @@
     "spdlog",
     "sdl2",
     "nlohmann-json",
-    "dp-thread-pool",
     "bshoshany-thread-pool",
     {
       "name": "imgui",

@@ -72,6 +72,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Tracy::TracyClient
     spdlog::spdlog
     nlohmann_json::nlohmann_json
-    dp::thread-pool
     FastNoise
 )
