@@ -61,19 +61,17 @@ void OrbitCamera::UpdatePosition() {
   float sin_azimuth = glm::sin(azimuth_rad);
   pos_.x = target_.x + distance_ * cos_polar * cos_azimuth;
   pos_.y = target_.y + distance_ * sin_polar;
-  pos_.z = target_.z + distance_ * sin_azimuth * cos_polar;
+  pos_.z = target_.z + distance_ * cos_polar * sin_azimuth;
   front_ = glm::normalize(target_ - pos_);
-  right_ = glm::normalize(glm::cross(target_ - pos_, UpVector));
-  up_ = glm::normalize(glm::cross(right_, target_ - pos_));
+  right_ = glm::normalize(glm::cross(front_, UpVector));
+  up_ = glm::normalize(glm::cross(right_, front_));
 }
 
 void OrbitCamera::SetPosition(const glm::vec3& pos) {
-  auto dist_to_target = glm::distance(pos, target_);
-  distance_ = dist_to_target;
-  auto diff = pos - target_;
-  polar_angle_ = glm::acos(diff.z / dist_to_target);
-  float sign = diff.y > 0 ? 1 : diff.y < 0 ? -1 : 0;
-  azimuth_angle_ = sign * glm::acos(diff.x / glm::sqrt(diff.x * diff.x + diff.y * diff.y));
+  distance_ = glm::distance(pos, target_);
+  glm::vec3 diff = pos - target_;
+  polar_angle_ = glm::degrees(glm::atan(glm::sqrt(diff.x * diff.x + diff.z * diff.z), diff.y));
+  azimuth_angle_ = glm::degrees(glm::atan(diff.z, diff.x));
   UpdatePosition();
 }
 
