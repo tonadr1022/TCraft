@@ -8,8 +8,6 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include <thread_pool/thread_pool.h>
-
 #include <glm/gtx/hash.hpp>
 #include <glm/vec3.hpp>
 #include <unordered_map>
