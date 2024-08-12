@@ -87,8 +87,8 @@ class Renderer {
   ShaderManager shader_manager_;
 
   // TODO: try without alignas
-  struct alignas(16) ChunkDrawCmdUniform {
-    glm::mat4 model;
+  struct ChunkDrawCmdUniform {
+    glm::vec4 pos;
   };
 
   // TODO: try without alignas
@@ -121,8 +121,24 @@ class Renderer {
   Buffer uniform_ubo_;
 
   VertexArray chunk_vao_;
-  DynamicBuffer chunk_vbo_;
-  DynamicBuffer chunk_ebo_;
+  DynamicBuffer<> chunk_ebo_;
+  struct AABB {
+    glm::vec4 min;
+    glm::vec4 max;
+  };
+
+  struct ChunkDrawInfo {
+    AABB aabb;
+    uint32_t _pad;
+    uint32_t first_index;
+    uint32_t count;
+    uint32_t _pad2;
+  };
+  void RenderChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+
+  DynamicBuffer<ChunkDrawInfo> chunk_vbo_;
+  Buffer chunk_draw_info_buffer_;
+  Buffer chunk_draw_count_buffer_;
   Buffer chunk_uniform_ssbo_;
   Buffer chunk_draw_indirect_buffer_;
   std::unordered_map<uint32_t, ChunkMeshAlloc> chunk_allocs_;
@@ -133,8 +149,8 @@ class Renderer {
   bool chunk_alloc_change_this_frame_{true};
 
   VertexArray reg_mesh_vao_;
-  DynamicBuffer reg_mesh_vbo_;
-  DynamicBuffer reg_mesh_ebo_;
+  DynamicBuffer<> reg_mesh_vbo_;
+  DynamicBuffer<> reg_mesh_ebo_;
   Buffer reg_mesh_uniform_ssbo_;
   Buffer reg_mesh_draw_indirect_buffer_;
   std::unordered_map<uint32_t, MeshAlloc> reg_mesh_allocs_;
@@ -143,7 +159,7 @@ class Renderer {
   std::vector<MaterialUniforms> reg_mesh_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> reg_mesh_frame_dei_cmds_;
 
-  DynamicBuffer tex_materials_buffer_;
+  DynamicBuffer<> tex_materials_buffer_;
   std::unordered_map<uint32_t, uint32_t> material_allocs_;
 
   // std::vector<DrawCmdUniform> quad_frame_draw_cmd_uniforms_;

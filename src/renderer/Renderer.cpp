@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <iostream>
 #include <tracy/Tracy.hpp>
 
 #include "ShaderManager.hpp"
@@ -37,10 +38,10 @@ Renderer::Renderer(Window& window) : window_(window) {
 Renderer::~Renderer() { ZoneScopedN("Destroy Renderer"); }
 
 void Renderer::ShutdownInternal() {
-  spdlog::info("chunk vbo allocs: {},chunk ebo allocs: {}", chunk_vbo_.NumAllocs(),
-               chunk_ebo_.NumAllocs());
-  spdlog::info("reg vbo allocs: {}, reg ebo allocs: {}", reg_mesh_vbo_.NumAllocs(),
-               reg_mesh_ebo_.NumAllocs());
+  spdlog::info("chunk vbo allocs: {},chunk ebo allocs: {}", chunk_vbo_.NumActiveAllocs(),
+               chunk_ebo_.NumActiveAllocs());
+  spdlog::info("reg vbo allocs: {}, reg ebo allocs: {}", reg_mesh_vbo_.NumActiveAllocs(),
+               reg_mesh_ebo_.NumActiveAllocs());
   nlohmann::json settings;
   settings["wireframe_enabled"] = wireframe_enabled_;
   SettingsManager::Get().SaveSetting(settings, "renderer");
@@ -79,9 +80,12 @@ void Renderer::Init() {
   chunk_ebo_.Init(sizeof(uint32_t) * 80'000'000, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
-  chunk_uniform_ssbo_.Init(sizeof(ChunkDrawCmdUniform) * MaxChunkDrawCmds, GL_DYNAMIC_STORAGE_BIT);
-  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxChunkDrawCmds,
-                                   GL_DYNAMIC_STORAGE_BIT);
+  chunk_uniform_ssbo_.Init(
+      sizeof(ChunkDrawCmdUniform) * MaxChunkDrawCmds,
+      GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+  chunk_draw_indirect_buffer_.Init(
+      sizeof(DrawElementsIndirectCommand) * MaxChunkDrawCmds,
+      GL_MAP_PERSISTENT_BIT | GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT | GL_DYNAMIC_STORAGE_BIT);
 
   reg_mesh_vao_.Init();
   reg_mesh_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
@@ -118,6 +122,7 @@ void Renderer::Init() {
   cube_ebo_.Init(sizeof(cube_indices), 0, cube_indices.data());
   cube_vao_.AttachVertexBuffer(cube_vbo_.Id(), 0, 0, sizeof(Vertex));
   cube_vao_.AttachElementBuffer(cube_ebo_.Id());
+  chunk_draw_count_buffer_.Init(sizeof(GLuint), GL_DYNAMIC_STORAGE_BIT, nullptr);
 
   tex_materials_buffer_.Init(sizeof(TextureMaterialData) * 1000, GL_DYNAMIC_STORAGE_BIT);
 }
@@ -194,6 +199,90 @@ void Renderer::RenderQuads() {
 
 void Renderer::RenderRegMeshes() {}
 
+void Renderer::RenderChunks(const ChunkRenderParams& render_params, const RenderInfo&) {
+  ZoneScoped;
+  if (!chunk_allocs_.empty()) {
+    chunk_draw_info_buffer_.Init(chunk_vbo_.Allocs().size() * chunk_vbo_.AllocSize(),
+                                 GL_DYNAMIC_STORAGE_BIT, chunk_vbo_.Allocs().data());
+    if (chunk_alloc_change_this_frame_) {
+      // auto* info =
+      // (DynamicBuffer<ChunkDrawInfo>::Allocation<ChunkDrawInfo>*)glMapNamedBufferRange(
+      //     chunk_draw_info_buffer_.Id(), 0, chunk_vbo_.Allocs().size() * chunk_vbo_.AllocSize(),
+      //     GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT);
+      // glUnmapNamedBuffer(chunk_draw_info_buffer_.Id());
+      // if (info) {
+      //   for (size_t i = 0; i < chunk_vbo_.Allocs().size(); i++) {
+      //     const auto& data = chunk_vbo_.Allocs()[i];
+      //     auto* in = info + i;
+      //     spdlog::info(" test {} {}  {} {}", in->handle, data.handle, in->user_data.first_index,
+      //                  data.user_data.first_index);
+      //   }
+      // }
+      chunk_draw_indirect_buffer_.Init(
+          chunk_vbo_.NumActiveAllocs() * sizeof(DrawElementsIndirectCommand),
+          GL_DYNAMIC_STORAGE_BIT);
+
+      chunk_alloc_change_this_frame_ = false;
+    }
+    glBlendFunc(GL_ONE, GL_ZERO);
+    chunk_uniform_ssbo_.Init(chunk_vbo_.Allocs().size() * sizeof(ChunkDrawCmdUniform),
+                             GL_DYNAMIC_STORAGE_BIT, nullptr);
+    uint32_t zero{0};
+    glClearNamedBufferSubData(chunk_draw_count_buffer_.Id(), GL_R32UI, 0, sizeof(GLuint), GL_RED,
+                              GL_UNSIGNED_INT, &zero);
+    shader_manager_.GetShader("chunk_cull")->Bind();
+    chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
+    chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
+    chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
+    glDispatchCompute((chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // if (chunk_vbo_.NumActiveAllocs() > 0) {
+    // Map the chunk_draw_count_buffer_ to read the data
+    // auto* cmd = (DrawElementsIndirectCommand*)glMapNamedBufferRange(
+    //     chunk_draw_indirect_buffer_.Id(), 0,
+    //     sizeof(DrawElementsIndirectCommand) * chunk_vbo_.NumActiveAllocs(),
+    //     GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT);
+    // if (cmd) {
+    //   for (size_t i = 0; i < chunk_vbo_.NumActiveAllocs(); i++) {
+    //     auto* c = cmd + i;
+    //     spdlog::info("{} {} {} {} {}", c->count, c->instance_count, c->first_index,
+    //                  c->base_vertex, c->base_instance);
+    //   }
+    // }
+    // glUnmapNamedBuffer(chunk_draw_indirect_buffer_.Id());
+
+    // auto* uniform = (ChunkDrawCmdUniform*)glMapNamedBufferRange(
+    //     chunk_uniform_ssbo_.Id(), 0, sizeof(ChunkDrawCmdUniform) * chunk_vbo_.NumActiveAllocs(),
+    //     GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT);
+    // if (uniform) {
+    //   for (size_t i = 0; i < chunk_vbo_.NumActiveAllocs(); i++) {
+    //     auto* uni = uniform + i;
+    //     spdlog::info("{} {} {}", uni->pos.x, uni->pos.y, uni->pos.z);
+    //   }
+    // }
+    // glUnmapNamedBuffer(chunk_uniform_ssbo_.Id());
+    // auto* num = (GLuint*)glMapNamedBufferRange(chunk_draw_count_buffer_.Id(), 0,
+    // sizeof(GLuint),
+    //                                            GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT);
+    // glUnmapNamedBuffer(chunk_draw_count_buffer_.Id());
+    // if (num) {
+    //   spdlog::info("draw count: {}", *num);
+    // }
+    //   }
+
+    shader_manager_.GetShader("chunk_batch")->Bind();
+    const auto& chunk_tex_arr =
+        TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
+    chunk_tex_arr.Bind(0);
+    chunk_vao_.Bind();
+    chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+    chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
+                                chunk_vbo_.NumActiveAllocs(), 0);
+  }
+}
 void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
   ZoneScoped;
   uniform_ubo_.ResetOffset();
@@ -202,39 +291,58 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
   uniform_data.vp_matrix = render_info.vp_matrix;
 
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
-  if (!chunk_allocs_.empty()) {
-    ZoneScopedN("Chunk render");
-    if (chunk_alloc_change_this_frame_) {
-      chunk_frame_draw_cmd_mesh_ids_.clear();
-      chunk_frame_draw_cmd_uniforms_.clear();
-      for (auto& [id, alloc] : chunk_allocs_) {
-        chunk_frame_draw_cmd_mesh_ids_.emplace_back(id);
-        chunk_frame_draw_cmd_uniforms_.emplace_back(
-            glm::translate(glm::mat4{1}, glm::vec3(alloc.pos)));
-      }
-      chunk_uniform_ssbo_.ResetOffset();
-      chunk_uniform_ssbo_.SubData(
-          sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
-          chunk_frame_draw_cmd_uniforms_.data());
-      spdlog::info("{} {} {}", chunk_frame_dei_cmds_.size(), chunk_frame_draw_cmd_uniforms_.size(),
-                   chunk_dei_cmds_.size());
-      // uint32_t chunk_allocs = chunk_vbo_.NumAllocs();
-      SetMeshFrameDrawCommands(chunk_draw_indirect_buffer_, chunk_frame_draw_cmd_uniforms_,
-                               chunk_frame_draw_cmd_mesh_ids_, chunk_frame_dei_cmds_,
-                               chunk_dei_cmds_);
-      chunk_alloc_change_this_frame_ = false;
-    }
-    chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
-
-    shader_manager_.GetShader(render_params.shader_name)->Bind();
-    const auto& chunk_tex_arr =
-        TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
-    chunk_tex_arr.Bind(0);
-    chunk_vao_.Bind();
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
-                                chunk_frame_dei_cmds_.size(), 0);
-  }
+  RenderChunks(render_params, render_info);
+  // if (!chunk_allocs_.empty()) {
+  //   ZoneScopedN("Chunk render");
+  //   if (chunk_alloc_change_this_frame_) {
+  //     chunk_frame_draw_cmd_mesh_ids_.clear();
+  //     chunk_frame_draw_cmd_uniforms_.clear();
+  //     for (auto& [id, alloc] : chunk_allocs_) {
+  //       chunk_frame_draw_cmd_mesh_ids_.emplace_back(id);
+  //       chunk_frame_draw_cmd_uniforms_.emplace_back(
+  //           glm::vec4(alloc.pos.x, alloc.pos.y, alloc.pos.z, 0));
+  //     }
+  //     chunk_uniform_ssbo_.ResetOffset();
+  //     chunk_uniform_ssbo_.SubData(
+  //         sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
+  //         chunk_frame_draw_cmd_uniforms_.data());
+  //     chunk_frame_dei_cmds_.clear();
+  //     chunk_frame_dei_cmds_.reserve(chunk_frame_draw_cmd_uniforms_.size());
+  //     uint32_t zero{0};
+  //     glClearNamedBufferSubData(chunk_draw_count_buffer_.Id(), GL_R32UI, 0, sizeof(GLuint),
+  //     GL_RED,
+  //                               GL_UNSIGNED_INT, &zero);
+  //     DrawElementsIndirectCommand cmd;
+  //     EASSERT_MSG(chunk_frame_draw_cmd_uniforms_.size() ==
+  //     chunk_frame_draw_cmd_mesh_ids_.size(),
+  //                 "Per frame draw cmd size must equal mesh cmd size");
+  //     for (uint32_t i = 0; i < chunk_frame_draw_cmd_mesh_ids_.size(); i++) {
+  //       const auto& draw_cmd_info = chunk_dei_cmds_[chunk_frame_draw_cmd_mesh_ids_[i]];
+  //       cmd.base_instance = i;
+  //       cmd.base_vertex = draw_cmd_info.base_vertex;
+  //       cmd.instance_count = 1;
+  //       cmd.count = draw_cmd_info.count;
+  //       cmd.first_index = draw_cmd_info.first_index;
+  //       chunk_frame_dei_cmds_.emplace_back(cmd);
+  //     }
+  //     chunk_draw_indirect_buffer_.ResetOffset();
+  //     chunk_draw_indirect_buffer_.SubData(
+  //         sizeof(DrawElementsIndirectCommand) * chunk_frame_dei_cmds_.size(),
+  //         chunk_frame_dei_cmds_.data());
+  //     chunk_alloc_change_this_frame_ = false;
+  //   }
+  //
+  //   chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+  //   chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+  //
+  //   shader_manager_.GetShader(render_params.shader_name)->Bind();
+  //   const auto& chunk_tex_arr =
+  //       TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
+  //   chunk_tex_arr.Bind(0);
+  //   chunk_vao_.Bind();
+  //   glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
+  //                               chunk_frame_dei_cmds_.size(), 0);
+  // }
 
   if (reg_mesh_frame_draw_cmd_uniforms_.size() > 0) {
     ZoneScopedN("Reg Mesh render");
@@ -321,22 +429,30 @@ void Renderer::AddStaticQuad(uint32_t material_handle, const glm::vec2& center,
 uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
                                 const glm::ivec3& pos) {
   ZoneScoped;
+  if (vertices.empty() || indices.empty()) {
+    spdlog::error("no vertices or indices");
+    return 0;
+  }
   uint32_t chunk_vbo_offset;
   uint32_t chunk_ebo_offset;
   // uint32_t id = dei_cmds_.size();
   uint32_t id = rand();
   uint32_t vbo_handle;
   uint32_t ebo_handle;
-  {
-    ZoneScopedN("vbo alloc");
-    vbo_handle = chunk_vbo_.Allocate(sizeof(ChunkVertex) * vertices.size(), vertices.data(),
-                                     chunk_vbo_offset);
-  }
-  {
-    ZoneScopedN("ebo alloc");
-    ebo_handle =
-        chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(), chunk_ebo_offset);
-  }
+  glm::ivec4 min = glm::ivec4(pos, 0);
+  glm::ivec4 max = min + ChunkLength;
+  ebo_handle =
+      chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(), chunk_ebo_offset);
+
+  vbo_handle = chunk_vbo_.Allocate(
+      sizeof(ChunkVertex) * vertices.size(), vertices.data(), chunk_vbo_offset,
+      {
+          .aabb = {min, max},
+          ._pad = 0,
+          .first_index = static_cast<uint32_t>(chunk_ebo_offset / sizeof(uint32_t)),
+          .count = static_cast<uint32_t>(indices.size()),
+          ._pad2 = 0,
+      });
 
   chunk_allocs_.emplace(id, ChunkMeshAlloc{
                                 .pos = pos,
@@ -352,11 +468,11 @@ uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices, std::vector<
               .base_instance = 0,
           });
   // spdlog::info(
-  //     "v_size: {}, e_size {}, vbo_offset: {}, ebo_offset: {}, base_vertex: {},  first_index: {},"
-  //     "dei_size: {} vbo_allocs: {}, ebo_allocs: {}",
-  //     sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset,
-  //     chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset /
-  //     sizeof(uint32_t), chunk_dei_cmds_.size(), chunk_vbo_.NumAllocs(), chunk_ebo_.NumAllocs());
+  //     "v_size: {}, e_size {}, vbo_offset: {}, ebo_offset: {}, base_vertex: {},  first_index:
+  //     {}," "dei_size: {} vbo_allocs: {}, ebo_allocs: {}", sizeof(ChunkVertex) *
+  //     vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset, chunk_ebo_offset,
+  //     chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset / sizeof(uint32_t),
+  //     chunk_dei_cmds_.size(), chunk_vbo_.NumAllocs(), chunk_ebo_.NumAllocs());
   chunk_alloc_change_this_frame_ = true;
   return id;
 }
@@ -482,6 +598,8 @@ void Renderer::LoadShaders() {
                             {{GET_SHADER_PATH("block_outline.vs.glsl"), ShaderType::Vertex},
                              {GET_SHADER_PATH("block_outline.gs.glsl"), ShaderType::Geometry},
                              {GET_SHADER_PATH("block_outline.fs.glsl"), ShaderType::Fragment}});
+  shader_manager_.AddShader("chunk_cull",
+                            {{GET_SHADER_PATH("chunk_cull.cs.glsl"), ShaderType::Compute}});
 }
 
 void Renderer::DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,

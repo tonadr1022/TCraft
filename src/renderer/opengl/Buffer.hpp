@@ -3,7 +3,7 @@
 class Buffer {
  public:
   Buffer();
-  void Init(uint32_t size_bytes, GLbitfield flags, void* data = nullptr);
+  void Init(uint32_t size_bytes, GLbitfield flags, const void* data = nullptr);
   [[nodiscard]] inline uint32_t Id() const { return id_; }
 
   Buffer(Buffer& other) = delete;
