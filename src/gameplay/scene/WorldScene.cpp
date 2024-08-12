@@ -40,8 +40,11 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
           data.value("player_position", std::array<float, 3>{0, 0, 0});
       player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
       auto camera = data["camera"];
-      float pitch = camera.value("pitch", 0);
-      float yaw = camera.value("yaw", 0);
+      float pitch = 0, yaw = 0;
+      if (camera.is_object()) {
+        pitch = camera.value("pitch", 0);
+        yaw = camera.value("yaw", 0);
+      }
       player_.GetFPSCamera().SetOrientation(pitch, yaw);
     } catch (std::runtime_error& error) {
       spdlog::info("failed to load world data");

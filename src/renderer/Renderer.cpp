@@ -202,9 +202,9 @@ void Renderer::RenderRegMeshes() {}
 void Renderer::RenderChunks(const ChunkRenderParams& render_params, const RenderInfo&) {
   ZoneScoped;
   if (!chunk_allocs_.empty()) {
-    chunk_draw_info_buffer_.Init(chunk_vbo_.Allocs().size() * chunk_vbo_.AllocSize(),
-                                 GL_DYNAMIC_STORAGE_BIT, chunk_vbo_.Allocs().data());
     if (chunk_alloc_change_this_frame_) {
+      chunk_draw_info_buffer_.Init(chunk_vbo_.Allocs().size() * chunk_vbo_.AllocSize(),
+                                   GL_DYNAMIC_STORAGE_BIT, chunk_vbo_.Allocs().data());
       // auto* info =
       // (DynamicBuffer<ChunkDrawInfo>::Allocation<ChunkDrawInfo>*)glMapNamedBufferRange(
       //     chunk_draw_info_buffer_.Id(), 0, chunk_vbo_.Allocs().size() * chunk_vbo_.AllocSize(),
@@ -221,7 +221,6 @@ void Renderer::RenderChunks(const ChunkRenderParams& render_params, const Render
       chunk_draw_indirect_buffer_.Init(
           chunk_vbo_.NumActiveAllocs() * sizeof(DrawElementsIndirectCommand),
           GL_DYNAMIC_STORAGE_BIT);
-
       chunk_alloc_change_this_frame_ = false;
     }
     glBlendFunc(GL_ONE, GL_ZERO);
@@ -530,6 +529,7 @@ void Renderer::FreeRegMesh(uint32_t handle) {
 }
 
 void Renderer::FreeChunkMesh(uint32_t handle) {
+  chunk_alloc_change_this_frame_ = true;
   auto it = chunk_allocs_.find(handle);
   if (it == chunk_allocs_.end()) {
     spdlog::error("FreeChunk: handle not found: {}", handle);
