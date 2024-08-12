@@ -9,6 +9,7 @@
 #include "Vertex.hpp"
 #include "application/SettingsManager.hpp"
 #include "application/Window.hpp"
+#include "gameplay/world/ChunkDef.hpp"
 #include "pch.hpp"
 #include "renderer/Material.hpp"
 #include "renderer/Mesh.hpp"
@@ -201,15 +202,31 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
   uniform_data.vp_matrix = render_info.vp_matrix;
 
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
-  if (chunk_frame_draw_cmd_uniforms_.size() > 0) {
+  if (!chunk_allocs_.empty()) {
     ZoneScopedN("Chunk render");
-    chunk_uniform_ssbo_.ResetOffset();
-    chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
-                                chunk_frame_draw_cmd_uniforms_.data());
+    if (chunk_alloc_change_this_frame_) {
+      chunk_frame_draw_cmd_mesh_ids_.clear();
+      chunk_frame_draw_cmd_uniforms_.clear();
+      for (auto& [id, alloc] : chunk_allocs_) {
+        chunk_frame_draw_cmd_mesh_ids_.emplace_back(id);
+        chunk_frame_draw_cmd_uniforms_.emplace_back(
+            glm::translate(glm::mat4{1}, glm::vec3(alloc.pos)));
+      }
+      chunk_uniform_ssbo_.ResetOffset();
+      chunk_uniform_ssbo_.SubData(
+          sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
+          chunk_frame_draw_cmd_uniforms_.data());
+      spdlog::info("{} {} {}", chunk_frame_dei_cmds_.size(), chunk_frame_draw_cmd_uniforms_.size(),
+                   chunk_dei_cmds_.size());
+      // uint32_t chunk_allocs = chunk_vbo_.NumAllocs();
+      SetMeshFrameDrawCommands(chunk_draw_indirect_buffer_, chunk_frame_draw_cmd_uniforms_,
+                               chunk_frame_draw_cmd_mesh_ids_, chunk_frame_dei_cmds_,
+                               chunk_dei_cmds_);
+      chunk_alloc_change_this_frame_ = false;
+    }
     chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    SetMeshFrameDrawCommands(chunk_draw_indirect_buffer_, chunk_frame_draw_cmd_uniforms_,
-                             chunk_frame_draw_cmd_mesh_ids_, chunk_frame_dei_cmds_,
-                             chunk_dei_cmds_);
+    chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+
     shader_manager_.GetShader(render_params.shader_name)->Bind();
     const auto& chunk_tex_arr =
         TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
@@ -229,6 +246,7 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
     SetMeshFrameDrawCommands(reg_mesh_draw_indirect_buffer_, reg_mesh_frame_draw_cmd_uniforms_,
                              reg_mesh_frame_draw_cmd_mesh_ids_, reg_mesh_frame_dei_cmds_,
                              reg_mesh_dei_cmds_);
+    reg_mesh_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
     auto shader = shader_manager_.GetShader("single_texture");
     shader->Bind();
     reg_mesh_vao_.Bind();
@@ -267,13 +285,12 @@ void Renderer::SetMeshFrameDrawCommands(
   draw_indirect_buffer.ResetOffset();
   draw_indirect_buffer.SubData(sizeof(DrawElementsIndirectCommand) * frame_dei_cmds.size(),
                                frame_dei_cmds.data());
-  draw_indirect_buffer.Bind(GL_DRAW_INDIRECT_BUFFER);
 }
 
-void Renderer::SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle) {
+void Renderer::SubmitChunkDrawCommand(const glm::mat4&, uint32_t) {
   ZoneScoped;
-  chunk_frame_draw_cmd_mesh_ids_.emplace_back(mesh_handle);
-  chunk_frame_draw_cmd_uniforms_.emplace_back(model);
+  // chunk_frame_draw_cmd_mesh_ids_.emplace_back(mesh_handle);
+  // chunk_frame_draw_cmd_uniforms_.emplace_back(model);
 }
 
 void Renderer::SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_handle,
@@ -301,8 +318,8 @@ void Renderer::AddStaticQuad(uint32_t material_handle, const glm::vec2& center,
                                               material_allocs_.at(material_handle));
 }
 
-uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
-                                std::vector<uint32_t>& indices) {
+uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
+                                const glm::ivec3& pos) {
   ZoneScoped;
   uint32_t chunk_vbo_offset;
   uint32_t chunk_ebo_offset;
@@ -321,7 +338,8 @@ uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
         chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(), chunk_ebo_offset);
   }
 
-  chunk_allocs_.emplace(id, MeshAlloc{
+  chunk_allocs_.emplace(id, ChunkMeshAlloc{
+                                .pos = pos,
                                 .vbo_handle = vbo_handle,
                                 .ebo_handle = ebo_handle,
                             });
@@ -339,6 +357,7 @@ uint32_t Renderer::AllocateMesh(std::vector<ChunkVertex>& vertices,
   //     sizeof(ChunkVertex) * vertices.size(), sizeof(uint32_t) * indices.size(), chunk_vbo_offset,
   //     chunk_ebo_offset, chunk_vbo_offset / sizeof(ChunkVertex), chunk_ebo_offset /
   //     sizeof(uint32_t), chunk_dei_cmds_.size(), chunk_vbo_.NumAllocs(), chunk_ebo_.NumAllocs());
+  chunk_alloc_change_this_frame_ = true;
   return id;
 }
 
@@ -415,10 +434,10 @@ void Renderer::StartFrame(const Window& window) {
   {
     ZoneScopedN("clear buffers");
     // TODO: don't clear and reallocate, or at least profile in the future
-    chunk_frame_draw_cmd_mesh_ids_.clear();
-    chunk_frame_draw_cmd_uniforms_.clear();
     reg_mesh_frame_draw_cmd_mesh_ids_.clear();
     reg_mesh_frame_draw_cmd_uniforms_.clear();
+    chunk_frame_draw_cmd_mesh_ids_.clear();
+    chunk_frame_draw_cmd_uniforms_.clear();
     stats_ = {};
   }
 

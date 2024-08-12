@@ -50,7 +50,7 @@ class Renderer {
   void SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_handle,
                                 uint32_t material_handle);
   [[nodiscard]] uint32_t AllocateMesh(std::vector<ChunkVertex>& vertices,
-                                      std::vector<uint32_t>& indices);
+                                      std::vector<uint32_t>& indices, const glm::ivec3& pos);
 
   [[nodiscard]] uint32_t AllocateMesh(std::vector<Vertex>& vertices,
                                       std::vector<uint32_t>& indices);
@@ -107,6 +107,12 @@ class Renderer {
     uint32_t ebo_handle;
   };
 
+  struct ChunkMeshAlloc {
+    glm::ivec3 pos;
+    uint32_t vbo_handle;
+    uint32_t ebo_handle;
+  };
+
   struct alignas(16) UBOUniforms {
     glm::mat4 vp_matrix;
     glm::vec3 cam_pos;
@@ -119,11 +125,12 @@ class Renderer {
   DynamicBuffer chunk_ebo_;
   Buffer chunk_uniform_ssbo_;
   Buffer chunk_draw_indirect_buffer_;
-  std::unordered_map<uint32_t, MeshAlloc> chunk_allocs_;
+  std::unordered_map<uint32_t, ChunkMeshAlloc> chunk_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> chunk_dei_cmds_;
   std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
   std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
+  bool chunk_alloc_change_this_frame_{true};
 
   VertexArray reg_mesh_vao_;
   DynamicBuffer reg_mesh_vbo_;

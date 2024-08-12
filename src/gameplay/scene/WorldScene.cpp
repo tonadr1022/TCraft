@@ -117,12 +117,12 @@ void WorldScene::Render() {
   {
     ZoneScopedN("Submit chunk draw commands");
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
-    for (const auto& it : chunk_manager_->GetVisibleChunks()) {
-      if (!it.second.mesh.IsAllocated()) continue;
-      glm::vec3 pos = it.first * ChunkLength;
-      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos),
-                                             it.second.mesh.Handle());
-    }
+    // for (const auto& it : chunk_manager_->GetVisibleChunks()) {
+    //   if (!it.second.mesh_handle == 0) continue;
+    //   glm::vec3 pos = it.first * ChunkLength;
+    //   Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos),
+    //                                          it.second.mesh.Handle());
+    // }
   }
 
   auto ray_cast_pos = player_.GetRayCastBlockPos();

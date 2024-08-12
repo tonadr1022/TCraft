@@ -14,3 +14,8 @@ using BlockTypeArray = std::array<BlockType, ChunkVolume>;
 using ChunkNeighborArray = std::array<ChunkData*, 27>;
 
 enum class ChunkState { None, TerrainQueued, TerrainFinished, MeshQueued, MeshFinished };
+
+struct ChunkVertex {
+  uint32_t data1;
+  uint32_t data2;
+};

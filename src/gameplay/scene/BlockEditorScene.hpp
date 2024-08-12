@@ -4,7 +4,6 @@
 #include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "renderer/ChunkRenderParams.hpp"
-#include "renderer/Mesh.hpp"
 
 class TextureMaterial;
 
@@ -21,7 +20,7 @@ class BlockEditorScene : public Scene {
  private:
   struct SingleBlock {
     glm::vec3 pos;
-    Mesh mesh;
+    uint32_t mesh_handle{0};
     BlockMeshData mesh_data;
   };
 

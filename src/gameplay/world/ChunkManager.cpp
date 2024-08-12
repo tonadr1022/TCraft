@@ -176,7 +176,7 @@ void ChunkManager::Update(double /*dt*/) {
       EASSERT_MSG(chunk.mesh_state == Chunk::State::NotFinished, "Invalid chunk state for meshing");
       if (chunk.mesh_state == Chunk::State::Queued) continue;
       chunk.mesh_state = Chunk::State::Queued;
-      if (chunk.mesh.IsAllocated()) chunk.mesh.Free();
+      if (chunk.mesh_handle != 0) Renderer::Get().FreeChunkMesh(chunk.mesh_handle);
       // TODO: copy the neighbor chunks so the mesher can use them
 
       ChunkNeighborArray a;
@@ -208,13 +208,11 @@ void ChunkManager::Update(double /*dt*/) {
     while (!chunk_mesh_finished_queue_.empty()) {
       if (timer.ElapsedMS() > 3) break;
       auto& task = chunk_mesh_finished_queue_.front();
-      auto it = chunk_map_.find(chunk_mesh_finished_queue_.front().pos);
+      auto it = chunk_map_.find(task.pos);
       if (it != chunk_map_.end()) {
-        total_vertex_count_ += task.vertices.size();
-        total_index_count_ += task.indices.size();
-        num_mesh_creations_++;
         if (!task.vertices.empty()) {
-          it->second.mesh.Allocate(task.vertices, task.indices);
+          it->second.mesh_handle =
+              Renderer::Get().AllocateMesh(task.vertices, task.indices, task.pos * ChunkLength);
         }
         it->second.mesh_state = Chunk::State::Finished;
       }
@@ -237,7 +235,6 @@ void ChunkManager::Update(double /*dt*/) {
       }
       if (!can_mesh) continue;
 
-      if (chunk.mesh.IsAllocated()) chunk.mesh.Free();
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, true);
       ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
@@ -247,10 +244,9 @@ void ChunkManager::Update(double /*dt*/) {
         mesher.GenerateGreedy2(a, vertices, indices);
       else
         mesher.GenerateSmart(a, vertices, indices);
-      total_vertex_count_ += vertices.size();
-      total_index_count_ += indices.size();
-      num_mesh_creations_++;
-      chunk.mesh.Allocate(vertices, indices);
+      if (chunk.mesh_state == Chunk::State::Finished)
+        Renderer::Get().FreeChunkMesh(chunk.mesh_handle);
+      chunk.mesh_handle = Renderer::Get().AllocateMesh(vertices, indices, pos * ChunkLength);
       chunk.mesh_state = Chunk::State::Finished;
     }
     chunk_mesh_queue_immediate_.clear();
@@ -264,6 +260,7 @@ void ChunkManager::UnloadChunksOutOfRange() {
     if (abs(it->first.x - center_.x) > load_distance_ ||
         abs(it->first.y - center_.y) > load_distance_ ||
         abs(it->first.z - center_.z) > load_distance_) {
+      if (it->second.mesh_handle != 0) Renderer::Get().FreeChunkMesh(it->second.mesh_handle);
       it = chunk_map_.erase(it);
     } else {
       it++;
@@ -296,7 +293,7 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
           add_color(Black);
         } else {
           Chunk& chunk = it->second;
-          if (chunk.mesh.IsAllocated()) {
+          if (chunk.mesh_handle != 0) {
             add_color(Blue);
           } else if (chunk.mesh_state == Chunk::State::Finished) {
             add_color(Green);
@@ -334,12 +331,12 @@ void ChunkManager::OnImGui() {
       ImGui::Text("Chunk Terrain Queue:  %zu", chunk_terrain_queue_.size());
       ImGui::Text("Chunk Terrain Finish Queue:  %zu", finished_chunk_terrain_queue_.size());
     }
-    if (num_mesh_creations_ > 0) {
-      ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
-      ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);
-      ImGui::Text("Total vertices: %i", total_vertex_count_);
-      ImGui::Text("Total indices: %i", total_index_count_);
-    }
+    // if (num_mesh_creations_ > 0) {
+    //   ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
+    //   ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);
+    //   ImGui::Text("Total vertices: %i", total_vertex_count_);
+    //   ImGui::Text("Total indices: %i", total_index_count_);
+    // }
   }
 }
 
