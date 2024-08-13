@@ -9,7 +9,10 @@ to draw all objects that use the same vertex format and shader with a single
 draw call. In general, my first iteration was quite messy, as it was one of my
 first real attempts at writing C++ and OpenGL, so a common strategy was find
 what other people did online and mimic it. This time, though, I actually know
-the language (not really, C++ is a lifelong journey)
+the language (not really, C++ is a lifelong journey).
+
+## Demos
+[Demo 1](https://youtu.be/nuAlO2GmP_g)
 
 ## Running Locally
 
