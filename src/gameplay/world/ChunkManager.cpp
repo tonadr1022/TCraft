@@ -42,20 +42,20 @@ void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
   auto it = chunk_map_.find(chunk_pos);
   EASSERT_MSG(it != chunk_map_.end(), "Set block in non existent chunk");
   glm::ivec3 block_pos_in_chunk = util::chunk::WorldToPosInChunk(pos);
-  it->second.data.SetBlock(block_pos_in_chunk, block);
+  it->second->data.SetBlock(block_pos_in_chunk, block);
   AddRelatedChunks(block_pos_in_chunk, chunk_pos, chunk_mesh_queue_immediate_);
 }
 
 BlockType ChunkManager::GetBlock(const glm::ivec3& pos) const {
   auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
   EASSERT_MSG(it != chunk_map_.end(), "Get block in non existent chunk");
-  return it->second.data.GetBlock(util::chunk::WorldToPosInChunk(pos));
+  return it->second->data.GetBlock(util::chunk::WorldToPosInChunk(pos));
 }
 
 Chunk* ChunkManager::GetChunk(const glm::ivec3& pos) {
   auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
   if (it == chunk_map_.end()) return nullptr;
-  return &it->second;
+  return it->second.get();
 }
 
 void ChunkManager::Update(double /*dt*/) {
@@ -95,8 +95,8 @@ void ChunkManager::Update(double /*dt*/) {
       auto& task = finished_chunk_terrain_queue_.front();
       auto it = chunk_map_.find(finished_chunk_terrain_queue_.front().first);
       if (it != chunk_map_.end()) {
-        it->second.data = std::move(task.second);
-        it->second.terrain_state = Chunk::State::Finished;
+        it->second->data = std::move(task.second);
+        it->second->terrain_state = Chunk::State::Finished;
       }
       finished_chunk_terrain_queue_.pop_front();
     }
@@ -118,20 +118,20 @@ void ChunkManager::Update(double /*dt*/) {
       auto it = chunk_map_.find(pos);
       if (it == chunk_map_.end()) {
         ZoneScopedN("make chunks and send to terrain queue");
-        chunk_map_.try_emplace(pos, pos);
+        chunk_map_.try_emplace(pos, std::make_shared<Chunk>(pos));
         // TODO: either allow infinite chunks vertically or cap it out and optimize
         glm::ivec3 pos_neg_y = {pos.x, pos.y - 1, pos.z};
         glm::ivec3 pos_pos_y = {pos.x, pos.y + 1, pos.z};
         {
-          auto pos1 = chunk_map_.try_emplace(pos_pos_y, pos_pos_y);
-          auto pos2 = chunk_map_.try_emplace(pos_neg_y, pos_neg_y);
-          pos1.first->second.terrain_state = Chunk::State::Finished;
-          pos2.first->second.terrain_state = Chunk::State::Finished;
+          auto pos1 = chunk_map_.try_emplace(pos_pos_y, std::make_shared<Chunk>(pos_pos_y));
+          auto pos2 = chunk_map_.try_emplace(pos_neg_y, std::make_shared<Chunk>(pos_neg_y));
+          pos1.first->second->terrain_state = Chunk::State::Finished;
+          pos2.first->second->terrain_state = Chunk::State::Finished;
         }
         chunk_terrain_queue_.emplace_back(pos);
       } else {
         ZoneScopedN("emplace valid meshes into queue");
-        Chunk& chunk = it->second;
+        Chunk& chunk = *it->second;
         EASSERT_MSG(!(chunk.mesh_state == Chunk::State::Queued &&
                       chunk.terrain_state != Chunk::State::Finished),
                     "invalid combo");
@@ -142,7 +142,7 @@ void ChunkManager::Update(double /*dt*/) {
             glm::ivec3 nei = {pos.x + off[0], pos.y + off[1], pos.z + off[2]};
             auto neighbor_it = chunk_map_.find(nei);
             if (neighbor_it == chunk_map_.end() ||
-                it->second.terrain_state != Chunk::State::Finished) {
+                it->second->terrain_state != Chunk::State::Finished) {
               // spdlog::info("{} {} {}, {} {} {}", pos.x, pos.y, pos.z, nei.x, nei.y, nei.z);
               valid = false;
               break;
@@ -172,11 +172,11 @@ void ChunkManager::Update(double /*dt*/) {
     for (const auto pos : chunk_mesh_queue_) {
       auto it = chunk_map_.find(pos);
       if (it == chunk_map_.end()) continue;
-      auto& chunk = it->second;
+      Chunk& chunk = *it->second;
       EASSERT_MSG(chunk.mesh_state == Chunk::State::NotFinished, "Invalid chunk state for meshing");
       if (chunk.mesh_state == Chunk::State::Queued) continue;
       chunk.mesh_state = Chunk::State::Queued;
-      if (chunk.mesh.IsAllocated()) chunk.mesh.Free();
+      if (chunk.mesh_handle != 0) Renderer::Get().FreeChunkMesh(chunk.mesh_handle);
       // TODO: copy the neighbor chunks so the mesher can use them
 
       ChunkNeighborArray a;
@@ -194,7 +194,7 @@ void ChunkManager::Update(double /*dt*/) {
           chunk_mesh_finished_queue_.emplace_back(vertices, indices, pos);
           auto it = chunk_map_.find(pos);
           if (it != chunk_map_.end()) {
-            it->second.mesh_state = Chunk::State::Finished;
+            it->second->mesh_state = Chunk::State::Finished;
           }
         }
       });
@@ -208,15 +208,13 @@ void ChunkManager::Update(double /*dt*/) {
     while (!chunk_mesh_finished_queue_.empty()) {
       if (timer.ElapsedMS() > 3) break;
       auto& task = chunk_mesh_finished_queue_.front();
-      auto it = chunk_map_.find(chunk_mesh_finished_queue_.front().pos);
+      auto it = chunk_map_.find(task.pos);
       if (it != chunk_map_.end()) {
-        total_vertex_count_ += task.vertices.size();
-        total_index_count_ += task.indices.size();
-        num_mesh_creations_++;
         if (!task.vertices.empty()) {
-          it->second.mesh.Allocate(task.vertices, task.indices);
+          it->second->mesh_handle = Renderer::Get().AllocateStaticChunk(task.vertices, task.indices,
+                                                                        task.pos * ChunkLength);
         }
-        it->second.mesh_state = Chunk::State::Finished;
+        it->second->mesh_state = Chunk::State::Finished;
       }
       chunk_mesh_finished_queue_.pop_front();
     }
@@ -237,7 +235,6 @@ void ChunkManager::Update(double /*dt*/) {
       }
       if (!can_mesh) continue;
 
-      if (chunk.mesh.IsAllocated()) chunk.mesh.Free();
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, true);
       ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
@@ -247,11 +244,11 @@ void ChunkManager::Update(double /*dt*/) {
         mesher.GenerateGreedy2(a, vertices, indices);
       else
         mesher.GenerateSmart(a, vertices, indices);
-      total_vertex_count_ += vertices.size();
-      total_index_count_ += indices.size();
-      num_mesh_creations_++;
-      chunk.mesh.Allocate(vertices, indices);
-      chunk.mesh_state = Chunk::State::Finished;
+      if (chunk->mesh_state == Chunk::State::Finished)
+        Renderer::Get().FreeChunkMesh(chunk->mesh_handle);
+      chunk->mesh_handle =
+          Renderer::Get().AllocateStaticChunk(vertices, indices, pos * ChunkLength);
+      chunk->mesh_state = Chunk::State::Finished;
     }
     chunk_mesh_queue_immediate_.clear();
   }
@@ -264,6 +261,7 @@ void ChunkManager::UnloadChunksOutOfRange() {
     if (abs(it->first.x - center_.x) > load_distance_ ||
         abs(it->first.y - center_.y) > load_distance_ ||
         abs(it->first.z - center_.z) > load_distance_) {
+      if (it->second->mesh_handle != 0) Renderer::Get().FreeChunkMesh(it->second->mesh_handle);
       it = chunk_map_.erase(it);
     } else {
       it++;
@@ -295,8 +293,8 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
         if (it == chunk_map_.end()) {
           add_color(Black);
         } else {
-          Chunk& chunk = it->second;
-          if (chunk.mesh.IsAllocated()) {
+          Chunk& chunk = *it->second;
+          if (chunk.mesh_handle != 0) {
             add_color(Blue);
           } else if (chunk.mesh_state == Chunk::State::Finished) {
             add_color(Green);
@@ -313,6 +311,9 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
 
 ChunkManager::~ChunkManager() {
   thread_pool_.wait();
+  for (auto& [pos, chunk] : chunk_map_) {
+    Renderer::Get().FreeChunkMesh(chunk->mesh_handle);
+  }
   nlohmann::json j = {{"load_distance", load_distance_}, {"frequency", frequency_}};
   SettingsManager::Get().SaveSetting(j, "chunk_manager");
 }
@@ -334,12 +335,12 @@ void ChunkManager::OnImGui() {
       ImGui::Text("Chunk Terrain Queue:  %zu", chunk_terrain_queue_.size());
       ImGui::Text("Chunk Terrain Finish Queue:  %zu", finished_chunk_terrain_queue_.size());
     }
-    if (num_mesh_creations_ > 0) {
-      ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
-      ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);
-      ImGui::Text("Total vertices: %i", total_vertex_count_);
-      ImGui::Text("Total indices: %i", total_index_count_);
-    }
+    // if (num_mesh_creations_ > 0) {
+    //   ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
+    //   ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);
+    //   ImGui::Text("Total vertices: %i", total_vertex_count_);
+    //   ImGui::Text("Total indices: %i", total_index_count_);
+    // }
   }
 }
 
@@ -355,14 +356,14 @@ void ChunkManager::PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, co
     auto neighbor_it = chunk_map_.find(neighbor_pos);
     if (neighbor_it == chunk_map_.end()) {
       if (add_new_chunks) {
-        auto new_chunk = chunk_map_.try_emplace(neighbor_pos, neighbor_pos);
-        neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] =
-            &new_chunk.first->second.data;
+        auto new_chunk =
+            chunk_map_.try_emplace(neighbor_pos, std::make_shared<Chunk>(neighbor_pos));
+        neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = new_chunk.first->second;
       } else {
         neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = nullptr;
       }
     } else {
-      neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = &neighbor_it->second.data;
+      neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = neighbor_it->second;
     }
   }
 }

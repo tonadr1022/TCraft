@@ -9,7 +9,7 @@ layout(location = 0) out VS_OUT {
 } vs_out;
 
 struct UniformData {
-    mat4 model;
+    vec4 pos;
 };
 
 layout(std430, binding = 0) readonly buffer uniform_data_buffer {
@@ -34,7 +34,7 @@ void main() {
     uint v = bitfieldExtract(data.x, 26, 6);
     uint tex_idx = bitfieldExtract(data.y, 0, 32);
     UniformData uniform_data = uniforms[gl_DrawID + gl_InstanceID];
-    vec4 pos_world_space = uniform_data.model * vec4(x, y, z, 1.0);
+    vec4 pos_world_space = vec4(vec3(x, y, z) + uniform_data.pos.xyz, 1.0);
     gl_Position = vp_matrix * pos_world_space;
     vs_out.pos_world_space = vec3(pos_world_space);
     vs_out.tex_coords = vec3(u, v, tex_idx);

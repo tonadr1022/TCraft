@@ -91,9 +91,10 @@ void BlockEditorScene::Reload() {
     vertices.clear();
     indices.clear();
     ChunkMesher::GenerateBlock(vertices, indices, block_db_.GetMeshData()[i].texture_indices);
+
     blocks_.emplace_back(SingleBlock{
         .pos = {(-num_blocks + i), 0, 0},
-        .mesh = {vertices, indices},
+        .mesh_handle = Renderer::Get().AllocateChunk(vertices, indices),
         .mesh_data = {},
     });
   }
@@ -127,8 +128,11 @@ void BlockEditorScene::HandleEditModelChange() {
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
   ChunkMesher::GenerateBlock(vertices, indices, edit_model_block_.mesh_data.texture_indices);
-  edit_model_block_ = {};
-  edit_model_block_.mesh.Allocate(vertices, indices);
+  if (edit_model_block_.mesh_handle != 0)
+    Renderer::Get().FreeChunkMesh(edit_model_block_.mesh_handle);
+  // TODO: handle difference from regular chunk rendering since i want to set the position myself
+  // for these. Need to use a different code path
+  edit_model_block_.mesh_handle = Renderer::Get().AllocateChunk(vertices, indices);
 }
 
 void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
@@ -159,8 +163,11 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
   ChunkMesher::GenerateBlock(vertices, indices, add_model_blocks_[i].mesh_data.texture_indices);
-  add_model_blocks_[i] = {};
-  add_model_blocks_[i].mesh.Allocate(vertices, indices);
+  if (add_model_blocks_[i].mesh_handle != 0)
+    Renderer::Get().FreeChunkMesh(add_model_blocks_[i].mesh_handle);
+  // TODO: handle difference from regular chunk rendering since i want to set the position myself
+  // for these. Need to use a different code path
+  add_model_blocks_[i].mesh_handle = Renderer::Get().AllocateChunk(vertices, indices);
 }
 
 BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_manager) {
@@ -189,17 +196,17 @@ void BlockEditorScene::Render() {
     auto win_center = window_.GetWindowCenter();
     Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
     if (edit_mode_ == EditMode::AddModel) {
-      auto& mesh = add_model_blocks_[static_cast<uint32_t>(add_model_type_)].mesh;
-      EASSERT_MSG(mesh.IsAllocated(), "Add model mesh not allocated");
-      Renderer::Get().SubmitChunkDrawCommand(model, mesh.Handle());
+      uint32_t mesh_handle = add_model_blocks_[static_cast<uint32_t>(add_model_type_)].mesh_handle;
+      EASSERT_MSG(mesh_handle != 0, "Add model mesh not allocated");
+      Renderer::Get().SubmitChunkDrawCommand(model, mesh_handle);
     } else if (edit_mode_ == EditMode::EditModel) {
-      EASSERT_MSG(edit_model_block_.mesh.IsAllocated(), "Edit model not allocated");
-      Renderer::Get().SubmitChunkDrawCommand(model, edit_model_block_.mesh.Handle());
+      EASSERT_MSG(edit_model_block_.mesh_handle != 0, "Edit model not allocated");
+      Renderer::Get().SubmitChunkDrawCommand(model, edit_model_block_.mesh_handle);
     } else if (edit_mode_ == EditMode::EditBlock) {
       for (const auto& block : blocks_) {
-        EASSERT_MSG(block.mesh.IsAllocated(), "model not allocated");
+        EASSERT_MSG(block.mesh_handle != 0, "model not allocated");
         Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos),
-                                               block.mesh.Handle());
+                                               block.mesh_handle);
       }
     }
   }

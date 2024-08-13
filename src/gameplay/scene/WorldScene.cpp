@@ -40,8 +40,11 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
           data.value("player_position", std::array<float, 3>{0, 0, 0});
       player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
       auto camera = data["camera"];
-      float pitch = camera.value("pitch", 0);
-      float yaw = camera.value("yaw", 0);
+      float pitch = 0, yaw = 0;
+      if (camera.is_object()) {
+        pitch = camera.value("pitch", 0);
+        yaw = camera.value("yaw", 0);
+      }
       player_.GetFPSCamera().SetOrientation(pitch, yaw);
     } catch (std::runtime_error& error) {
       spdlog::info("failed to load world data");
@@ -117,12 +120,12 @@ void WorldScene::Render() {
   {
     ZoneScopedN("Submit chunk draw commands");
     // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
-    for (const auto& it : chunk_manager_->GetVisibleChunks()) {
-      if (!it.second.mesh.IsAllocated()) continue;
-      glm::vec3 pos = it.first * ChunkLength;
-      Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos),
-                                             it.second.mesh.Handle());
-    }
+    // for (const auto& it : chunk_manager_->GetVisibleChunks()) {
+    //   if (!it.second.mesh_handle == 0) continue;
+    //   glm::vec3 pos = it.first * ChunkLength;
+    //   Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos),
+    //                                          it.second.mesh.Handle());
+    // }
   }
 
   auto ray_cast_pos = player_.GetRayCastBlockPos();

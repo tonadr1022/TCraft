@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ChunkData.hpp"
-#include "renderer/Mesh.hpp"
 
 struct ChunkMeshTask {
   std::vector<ChunkVertex> vertices;
@@ -15,7 +14,7 @@ class Chunk {
   [[nodiscard]] const glm::ivec3& GetPos() const;
 
   ChunkData data;
-  Mesh mesh;
+  uint32_t mesh_handle{0};
 
   enum class State { NotFinished, Queued, Finished };
   State terrain_state{State::NotFinished};

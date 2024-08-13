@@ -12,7 +12,10 @@ Buffer::~Buffer() {
   }
 }
 
-void Buffer::Init(uint32_t size_bytes, GLbitfield flags, void* data) {
+void Buffer::Init(uint32_t size_bytes, GLbitfield flags, const void* data) {
+  if (id_) {
+    glDeleteBuffers(1, &id_);
+  }
   glCreateBuffers(1, &id_);
   glNamedBufferStorage(id_, size_bytes, data, flags);
 }

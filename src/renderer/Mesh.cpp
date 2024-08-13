@@ -3,20 +3,8 @@
 #include "renderer/Renderer.hpp"
 #include "renderer/Vertex.hpp"
 
-Mesh::Mesh(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices) {
-  Allocate(vertices, indices);
-}
-
 Mesh::Mesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
   Allocate(vertices, indices);
-}
-
-void Mesh::Allocate(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices) {
-  EASSERT_MSG(!IsAllocated(), "Cannot be allocated already");
-  handle_ = Renderer::Get().AllocateMesh(vertices, indices);
-  vertex_count_ = vertices.size();
-  index_count_ = indices.size();
-  type_ = Type::Chunk;
 }
 
 void Mesh::Allocate(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
@@ -24,16 +12,11 @@ void Mesh::Allocate(std::vector<Vertex>& vertices, std::vector<uint32_t>& indice
   handle_ = Renderer::Get().AllocateMesh(vertices, indices);
   vertex_count_ = vertices.size();
   index_count_ = indices.size();
-  type_ = Type::Regular;
 }
 
 Mesh::~Mesh() {
   if (handle_) {
-    if (type_ == Type::Regular) {
-      Renderer::Get().FreeRegMesh(handle_);
-    } else {
-      Renderer::Get().FreeChunkMesh(handle_);
-    }
+    Renderer::Get().FreeRegMesh(handle_);
   }
   handle_ = 0;
 }
@@ -46,7 +29,6 @@ Mesh& Mesh::operator=(Mesh&& other) noexcept {
   if (&other == this) return *this;
   this->~Mesh();
   handle_ = std::exchange(other.handle_, 0);
-  type_ = other.type_;
   return *this;
 }
 uint32_t Mesh::Handle() const {
@@ -58,11 +40,7 @@ void Mesh::Free() {
   // TODO: maybe allow double free?
   EASSERT_MSG(handle_, "Don't explicitly free a non allocated mesh");
   if (handle_) {
-    if (type_ == Type::Regular) {
-      Renderer::Get().FreeRegMesh(handle_);
-    } else {
-      Renderer::Get().FreeChunkMesh(handle_);
-    }
+    Renderer::Get().FreeRegMesh(handle_);
   }
   handle_ = 0;
 }
