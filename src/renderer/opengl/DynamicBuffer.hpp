@@ -13,8 +13,9 @@ class DynamicBuffer {
     }
   }
 
-  void Init(uint32_t size_bytes, uint32_t alignment) {
+  void Init(uint32_t size_bytes, uint32_t alignment, size_t max_size = 100'000'000) {
     ZoneScoped;
+    max_size_ = max_size;
     alignment_ = alignment;
     // align the size
     size_bytes += (alignment_ - (size_bytes % alignment_)) % alignment_;
@@ -146,6 +147,7 @@ class DynamicBuffer {
   uint32_t alignment_{0};
   uint64_t next_handle_{1};
   uint32_t num_active_allocs_{0};
+  size_t max_size_;
 
   std::vector<Allocation<UserT>> allocs_;
   using Iterator = decltype(allocs_.begin());

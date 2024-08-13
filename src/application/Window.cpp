@@ -364,3 +364,5 @@ float Window::GetAspectRatio() const {
   auto dims = GetWindowSize();
   return static_cast<float>(dims.x) / static_cast<float>(dims.y);
 }
+
+void Window::SetTitle(std::string_view title) { SDL_SetWindowTitle(window_, title.data()); }

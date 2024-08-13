@@ -75,7 +75,7 @@ void Renderer::Init() {
   static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
   static_chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
-  static_chunk_ebo_.Init(sizeof(uint32_t) * 80'000'000, sizeof(uint32_t));
+  static_chunk_ebo_.Init(sizeof(uint32_t) * 100'000'000, sizeof(uint32_t));
   static_chunk_vao_.AttachVertexBuffer(static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   static_chunk_vao_.AttachElementBuffer(static_chunk_ebo_.Id());
   // static_chunk_uniform_ssbo_.Init(sizeof(StaticChunkDrawCmdUniform) * MaxChunkDrawCmds,
@@ -87,7 +87,7 @@ void Renderer::Init() {
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'0, sizeof(ChunkVertex));
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 80, sizeof(ChunkVertex), sizeof(ChunkVertex) * 100'000'000);
   chunk_ebo_.Init(sizeof(uint32_t) * 80'000'0, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());

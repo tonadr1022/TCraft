@@ -21,6 +21,7 @@ class Window {
   void EndRenderFrame(bool imgui_enabled) const;
   void PollEvents();
   void SetMouseGrab(bool state);
+  void SetTitle(std::string_view title);
   static void DisableImGuiInputs();
   static void EnableImGuiInputs();
   static std::string GetEventTypeString(Uint32 eventType);
