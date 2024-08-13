@@ -20,7 +20,9 @@ void WorldManager::CreateWorld(const WorldCreateParams& params) {
   // TODO: either better id or get rid of it
   nlohmann::json level_data = {{"name", params.name}, {"id", rand()}, {"seed", params.seed}};
   util::json::WriteJson(level_data, level_path);
-  nlohmann::json settings = {{"player_position", std::array<float, 3>{0, 0, 0}}};
+  nlohmann::json settings = {{"camera", {{"pitch", 0.0f}, {"yaw", 0.0f}}},
+                             {"player_position", std::array<float, 3>{0.0f, 0.0f, 0.0f}}};
+
   util::json::WriteJson(settings, world_path / "data.json");
 }
 

@@ -16,7 +16,7 @@
 
 class BlockDB;
 
-using ChunkMap = std::unordered_map<glm::ivec3, Chunk>;
+using ChunkMap = std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>>;
 
 struct ChunkStateData {
   std::vector<ChunkState> data;

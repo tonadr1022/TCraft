@@ -9,9 +9,10 @@ constexpr const int MeshChunkArea = MeshChunkLength * MeshChunkLength;
 constexpr const int MeshChunkVolume = MeshChunkArea * MeshChunkLength;
 using BlockType = uint16_t;
 class ChunkData;
+class Chunk;
 
 using BlockTypeArray = std::array<BlockType, ChunkVolume>;
-using ChunkNeighborArray = std::array<ChunkData*, 27>;
+using ChunkNeighborArray = std::array<std::shared_ptr<Chunk>, 27>;
 
 enum class ChunkState { None, TerrainQueued, TerrainFinished, MeshQueued, MeshFinished };
 
