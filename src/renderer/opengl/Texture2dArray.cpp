@@ -105,6 +105,10 @@ Texture2dArray::Texture2dArray(const std::string& param_path,
       .filter_mode_min = filter_mode_min,
       .filter_mode_max = filter_mode_max,
   });
+  // TODO: raii for image data?
+  for (auto* p : all_pixels_data) {
+    util::FreeImage(p);
+  }
 }
 
 bool Texture2dArray::IsValid() const { return id_ != 0; }

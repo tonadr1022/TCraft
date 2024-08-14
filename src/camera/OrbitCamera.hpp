@@ -19,7 +19,7 @@ class OrbitCamera : public Camera {
   void LookAt(const glm::vec3& pos) override;
 
  private:
-  glm::vec3 target_;
+  glm::vec3 target_{0, 0, 0};
   glm::vec3 up_;
   glm::vec3 right_;
   glm::vec3 pos_;

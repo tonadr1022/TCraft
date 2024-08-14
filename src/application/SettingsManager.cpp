@@ -29,11 +29,12 @@ void SettingsManager::Shutdown() {
 
 void SettingsManager::Load(const std::string& path) {
   settings_json_ = util::LoadJsonFile(path);
+  if (!settings_json_.is_object()) return;
 
   // Main settings
   auto& main = settings_json_["main"];
-  mouse_sensitivity = main["mouse_sensitivity"].get<float>();
-  fps_cam_fov_deg = main["fps_cam_fov_deg"].get<float>();
+  mouse_sensitivity = main.value("mouse_sensitivity", 1.0f);
+  fps_cam_fov_deg = main.value("fps_cam_fov_deg", 75.f);
   orbit_mouse_sensitivity = main.value("orbit_mouse_sensitivity", 1.f);
 }
 
@@ -42,7 +43,6 @@ void SettingsManager::Shutdown(const std::string& path) {
   // save main settings
   settings_json_["main"] = {{"mouse_sensitivity", mouse_sensitivity},
                             {"fps_cam_fov_deg", fps_cam_fov_deg},
-                            {"load_distance", load_distance},
                             {"orbit_mouse_sensitivity", orbit_mouse_sensitivity}};
   util::json::WriteJson(settings_json_, path);
 }

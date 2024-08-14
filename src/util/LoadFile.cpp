@@ -34,8 +34,10 @@ void LoadImage(Image& image, std::string_view path, bool flip) {
     if (!image.pixels) {
       spdlog::error("Failed to load image at path {}", path);
     }
+    // stbi_image_free(image.pixels);
   }
 }
+void FreeImage(void* pixels) { stbi_image_free(pixels); }
 
 nlohmann::json LoadJsonFile(const std::string& path) {
   std::ifstream file_stream(path);

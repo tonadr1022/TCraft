@@ -10,6 +10,7 @@
 #include "gameplay/GamePlayer.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
+#include "renderer/Constants.hpp"
 #include "renderer/Renderer.hpp"
 #include "renderer/opengl/Texture2d.hpp"
 #include "resource/Image.hpp"
@@ -82,6 +83,9 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
                                              .texture_wrap = GL_REPEAT});
 
     block_db_.LoadMeshData(tex_name_to_idx);
+    for (auto* const p : all_texture_pixel_data) {
+      util::FreeImage(p);
+    }
   }
 }
 
@@ -89,13 +93,16 @@ void WorldScene::Update(double dt) {
   ZoneScoped;
   chunk_manager_->SetCenter(player_.Position());
   chunk_manager_->Update(dt);
-  player_.Update(dt);
+  const auto& state = chunk_manager_->GetStateStats();
+  if (state.loaded_chunks >= state.max_loaded_chunks) loaded_ = true;
+  if (loaded_) player_.Update(dt);
 }
 
 bool WorldScene::OnEvent(const SDL_Event& event) {
   if (player_.OnEvent(event)) {
     return true;
   }
+  if (!loaded_) return false;
   switch (event.type) {
     case SDL_KEYDOWN:
       if (event.key.keysym.sym == SDLK_p && event.key.keysym.mod & KMOD_ALT) {
@@ -121,24 +128,27 @@ void WorldScene::Render() {
                          .view_pos = player_.Position()};
 
   auto win_center = window_.GetWindowCenter();
-  Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
-  {
-    ZoneScopedN("Submit chunk draw commands");
-    // TODO: only send to renderer the chunks ready to be rendered instead of the whole map
-    // for (const auto& it : chunk_manager_->GetVisibleChunks()) {
-    //   if (!it.second.mesh_handle == 0) continue;
-    //   glm::vec3 pos = it.first * ChunkLength;
-    //   Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, pos),
-    //                                          it.second.mesh.Handle());
-    // }
+
+  if (loaded_) {
+    Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
+    auto ray_cast_pos = player_.GetRayCastBlockPos();
+    if (ray_cast_pos != glm::NullIVec3) {
+      Renderer::Get().DrawBlockOutline(
+          ray_cast_pos, player_.GetCamera().GetView(),
+          player_.GetCamera().GetProjection(Window::Get().GetAspectRatio()));
+    }
+  } else {
+    // draw loading bar
+    const auto& state = chunk_manager_->GetStateStats();
+    float loading_percentage =
+        static_cast<float>(state.loaded_chunks) / static_cast<float>(state.max_loaded_chunks);
+    for (int i = 0; i < 100; i++) {
+      auto color = static_cast<float>(i) / 100.f >= loading_percentage ? color::Red : color::Green;
+      Renderer::Get().DrawQuad(color, glm::ivec2{win_center.x + i * 3, win_center.y + 275},
+                               {10, 10});
+    }
   }
 
-  auto ray_cast_pos = player_.GetRayCastBlockPos();
-  if (ray_cast_pos != glm::NullIVec3) {
-    Renderer::Get().DrawBlockOutline(
-        ray_cast_pos, player_.GetCamera().GetView(),
-        player_.GetCamera().GetProjection(Window::Get().GetAspectRatio()));
-  }
   {
     ZoneScopedN("Chunk state render");
     glm::ivec2 dims;
@@ -159,8 +169,12 @@ void WorldScene::Render() {
     // glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, ChunkMapTexWidth,
     //                     ChunkMapTexHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
     // Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {500, 500}, {100, 100});
-    Renderer::Get().DrawQuad(chunk_state_tex_->Handle(), {250, 250}, {500, 500});
+    glm::ivec2 quad_dims = loaded_ ? glm::ivec2{250, 250} : glm::ivec2{500, 500};
+    glm::ivec2 quad_pos = loaded_ ? quad_dims / 2 : win_center;
+    Renderer::Get().DrawQuad(chunk_state_tex_->Handle(), quad_pos, quad_dims);
   }
+
+  chunk_render_params_.render_chunks_ = loaded_;
   Renderer::Get().RenderWorld(chunk_render_params_, render_info);
 }
 

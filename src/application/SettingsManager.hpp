@@ -19,10 +19,9 @@ class SettingsManager {
   [[nodiscard]] json LoadSetting(std::string_view name) const;
 
   // main settings in the settings object
-  float mouse_sensitivity;
-  float fps_cam_fov_deg;
-  float orbit_mouse_sensitivity;
-  int load_distance;
+  float mouse_sensitivity{1};
+  float fps_cam_fov_deg{75};
+  float orbit_mouse_sensitivity{1};
   const uint32_t core_count_;
   ~SettingsManager() = default;
 

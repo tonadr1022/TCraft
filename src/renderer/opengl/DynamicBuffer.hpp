@@ -18,7 +18,7 @@ class DynamicBuffer {
     }
   }
 
-  void Init(uint32_t size_bytes, uint32_t alignment, size_t max_size = 100'000'000) {
+  void Init(uint32_t size_bytes, uint32_t alignment, size_t max_size = UINT32_MAX) {
     ZoneScoped;
     max_size_ = max_size;
     alignment_ = alignment;

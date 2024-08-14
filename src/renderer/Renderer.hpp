@@ -143,12 +143,11 @@ class Renderer {
     glm::vec4 max;
   };
 
-  struct ChunkDrawInfo {
+  // Needs to be 16 byte aligned for the GPU
+  struct alignas(16) ChunkDrawInfo {
     AABB aabb;
-    uint32_t _pad;
     uint32_t first_index;
     uint32_t count;
-    uint32_t _pad2;
   };
   void RenderStaticChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
 
@@ -161,13 +160,13 @@ class Renderer {
   Buffer static_chunk_draw_indirect_buffer_;
   Buffer chunk_draw_indirect_buffer_;
   Buffer chunk_uniform_ssbo_;
-  std::unordered_map<uint32_t, ChunkMeshAlloc> static_chunk_allocs_;
+  std::unordered_map<uint32_t, MeshAlloc> static_chunk_allocs_;
   std::unordered_map<uint32_t, MeshAlloc> chunk_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> chunk_dei_cmds_;
   std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
   std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
-  bool static_chunk_alloc_change_this_frame_{true};
+  bool static_chunk_buffer_dirty_{true};
 
   VertexArray reg_mesh_vao_;
   DynamicBuffer<> reg_mesh_vbo_;

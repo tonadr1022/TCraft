@@ -60,6 +60,7 @@ Texture2D::Texture2D(const Texture2DCreateParams& params) {
                       GL_UNSIGNED_BYTE,  // type
                       image.pixels       // data
   );
+  util::FreeImage(image.pixels);
 
   if (params.generate_mipmaps) glGenerateTextureMipmap(id_);
 

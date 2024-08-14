@@ -74,6 +74,9 @@ void BlockEditorScene::Reload() {
                                              .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
                                              .filter_mode_max = GL_NEAREST,
                                              .texture_wrap = GL_REPEAT});
+    for (auto* p : all_texture_pixel_data) {
+      util::FreeImage(p);
+    }
   }
   // block_db_.Init();
   block_db_.LoadMeshData(tex_name_to_idx_);

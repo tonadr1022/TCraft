@@ -78,7 +78,7 @@ void Renderer::Init() {
   static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
   static_chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
-  static_chunk_ebo_.Init(sizeof(uint32_t) * 100'000'000, sizeof(uint32_t));
+  static_chunk_ebo_.Init(UINT32_MAX / 2, sizeof(uint32_t));
   static_chunk_vao_.AttachVertexBuffer(static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   static_chunk_vao_.AttachElementBuffer(static_chunk_ebo_.Id());
   // static_chunk_uniform_ssbo_.Init(sizeof(StaticChunkDrawCmdUniform) * MaxChunkDrawCmds,
@@ -210,8 +210,8 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
   // only render if there are static chunks
   if (!static_chunk_allocs_.empty()) {
     // if an allocation change happend this frame (alloc or free), reset the buffers
-    if (static_chunk_alloc_change_this_frame_) {
-      static_chunk_alloc_change_this_frame_ = false;
+    if (static_chunk_buffer_dirty_) {
+      static_chunk_buffer_dirty_ = false;
 
       static_chunk_draw_info_buffer_.Init(
           static_chunk_vbo_.Allocs().size() * static_chunk_vbo_.AllocSize(), GL_DYNAMIC_STORAGE_BIT,
@@ -428,7 +428,7 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
               .base_vertex = static_cast<uint32_t>(chunk_vbo_offset / sizeof(ChunkVertex)),
               .base_instance = 0,
           });
-  static_chunk_alloc_change_this_frame_ = true;
+  static_chunk_buffer_dirty_ = true;
   return id;
 }
 uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
@@ -447,22 +447,18 @@ uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
   glm::ivec4 max = min + ChunkLength;
   ebo_handle = static_chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(),
                                           chunk_ebo_offset);
-
   vbo_handle = static_chunk_vbo_.Allocate(
       sizeof(ChunkVertex) * vertices.size(), vertices.data(), chunk_vbo_offset,
       {
           .aabb = {min, max},
-          ._pad = 0,
           .first_index = static_cast<uint32_t>(chunk_ebo_offset / sizeof(uint32_t)),
           .count = static_cast<uint32_t>(indices.size()),
-          ._pad2 = 0,
       });
-  static_chunk_allocs_.emplace(id, ChunkMeshAlloc{
-                                       .pos = pos,
-                                       .vbo_handle = vbo_handle,
-                                       .ebo_handle = ebo_handle,
-                                   });
-  static_chunk_alloc_change_this_frame_ = true;
+  static_chunk_allocs_.try_emplace(id, MeshAlloc{
+                                           .vbo_handle = vbo_handle,
+                                           .ebo_handle = ebo_handle,
+                                       });
+  static_chunk_buffer_dirty_ = true;
   return id;
 }
 
@@ -532,7 +528,7 @@ void Renderer::FreeChunkMesh(uint32_t handle) {
 
 void Renderer::FreeStaticChunkMesh(uint32_t handle) {
   if (handle == 0) return;
-  static_chunk_alloc_change_this_frame_ = true;
+  static_chunk_buffer_dirty_ = true;
   auto it = static_chunk_allocs_.find(handle);
   if (it == static_chunk_allocs_.end()) {
     spdlog::error("FreeStaticChunkMesh: handle not found: {}", handle);

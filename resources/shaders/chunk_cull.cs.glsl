@@ -27,10 +27,8 @@ struct DrawInfo {
     uint vertex_offset;
     uint vertex_size;
     AABB aabb;
-    uint _pad2;
     uint first_index; // ebo
     uint count; // ebo
-    uint _pad3;
 };
 
 struct UniformData {

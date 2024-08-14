@@ -43,20 +43,29 @@ class ChunkManager {
                                 float opacity);
   void UnloadChunksOutOfRange();
 
+  struct StateStats {
+    uint32_t max_loaded_chunks{};
+    uint32_t max_meshed_chunks{};
+    uint32_t loaded_chunks{};
+    uint32_t meshed_chunks{};
+  };
+
+  const StateStats& GetStateStats() const { return state_stats_; }
+
  private:
   BlockDB& block_db_;
   ChunkMap chunk_map_;
   Terrain terrain_;
-  int seed_;
-  int load_distance_;
-  glm::ivec3 center_;
-  glm::ivec3 prev_center_;
+  int seed_{};
+  int load_distance_{};
+  glm::ivec3 center_{};
+  glm::ivec3 prev_center_{};
   std::mutex mutex_;
-  std::vector<glm::ivec3> chunk_mesh_queue_;
+  std::queue<glm::ivec3> chunk_mesh_queue_;
   std::unordered_set<glm::ivec3> chunk_mesh_queue_immediate_;
   std::deque<ChunkMeshTask> chunk_mesh_finished_queue_;
 
-  std::vector<glm::ivec3> chunk_terrain_queue_;
+  std::queue<glm::ivec3> chunk_terrain_queue_;
   std::deque<std::pair<glm::ivec3, ChunkData>> finished_chunk_terrain_queue_;
 
   // uint32_t num_mesh_creations_{0};
@@ -70,6 +79,7 @@ class ChunkManager {
   bool mesh_greedy_{true};
 
   float frequency_;
+  StateStats state_stats_;
 
   BS::thread_pool thread_pool_;
 };
