@@ -194,11 +194,11 @@ void ChunkManager::Update(double /*dt*/) {
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, true);
       thread_pool_.detach_task([this, a, pos] {
-        ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
+        ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData(), ChunkLength};
         std::vector<ChunkVertex> vertices;
         std::vector<uint32_t> indices;
         if (mesh_greedy_)
-          mesher.GenerateGreedy2(a, vertices, indices);
+          mesher.GenerateGreedy(a, vertices, indices);
         else
           mesher.GenerateSmart(a, vertices, indices);
         {
@@ -217,7 +217,7 @@ void ChunkManager::Update(double /*dt*/) {
     ZoneScopedN("Process finished mesh chunks");
     Timer timer;
     while (!chunk_mesh_finished_queue_.empty()) {
-      if (timer.ElapsedMS() > 3) break;
+      if (timer.ElapsedMS() > 5) break;
       auto& task = chunk_mesh_finished_queue_.front();
       auto it = chunk_map_.find(task.pos);
       if (it != chunk_map_.end()) {
@@ -249,11 +249,11 @@ void ChunkManager::Update(double /*dt*/) {
 
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, true);
-      ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
+      ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData(), ChunkLength};
       std::vector<ChunkVertex> vertices;
       std::vector<uint32_t> indices;
       if (mesh_greedy_)
-        mesher.GenerateGreedy2(a, vertices, indices);
+        mesher.GenerateGreedy(a, vertices, indices);
       else
         mesher.GenerateSmart(a, vertices, indices);
       if (chunk->mesh_state == Chunk::State::Finished)
@@ -356,12 +356,6 @@ void ChunkManager::OnImGui() {
       ImGui::Text("Chunks Meshed: %i, Max: %i", state_stats_.meshed_chunks,
                   state_stats_.max_meshed_chunks);
     }
-    // if (num_mesh_creations_ > 0) {
-    //   ImGui::Text("Avg vertices: %i", total_vertex_count_ / num_mesh_creations_);
-    //   ImGui::Text("Avg indices: %i", total_index_count_ / num_mesh_creations_);
-    //   ImGui::Text("Total vertices: %i", total_vertex_count_);
-    //   ImGui::Text("Total indices: %i", total_index_count_);
-    // }
   }
 }
 
