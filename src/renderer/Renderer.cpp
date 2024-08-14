@@ -73,7 +73,6 @@ void Renderer::Init() {
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
 
   uniform_ubo_.Init(sizeof(UBOUniforms), GL_DYNAMIC_STORAGE_BIT);
-  frustum_ubo_.Init(sizeof(FrustumData), GL_DYNAMIC_STORAGE_BIT, nullptr);
 
   static_chunk_vao_.Init();
   static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
@@ -84,9 +83,9 @@ void Renderer::Init() {
   static_chunk_vao_.AttachElementBuffer(static_chunk_ebo_.Id());
   // static_chunk_uniform_ssbo_.Init(sizeof(StaticChunkDrawCmdUniform) * MaxChunkDrawCmds,
   //                                 GL_DYNAMIC_STORAGE_BIT);
-  chunk_draw_indirect_buffer_.Init(
-      sizeof(DrawElementsIndirectCommand) * MaxChunkDrawCmds / 2,
-      GL_MAP_PERSISTENT_BIT | GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT | GL_DYNAMIC_STORAGE_BIT);
+  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxChunkDrawCmds / 2,
+                                   GL_DYNAMIC_STORAGE_BIT);
+  static_chunk_draw_count_buffer_.Init(sizeof(GLuint), 0, nullptr);
 
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
@@ -133,7 +132,6 @@ void Renderer::Init() {
   cube_ebo_.Init(sizeof(cube_indices), 0, cube_indices.data());
   cube_vao_.AttachVertexBuffer(cube_vbo_.Id(), 0, 0, sizeof(Vertex));
   cube_vao_.AttachElementBuffer(cube_ebo_.Id());
-  static_chunk_draw_count_buffer_.Init(sizeof(GLuint), GL_DYNAMIC_STORAGE_BIT, nullptr);
 
   tex_materials_buffer_.Init(sizeof(TextureMaterialData) * 1000, GL_DYNAMIC_STORAGE_BIT);
 }
@@ -238,30 +236,23 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     cull_shader->Bind();
     cull_shader->SetVec3("u_view_pos", render_info.view_pos);
     cull_shader->SetBool("u_cull_frustum", cull_frustum_);
+    // A UBO could be used, but this is more straightforward
     Frustum frustum(render_info.vp_matrix);
-    // const auto& frustum_data = frustum.GetData();
-    frustum_ubo_.SubDataStart(sizeof(float) * 24, &frustum.GetData());
-    frustum_ubo_.BindBase(GL_UNIFORM_BUFFER, 4);
-    // for (int i = 0; i < 6; i++) {
-    //   const auto& plane = frustum_data[i];
-    //   // spdlog::info("{} {} {} {}", plane[0], plane[1], plane[2], plane[3]);
-    //   // std::string str = "u_viewfrustum[" + std::to_string(i) + "][0]";
-    //   // spdlog::info("{}", str);
-    //   // for (int j = 0; j < 4; j++) {
-    //   //   cull_shader->SetFloat(
-    //   //       "u_viewfrustum.data_[" + std::to_string(i) + "][" + std::to_string(j) + "]",
-    //   //       frustum_data[i][j]);
-    //   // }
-    //   cull_shader->SetVec4(
-    //       "u_viewfrustum.data_[" + std::to_string(i) + "][0]",
-    //       glm::vec4{plane[Frustum::X], plane[Frustum::Y], plane[Frustum::Z],
-    //       plane[Frustum::Dist]});
-    // }
+    const auto& frustum_data = frustum.GetData();
+    cull_shader->SetVec4("plane0", frustum_data[0]);
+    cull_shader->SetVec4("plane1", frustum_data[1]);
+    cull_shader->SetVec4("plane2", frustum_data[2]);
+    cull_shader->SetVec4("plane3", frustum_data[3]);
+    cull_shader->SetVec4("plane4", frustum_data[4]);
+    cull_shader->SetVec4("plane5", frustum_data[5]);
+
     static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     static_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
     static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
     static_chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
+    // Round work groups up by one, and it's a one dimensional work load
     glDispatchCompute((static_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
+    // Wait for data to be written to
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     // draw using the uniforms and indirect buffers
@@ -272,8 +263,11 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     static_chunk_vao_.Bind();
     static_chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
     static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
-                                static_chunk_vbo_.NumActiveAllocs(), 0);
+    static_chunk_draw_count_buffer_.Bind(GL_PARAMETER_BUFFER);
+    // https://registry.khronos.org/OpenGL/extensions/ARB/ARB_indirect_parameters.txt
+    glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0,
+                                     static_chunk_vbo_.NumActiveAllocs(),
+                                     sizeof(DrawElementsIndirectCommand));
   }
 }
 

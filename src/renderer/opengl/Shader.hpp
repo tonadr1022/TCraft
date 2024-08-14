@@ -6,6 +6,7 @@
 
 // Lightweight object containing id and reference to uniform locations stored in the manager.
 // This is a wrapper to access the shader and set uniforms
+using Float4Arr = float[4];
 class Shader {
  public:
   void Bind() const;
@@ -19,6 +20,7 @@ class Shader {
   void SetVec3(const std::string& name, const glm::vec3& vec);
   void SetVec2(const std::string& name, const glm::vec2& vec);
   void SetVec4(const std::string& name, const glm::vec4& vec);
+  void SetVec4(const std::string& name, const Float4Arr& vec);
   void SetMat3(const std::string& name, const glm::mat3& mat, bool transpose = false);
   void SetBool(const std::string& name, bool value);
 

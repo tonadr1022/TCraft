@@ -131,7 +131,6 @@ class Renderer {
   };
   Buffer uniform_ubo_;
 
-  Buffer frustum_ubo_;
   bool cull_frustum_{true};
 
   VertexArray static_chunk_vao_;

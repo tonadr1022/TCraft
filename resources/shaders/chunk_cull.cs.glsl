@@ -13,7 +13,7 @@ struct DrawElementsCommand
 };
 
 struct Frustum {
-    vec4 data_[6];
+    float data_[6][4];
 };
 
 // padding for GPU
@@ -49,33 +49,38 @@ layout(std430, binding = 2) writeonly restrict buffer dib_4 {
     UniformData out_uniforms[];
 };
 
+// This can be used as a parameter buffer in multiDrawElementsIndirectCount()
+// https://registry.khronos.org/OpenGL/extensions/ARB/ARB_indirect_parameters.txt
 layout(std430, binding = 3) coherent restrict buffer parameter_buffer_4 {
     uint next_idx;
 };
 
-layout(std140, binding = 4) uniform frustum_block {
-    Frustum frustum;
-};
+uniform vec4 plane0;
+uniform vec4 plane1;
+uniform vec4 plane2;
+uniform vec4 plane3;
+uniform vec4 plane4;
+uniform vec4 plane5;
 
-// uniform Frustum u_viewfrustum;
 uniform float u_min_cull_dist = 1;
 uniform float u_max_cull_dist = 99999999;
 uniform vec3 u_view_pos;
 uniform bool u_cull_frustum = true;
+uniform uint u_vertex_size = 8;
 
 bool CullDistance(float dist, float minDist, float maxDist);
 float CalcDistance(AABB box, vec3 pos);
-int CullFrustum(AABB box, Frustum frustum);
+int CullFrustum(AABB box);
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 void main() {
     if (gl_GlobalInvocationID.x >= in_draw_info.length()) return;
     DrawInfo draw_info = in_draw_info[gl_GlobalInvocationID.x];
     // Draw if there are vertices to draw and it's in the view frustum
-    // bool should_draw = draw_info.handle != uvec2(0) && CullFrustum(draw_info.aabb, u_viewfrustum) != 0;
     bool should_draw = false;
+    uint frustum_val = 0;
     if (draw_info.handle != uvec2(0)) {
-        uint frustum_val = CullFrustum(draw_info.aabb, frustum);
+        frustum_val = CullFrustum(draw_info.aabb);
         if (
             CullDistance(CalcDistance(draw_info.aabb, u_view_pos), u_min_cull_dist, u_max_cull_dist) &&
                 (!u_cull_frustum || frustum_val != 0)
@@ -83,21 +88,19 @@ void main() {
             should_draw = true;
         }
     }
-    if (draw_info.handle != uvec2(0) && should_draw) {
-        uint instance_count = 1;
-
-        //if (CullFrustum(draw_info.aabb, u_viewfrustum) == 0) return;
+    if (should_draw) {
         DrawElementsCommand cmd;
-        cmd.count = draw_info.count;
-        cmd.instance_count = instance_count;
-        cmd.first_index = draw_info.first_index;
-        cmd.base_vertex = draw_info.vertex_offset / 8;
+        cmd.count = draw_info.count; // indices count
+        cmd.instance_count = 1; // 1 since not instancing, would be zero if not drawn, but 0 instance count commands are skipped
+        cmd.first_index = draw_info.first_index; // offset into the element buffer object for indices
+        cmd.base_vertex = draw_info.vertex_offset / u_vertex_size; // index of first vertex
+        // atomic index shared across all threads
         uint insert = atomicAdd(next_idx, 1);
-        // size of vertex is 8 bytes
+        // TODO: figure out why this doesn't seem to matter?
         cmd.base_instance = 0;
-        // cmd.base_instance = draw_info.vertex_offset / 8;
         UniformData d;
-        d.pos = vec4(draw_info.aabb.min.x, draw_info.aabb.min.y, draw_info.aabb.min.z, 0);
+        // Adding frustum val for debug
+        d.pos = vec4(draw_info.aabb.min.x, draw_info.aabb.min.y, draw_info.aabb.min.z, frustum_val);
         out_uniforms[insert] = d;
         out_draw_cmds[insert] = cmd;
     }
@@ -109,11 +112,6 @@ bool CullDistance(float dist, float minDist, float maxDist) {
 
 float CalcDistance(AABB box, vec3 pos) {
     return distance(pos, ((box.min.xyz + box.max.xyz) / 2));
-}
-
-vec4 GetPlane(int plane, Frustum frustum) {
-    return vec4(frustum.data_[plane][0], frustum.data_[plane][1],
-        frustum.data_[plane][2], frustum.data_[plane][3]);
 }
 
 int GetVisibility(vec4 clip, AABB box) {
@@ -146,29 +144,28 @@ int GetVisibility(vec4 clip, AABB box) {
     return PartiallyVisible;
 }
 
-int CullFrustum(AABB box, Frustum frustum) {
-    // Check the box against every plane other than near plane
-    int v0 = GetVisibility(GetPlane(0, frustum), box);
+int CullFrustum(AABB box) {
+    int v0 = GetVisibility(plane0, box);
     if (v0 == 0) {
         return Invisible;
     }
-    int v1 = GetVisibility(GetPlane(1, frustum), box);
+    int v1 = GetVisibility(plane1, box);
     if (v1 == 0) {
         return Invisible;
     }
-    int v2 = GetVisibility(GetPlane(2, frustum), box);
+    int v2 = GetVisibility(plane2, box);
     if (v2 == 0) {
         return Invisible;
     }
-    int v3 = GetVisibility(GetPlane(3, frustum), box);
+    int v3 = GetVisibility(plane3, box);
     if (v3 == 0) {
         return Invisible;
     }
-    int v4 = GetVisibility(GetPlane(4, frustum), box);
+    int v4 = GetVisibility(plane4, box);
     if (v4 == 0) {
         return Invisible;
     }
-    int v5 = GetVisibility(GetPlane(5, frustum), box);
+    int v5 = GetVisibility(plane5, box);
     if (v5 == 0) {
         return Invisible;
     }

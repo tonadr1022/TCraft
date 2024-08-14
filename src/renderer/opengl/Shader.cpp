@@ -46,6 +46,11 @@ void Shader::SetVec2(const std::string& name, const glm::vec2& vec) {
   glUniform2fv(uniform_locations_[name], 1, glm::value_ptr(vec));
 }
 
+void Shader::SetVec4(const std::string& name, const Float4Arr& vec) {
+  EASSERT_MSG(uniform_locations_.contains(name), "Uniform name not found");
+  glUniform4fv(uniform_locations_[name], 1, vec);
+}
+
 void Shader::SetVec4(const std::string& name, const glm::vec4& vec) {
   EASSERT_MSG(uniform_locations_.contains(name), "Uniform name not found");
   glUniform4fv(uniform_locations_[name], 4, glm::value_ptr(vec));
