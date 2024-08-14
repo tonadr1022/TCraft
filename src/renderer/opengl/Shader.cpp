@@ -48,7 +48,7 @@ void Shader::SetVec2(const std::string& name, const glm::vec2& vec) {
 
 void Shader::SetVec4(const std::string& name, const glm::vec4& vec) {
   EASSERT_MSG(uniform_locations_.contains(name), "Uniform name not found");
-  glUniform4fv(uniform_locations_[name], 1, glm::value_ptr(vec));
+  glUniform4fv(uniform_locations_[name], 4, glm::value_ptr(vec));
 }
 
 void Shader::SetMat3(const std::string& name, const glm::mat3& mat, bool transpose) {

@@ -1,5 +1,8 @@
 #version 460 core
 
+#define FullyVisible    2
+#define PartiallyVisible 1
+#define Invisible       0
 struct DrawElementsCommand
 {
     uint count; // num indices in draw call
@@ -10,7 +13,7 @@ struct DrawElementsCommand
 };
 
 struct Frustum {
-    float data_[6][4];
+    vec4 data_[6];
 };
 
 // padding for GPU
@@ -50,21 +53,43 @@ layout(std430, binding = 3) coherent restrict buffer parameter_buffer_4 {
     uint next_idx;
 };
 
-layout(location = 0) uniform Frustum u_viewfrustum;
+layout(std140, binding = 4) uniform frustum_block {
+    Frustum frustum;
+};
+
+// uniform Frustum u_viewfrustum;
+uniform float u_min_cull_dist = 1;
+uniform float u_max_cull_dist = 99999999;
+uniform vec3 u_view_pos;
+uniform bool u_cull_frustum = true;
 
 bool CullDistance(float dist, float minDist, float maxDist);
-int CullFrustum(in AABB box, in Frustum frustum);
+float CalcDistance(AABB box, vec3 pos);
+int CullFrustum(AABB box, Frustum frustum);
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 void main() {
     if (gl_GlobalInvocationID.x >= in_draw_info.length()) return;
     DrawInfo draw_info = in_draw_info[gl_GlobalInvocationID.x];
     // Draw if there are vertices to draw and it's in the view frustum
-    bool should_draw = draw_info.handle != uvec2(0) && CullFrustum(draw_info.aabb, u_viewfrustum) != 0;
+    // bool should_draw = draw_info.handle != uvec2(0) && CullFrustum(draw_info.aabb, u_viewfrustum) != 0;
+    bool should_draw = false;
     if (draw_info.handle != uvec2(0)) {
+        uint frustum_val = CullFrustum(draw_info.aabb, frustum);
+        if (
+            CullDistance(CalcDistance(draw_info.aabb, u_view_pos), u_min_cull_dist, u_max_cull_dist) &&
+                (!u_cull_frustum || frustum_val != 0)
+        ) {
+            should_draw = true;
+        }
+    }
+    if (draw_info.handle != uvec2(0) && should_draw) {
+        uint instance_count = 1;
+
+        //if (CullFrustum(draw_info.aabb, u_viewfrustum) == 0) return;
         DrawElementsCommand cmd;
         cmd.count = draw_info.count;
-        cmd.instance_count = 1;
+        cmd.instance_count = instance_count;
         cmd.first_index = draw_info.first_index;
         cmd.base_vertex = draw_info.vertex_offset / 8;
         uint insert = atomicAdd(next_idx, 1);
@@ -78,18 +103,28 @@ void main() {
     }
 }
 
-vec4 GetPlane(int plane, in Frustum frustum) {
+bool CullDistance(float dist, float minDist, float maxDist) {
+    return dist >= minDist && dist <= maxDist;
+}
+
+float CalcDistance(AABB box, vec3 pos) {
+    return distance(pos, ((box.min.xyz + box.max.xyz) / 2));
+}
+
+vec4 GetPlane(int plane, Frustum frustum) {
     return vec4(frustum.data_[plane][0], frustum.data_[plane][1],
         frustum.data_[plane][2], frustum.data_[plane][3]);
 }
 
-int GetVisibility(in vec4 clip, in AABB box) {
+int GetVisibility(vec4 clip, AABB box) {
+    // get the dimensions
     float x0 = box.min.x * clip.x;
     float x1 = box.max.x * clip.x;
     float y0 = box.min.y * clip.y;
     float y1 = box.max.y * clip.y;
     float z0 = box.min.z * clip.z + clip.w;
     float z1 = box.max.z * clip.z + clip.w;
+    // Get the 8 points of the aabb in clip space
     float p1 = x0 + y0 + z0;
     float p2 = x1 + y0 + z0;
     float p3 = x1 + y1 + z0;
@@ -99,40 +134,47 @@ int GetVisibility(in vec4 clip, in AABB box) {
     float p7 = x1 + y1 + z1;
     float p8 = x0 + y1 + z1;
 
+    // If all the points are outside the plane, it's invisible
     if (p1 <= 0 && p2 <= 0 && p3 <= 0 && p4 <= 0 && p5 <= 0 && p6 <= 0 && p7 <= 0 && p8 <= 0) {
-        return 0;
+        return Invisible;
     }
+    // If all the points are in the plane, it's fully visible
     if (p1 > 0 && p2 > 0 && p3 > 0 && p4 > 0 && p5 > 0 && p6 > 0 && p7 > 0 && p8 > 0) {
-        return 1;
+        return FullyVisible;
     }
     // partial vis
-    return 1;
+    return PartiallyVisible;
 }
 
-int CullFrustum(in AABB box, in Frustum frustum) {
+int CullFrustum(AABB box, Frustum frustum) {
+    // Check the box against every plane other than near plane
     int v0 = GetVisibility(GetPlane(0, frustum), box);
     if (v0 == 0) {
-        return 0;
+        return Invisible;
     }
     int v1 = GetVisibility(GetPlane(1, frustum), box);
     if (v1 == 0) {
-        return 0;
+        return Invisible;
     }
     int v2 = GetVisibility(GetPlane(2, frustum), box);
     if (v2 == 0) {
-        return 0;
+        return Invisible;
     }
     int v3 = GetVisibility(GetPlane(3, frustum), box);
     if (v3 == 0) {
-        return 0;
+        return Invisible;
     }
     int v4 = GetVisibility(GetPlane(4, frustum), box);
     if (v4 == 0) {
-        return 0;
+        return Invisible;
     }
-    if (v0 == 1 && v1 == 1 && v2 == 1 && v3 == 1 && v4 == 1) {
-        return 1;
+    int v5 = GetVisibility(GetPlane(5, frustum), box);
+    if (v5 == 0) {
+        return Invisible;
     }
-    // partial vis
-    return 1;
+
+    if (v0 == 1 && v1 == 1 && v2 == 1 && v3 == 1 && v4 == 1 && v5 == 1) {
+        return FullyVisible;
+    }
+    return PartiallyVisible;
 }

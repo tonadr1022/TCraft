@@ -133,6 +133,7 @@ void Application::OnImGui() {
   }
 
   SettingsManager::Get().OnImGui();
+  Renderer::Get().OnImGui();
   scene_manager_.GetActiveScene().OnImGui();
   ImGui::End();
 }

@@ -113,8 +113,13 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
 
 void WorldScene::Render() {
   ZoneScoped;
-  RenderInfo render_info{.vp_matrix = player_.GetCamera().GetProjection(window_.GetAspectRatio()) *
-                                      player_.GetCamera().GetView()};
+  glm::mat4 proj = player_.GetCamera().GetProjection(window_.GetAspectRatio());
+  glm::mat4 view = player_.GetCamera().GetView();
+  RenderInfo render_info{.vp_matrix = proj * view,
+                         .view_matrix = view,
+                         .proj_matrix = proj,
+                         .view_pos = player_.Position()};
+
   auto win_center = window_.GetWindowCenter();
   Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
   {

@@ -34,6 +34,11 @@ void Buffer::Bind(GLuint target) const { glBindBuffer(target, id_); }
 
 void Buffer::BindBase(GLuint target, GLuint slot) const { glBindBufferBase(target, slot, id_); }
 
+void Buffer::SubDataStart(size_t size_bytes, void* data) {
+  glNamedBufferSubData(id_, 0, size_bytes, data);
+  offset_ += size_bytes;
+}
+
 void Buffer::SubData(size_t size_bytes, void* data) {
   glNamedBufferSubData(id_, offset_, size_bytes, data);
   offset_ += size_bytes;

@@ -1,5 +1,7 @@
 #include "Renderer.hpp"
 
+#include <imgui.h>
+
 #include <cstdint>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -11,6 +13,7 @@
 #include "application/Window.hpp"
 #include "gameplay/world/ChunkDef.hpp"
 #include "pch.hpp"
+#include "renderer/Frustum.hpp"
 #include "renderer/Material.hpp"
 #include "renderer/Mesh.hpp"
 #include "renderer/Shape.hpp"
@@ -70,6 +73,7 @@ void Renderer::Init() {
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
 
   uniform_ubo_.Init(sizeof(UBOUniforms), GL_DYNAMIC_STORAGE_BIT);
+  frustum_ubo_.Init(sizeof(FrustumData), GL_DYNAMIC_STORAGE_BIT, nullptr);
 
   static_chunk_vao_.Init();
   static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
@@ -141,7 +145,7 @@ void Renderer::RenderQuads() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  // UBO to ortho
+  // change UBO to ortho
   auto window_dims = window_.GetWindowSize();
   uniform_ubo_.ResetOffset();
   UBOUniforms uniform_data;
@@ -200,11 +204,10 @@ void Renderer::RenderQuads() {
   }
   glDisable(GL_BLEND);
   glDepthFunc(GL_LESS);
-  quad_textured_uniforms_.clear();
-  quad_color_uniforms_.clear();
 }
 
-void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params, const RenderInfo&) {
+void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
+                                  const RenderInfo& render_info) {
   ZoneScoped;
   // only render if there are static chunks
   if (!static_chunk_allocs_.empty()) {
@@ -231,7 +234,29 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params, const 
                               GL_RED, GL_UNSIGNED_INT, &zero);
 
     // bind and generate indirect draw commands and uniform buffers with compute shader
-    shader_manager_.GetShader("chunk_cull")->Bind();
+    auto cull_shader = shader_manager_.GetShader("chunk_cull");
+    cull_shader->Bind();
+    cull_shader->SetVec3("u_view_pos", render_info.view_pos);
+    cull_shader->SetBool("u_cull_frustum", cull_frustum_);
+    Frustum frustum(render_info.vp_matrix);
+    // const auto& frustum_data = frustum.GetData();
+    frustum_ubo_.SubDataStart(sizeof(float) * 24, &frustum.GetData());
+    frustum_ubo_.BindBase(GL_UNIFORM_BUFFER, 4);
+    // for (int i = 0; i < 6; i++) {
+    //   const auto& plane = frustum_data[i];
+    //   // spdlog::info("{} {} {} {}", plane[0], plane[1], plane[2], plane[3]);
+    //   // std::string str = "u_viewfrustum[" + std::to_string(i) + "][0]";
+    //   // spdlog::info("{}", str);
+    //   // for (int j = 0; j < 4; j++) {
+    //   //   cull_shader->SetFloat(
+    //   //       "u_viewfrustum.data_[" + std::to_string(i) + "][" + std::to_string(j) + "]",
+    //   //       frustum_data[i][j]);
+    //   // }
+    //   cull_shader->SetVec4(
+    //       "u_viewfrustum.data_[" + std::to_string(i) + "][0]",
+    //       glm::vec4{plane[Frustum::X], plane[Frustum::Y], plane[Frustum::Z],
+    //       plane[Frustum::Dist]});
+    // }
     static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     static_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
     static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
@@ -254,12 +279,12 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params, const 
 
 void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
   ZoneScoped;
-  uniform_ubo_.ResetOffset();
-  uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
   UBOUniforms uniform_data;
   uniform_data.vp_matrix = render_info.vp_matrix;
-
+  uniform_ubo_.ResetOffset();
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
+  uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
+
   RenderStaticChunks(render_params, render_info);
 
   if (!chunk_frame_draw_cmd_uniforms_.empty()) {
@@ -501,19 +526,30 @@ void Renderer::FreeRegMesh(uint32_t handle) {
 
 void Renderer::FreeChunkMesh(uint32_t handle) {
   if (handle == 0) return;
+  auto it = chunk_allocs_.find(handle);
+  if (it == chunk_allocs_.end()) {
+    spdlog::error("FreeChunkMesh: handle not found: {}", handle);
+  }
+  chunk_vbo_.Free(it->second.vbo_handle);
+  chunk_ebo_.Free(it->second.ebo_handle);
+  chunk_dei_cmds_.erase(it->first);
+  chunk_allocs_.erase(it);
+}
+
+void Renderer::FreeStaticChunkMesh(uint32_t handle) {
+  if (handle == 0) return;
   static_chunk_alloc_change_this_frame_ = true;
   auto it = static_chunk_allocs_.find(handle);
   if (it == static_chunk_allocs_.end()) {
-    spdlog::error("FreeChunk: handle not found: {}", handle);
+    spdlog::error("FreeStaticChunkMesh: handle not found: {}", handle);
     return;
   }
   static_chunk_vbo_.Free(it->second.vbo_handle);
   static_chunk_ebo_.Free(it->second.ebo_handle);
-  chunk_dei_cmds_.erase(it->first);
   static_chunk_allocs_.erase(it);
 }
 
-void Renderer::ClearStaticData() {
+void Renderer::RemoveStaticMeshes() {
   static_textured_quad_uniforms_.clear();
   stats_.textured_quad_draw_calls = 0;
 }
@@ -526,6 +562,8 @@ void Renderer::StartFrame(const Window& window) {
     reg_mesh_frame_draw_cmd_uniforms_.clear();
     chunk_frame_draw_cmd_mesh_ids_.clear();
     chunk_frame_draw_cmd_uniforms_.clear();
+    quad_textured_uniforms_.clear();
+    quad_color_uniforms_.clear();
     stats_ = {};
   }
 
@@ -586,4 +624,10 @@ void Renderer::DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& vie
   shader->SetFloat("line_width", .01f);
   cube_vao_.Bind();
   glDrawElements(GL_LINES, CubeIndices.size(), GL_UNSIGNED_INT, nullptr);
+}
+
+void Renderer::OnImGui() {
+  ImGui::Begin("Renderer");
+  ImGui::Checkbox("Cull Frustum", &cull_frustum_);
+  ImGui::End();
 }

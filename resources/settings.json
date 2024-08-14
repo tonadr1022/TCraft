@@ -4,13 +4,13 @@
   },
   "chunk_manager": {
     "frequency": 0.008333333767950535,
-    "load_distance": 56
+    "load_distance": 16
   },
   "main": {
     "fps_cam_fov_deg": 73.00000762939453,
     "load_distance": 0,
     "mouse_sensitivity": 2.9000000953674316,
-    "orbit_mouse_sensitivity": 0.4580000042915344
+    "orbit_mouse_sensitivity": 0.7229999899864197
   },
   "renderer": {
     "wireframe_enabled": false

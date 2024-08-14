@@ -210,12 +210,12 @@ void BlockEditorScene::Render() {
       }
     }
   }
-  Renderer::Get().RenderWorld(
-      chunk_render_params_,
-      {
-          .vp_matrix = player_.GetCamera().GetProjection(window_.GetAspectRatio()) *
-                       player_.GetCamera().GetView(),
-      });
+  glm::mat4 proj = player_.GetCamera().GetProjection(window_.GetAspectRatio());
+  glm::mat4 view = player_.GetCamera().GetView();
+  Renderer::Get().RenderWorld(chunk_render_params_, {.vp_matrix = proj * view,
+                                                     .view_matrix = view,
+                                                     .proj_matrix = proj,
+                                                     .view_pos = player_.Position()});
 }
 
 void BlockEditorScene::ResetAddModelData() {

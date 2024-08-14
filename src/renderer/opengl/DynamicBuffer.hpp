@@ -2,6 +2,11 @@
 
 struct NoneT {};
 
+/*
+ * glBuffer allocator. Can allocate and free blocks. The Allocation struct contains metadata for
+ * each block, including user defined data via templating. The current primary use of templating
+ * user data is to attach data to a vertex buffer for GPU compute culling.
+ */
 template <typename UserT = NoneT>
 class DynamicBuffer {
  public:
@@ -23,11 +28,11 @@ class DynamicBuffer {
     glCreateBuffers(1, &id_);
     glNamedBufferStorage(id_, size_bytes, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
+    // create one large free block
     Allocation<UserT> empty_alloc{};
     empty_alloc.size_bytes = size_bytes;
     empty_alloc.offset = 0;
     empty_alloc.handle = 0;
-    // create one large free block
     allocs_.push_back(empty_alloc);
   }
 

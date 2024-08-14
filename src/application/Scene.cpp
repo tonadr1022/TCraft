@@ -11,7 +11,7 @@ void Scene::OnImGui() {}
 
 bool Scene::OnEvent(const SDL_Event&) { return false; }
 
-Scene::~Scene() { Renderer::Get().ClearStaticData(); }
+Scene::~Scene() { Renderer::Get().RemoveStaticMeshes(); }
 
 Scene::Scene(SceneManager& scene_manager)
     : scene_manager_(scene_manager), window_(scene_manager_.window_) {}

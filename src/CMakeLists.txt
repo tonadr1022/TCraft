@@ -17,6 +17,7 @@ set(SOURCES
     renderer/Renderer.cpp
     renderer/ChunkMesher.cpp
     renderer/Mesh.cpp
+    renderer/Frustum.cpp
     renderer/Material.cpp
     renderer/opengl/Texture2d.cpp
     renderer/opengl/Texture2dArray.cpp

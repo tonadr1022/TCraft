@@ -245,7 +245,7 @@ void ChunkManager::Update(double /*dt*/) {
       else
         mesher.GenerateSmart(a, vertices, indices);
       if (chunk->mesh_state == Chunk::State::Finished)
-        Renderer::Get().FreeChunkMesh(chunk->mesh_handle);
+        Renderer::Get().FreeStaticChunkMesh(chunk->mesh_handle);
       chunk->mesh_handle =
           Renderer::Get().AllocateStaticChunk(vertices, indices, pos * ChunkLength);
       chunk->mesh_state = Chunk::State::Finished;
@@ -261,7 +261,8 @@ void ChunkManager::UnloadChunksOutOfRange() {
     if (abs(it->first.x - center_.x) > load_distance_ ||
         abs(it->first.y - center_.y) > load_distance_ ||
         abs(it->first.z - center_.z) > load_distance_) {
-      if (it->second->mesh_handle != 0) Renderer::Get().FreeChunkMesh(it->second->mesh_handle);
+      if (it->second->mesh_handle != 0)
+        Renderer::Get().FreeStaticChunkMesh(it->second->mesh_handle);
       it = chunk_map_.erase(it);
     } else {
       it++;
@@ -312,7 +313,7 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
 ChunkManager::~ChunkManager() {
   thread_pool_.wait();
   for (auto& [pos, chunk] : chunk_map_) {
-    Renderer::Get().FreeChunkMesh(chunk->mesh_handle);
+    Renderer::Get().FreeStaticChunkMesh(chunk->mesh_handle);
   }
   nlohmann::json j = {{"load_distance", load_distance_}, {"frequency", frequency_}};
   SettingsManager::Get().SaveSetting(j, "chunk_manager");

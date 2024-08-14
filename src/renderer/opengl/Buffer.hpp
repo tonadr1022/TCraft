@@ -12,6 +12,7 @@ class Buffer {
   Buffer& operator=(Buffer&& other) noexcept;
 
   void SubData(size_t size_bytes, void* data);
+  void SubDataStart(size_t size_bytes, void* data);
   void Bind(uint32_t target) const;
   void BindBase(uint32_t target, uint32_t slot) const;
   void ResetOffset();

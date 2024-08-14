@@ -31,6 +31,9 @@ struct TextureMaterialData;
 
 struct RenderInfo {
   glm::mat4 vp_matrix;
+  glm::mat4 view_matrix;
+  glm::mat4 proj_matrix;
+  glm::vec3 view_pos;
 };
 
 class Renderer {
@@ -39,6 +42,7 @@ class Renderer {
   ~Renderer();
   static void Init(Window& window);
   static void Shutdown();
+  void OnImGui();
 
   bool render_gui_{true};
   bool render_chunks_{true};
@@ -60,8 +64,9 @@ class Renderer {
   void DrawQuad(const glm::vec3& color, const glm::vec2& center, const glm::vec2& size);
   void AddStaticQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size);
   void AddStaticQuads(std::vector<UserDrawCommand>& static_quad_draw_cmds);
-  void ClearStaticData();
+  void RemoveStaticMeshes();
 
+  void FreeStaticChunkMesh(uint32_t handle);
   void FreeChunkMesh(uint32_t handle);
   void FreeRegMesh(uint32_t handle);
   [[nodiscard]] uint32_t AllocateMaterial(TextureMaterialData& material);
@@ -125,6 +130,9 @@ class Renderer {
     float pad;
   };
   Buffer uniform_ubo_;
+
+  Buffer frustum_ubo_;
+  bool cull_frustum_{true};
 
   VertexArray static_chunk_vao_;
   DynamicBuffer<> static_chunk_ebo_;
