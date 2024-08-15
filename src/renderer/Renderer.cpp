@@ -65,6 +65,7 @@ void Renderer::Init() {
   // TODO: don't hard code size!!!!!!!!!!!!!!!!!!!!!!!
   auto settings = SettingsManager::Get().LoadSetting("renderer");
   glEnable(GL_DEBUG_OUTPUT);
+  glEnable(GL_MULTISAMPLE);
   glDebugMessageCallback(MessageCallback, nullptr);
   glEnable(GL_CULL_FACE);
   glEnable(GL_DEPTH_TEST);

@@ -5,6 +5,7 @@
 #include "application/SettingsManager.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkData.hpp"
+#include "gameplay/world/ChunkDef.hpp"
 #include "gameplay/world/ChunkHelpers.hpp"
 #include "gameplay/world/ChunkUtil.hpp"
 #include "gameplay/world/TerrainGenerator.hpp"
@@ -128,7 +129,7 @@ void ChunkManager::Update(double /*dt*/) {
 
     // Throttle the number of chunks sent to the queue per frame so that mesh tasks are interleaved
     int terrain_tasks_enqueued = 0;
-    int max_terrain_enqueues_per_tick = SettingsManager::Get().CoreCount();
+    int max_terrain_enqueues_per_tick = SettingsManager::Get().CoreCount() * 4;
     // iterate through the chunks in range
     for (int chunk_pos_idx = 0; chunk_pos_idx < num_chunk_positions; chunk_pos_idx++) {
       auto it = chunk_map_.find(pos);
@@ -136,42 +137,52 @@ void ChunkManager::Update(double /*dt*/) {
       if (it == chunk_map_.end()) {
         terrain_tasks_enqueued++;
         if (terrain_tasks_enqueued > max_terrain_enqueues_per_tick) break;
-        auto new_chunk = chunk_map_.try_emplace(pos, std::make_shared<Chunk>(pos));
-        new_chunk.first->second->terrain_state = Chunk::State::Queued;
-        chunk_terrain_queue_.emplace(pos);
+        for (pos.y = 0; pos.y <= NumVerticalChunks; pos.y++) {
+          auto new_chunk = chunk_map_.try_emplace(pos, std::make_shared<Chunk>(pos));
+          new_chunk.first->second->terrain_state = Chunk::State::Queued;
+          chunk_terrain_queue_.emplace(pos);
+        }
         // Add top and bottom chunks for padding
         // TODO: either allow infinite chunks vertically or cap it out and optimize
-        glm::ivec3 pos_neg_y = {pos.x, pos.y - 1, pos.z};
-        glm::ivec3 pos_pos_y = {pos.x, pos.y + 1, pos.z};
+        glm::ivec3 pos_neg_y = {pos.x, -1, pos.z};
+        glm::ivec3 pos_pos_y = {pos.x, NumVerticalChunks + 1, pos.z};
         {
           auto pos1 = chunk_map_.try_emplace(pos_pos_y, std::make_shared<Chunk>(pos_pos_y));
           auto pos2 = chunk_map_.try_emplace(pos_neg_y, std::make_shared<Chunk>(pos_neg_y));
           pos1.first->second->terrain_state = Chunk::State::Finished;
           pos2.first->second->terrain_state = Chunk::State::Finished;
         }
+        // TODO: handle diff heights
       } else if (it->second->terrain_state == Chunk::State::NotFinished) {
         // This case should never happen since any new chunk should be queued or finished. Avoid in
         // debug mode
         EASSERT(0);
         chunk_terrain_queue_.emplace(pos);
-        // If the chunk is in meshing range, has terrain finished, and mesh hasn't been queued or
-        // finished, and has blocks to mesh, and all its neighbors have finished terrain gen, send
-        // to mesh queue
-      } else if (chunk_pos_idx < first_non_meshable_chunk_pos_idx &&
-                 it->second->terrain_state == Chunk::State::Finished &&
-                 it->second->mesh_state == Chunk::State::NotFinished &&
-                 it->second->data.GetBlockCount() > 0) {
-        bool all_neighbors_terrain_finished = true;
-        for (const auto& off : ChunkNeighborOffsets) {
-          auto neighbor_it = chunk_map_.find({pos.x + off[0], pos.y + off[1], pos.z + off[2]});
-          if (neighbor_it == chunk_map_.end() ||
-              it->second->terrain_state != Chunk::State::Finished) {
-            all_neighbors_terrain_finished = false;
-            break;
+      } else {
+        for (pos.y = 0; pos.y <= NumVerticalChunks; pos.y++) {
+          auto vert_it = chunk_map_.find(pos);
+          EASSERT(vert_it != chunk_map_.end());
+          // If the chunk is in meshing range, has terrain finished, and mesh hasn't been queued or
+          // finished, and has blocks to mesh, and all its neighbors have finished terrain gen, send
+          // to mesh queue
+          if (vert_it->second->terrain_state == Chunk::State::Finished &&
+              vert_it->second->mesh_state == Chunk::State::NotFinished &&
+              vert_it->second->data.GetBlockCount() > 0) {
+            bool all_neighbors_terrain_finished = true;
+            for (const auto& off : ChunkNeighborOffsets) {
+              auto neighbor_it = chunk_map_.find({pos.x + off[0], pos.y + off[1], pos.z + off[2]});
+              if (neighbor_it == chunk_map_.end() ||
+                  vert_it->second->terrain_state != Chunk::State::Finished) {
+                // spdlog::info("{} {} {} {} {} {}", pos.x, pos.y, pos.z, pos.x + off[0],
+                //              pos.y + off[1], pos.z + off[2]);
+                all_neighbors_terrain_finished = false;
+                break;
+              }
+            }
+            if (all_neighbors_terrain_finished) {
+              chunk_mesh_queue_.emplace(pos);
+            }
           }
-        }
-        if (all_neighbors_terrain_finished) {
-          chunk_mesh_queue_.emplace(pos);
         }
       }
 

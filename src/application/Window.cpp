@@ -128,11 +128,22 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 #endif
-
   // From 2.0.18: Enable native IME.
 #ifdef SDL_HINT_IME_SHOW_UI
   SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
 #endif
+
+  // // Check if anisotropic filtering is supported
+  // if (glewIsSupported("GL_EXT_texture_filter_anisotropic")) {
+  //   GLfloat max_aniso = 0.0f;
+  //   glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_aniso);
+  //
+  //   // Set anisotropy to the maximum supported level
+  //   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso);
+  // }
+
+  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   // Create window with graphics context
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);

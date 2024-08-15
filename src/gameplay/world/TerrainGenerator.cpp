@@ -19,11 +19,11 @@ std::vector<int> TerrainGenerator::GetHeights(float frequency, float multiplier)
   ZoneScoped;
   std::vector<float> height_floats(ChunkArea);
   auto fn_simplex = FastNoise::New<FastNoise::Simplex>();
-  auto fn_fractal = FastNoise::New<FastNoise::FractalFBm>();
+  auto fn_fractal = FastNoise::New<FastNoise::FractalRidged>();
   {
     ZoneScopedN("Get grid call");
     fn_fractal->SetSource(fn_simplex);
-    fn_fractal->SetOctaveCount(5);
+    fn_fractal->SetOctaveCount(2);
     fn_fractal->GenUniformGrid2D(height_floats.data(), chunk_world_pos_.x, chunk_world_pos_.z,
                                  ChunkLength, ChunkLength, frequency, seed_);
   }
@@ -37,29 +37,27 @@ std::vector<int> TerrainGenerator::GetHeights(float frequency, float multiplier)
 void TerrainGenerator::GenerateBiome() {
   ZoneScoped;
   EASSERT_MSG(!terrain_.biomes.empty(), "Need biomes");
-  // auto& biome = terrain_.biomes[0];
-  // spdlog::info("biome {}", biome.layers[0].block_type_frequencies[0]);
   auto get_block = [this](uint32_t y, uint32_t max_height) -> BlockType {
     const auto& biome = terrain_.biomes[0];
-    if (y < max_height - biome.layer_y_sum) {
+    if (y - chunk_world_pos_.y < max_height - biome.layer_y_sum) {
       return terrain_.stone;
     }
     uint32_t sum = 0;
     for (size_t i = 0; i < biome.layers.size(); i++) {
       sum += biome.layer_y_counts[i];
-      if (sum > max_height - y) {
+      if (sum > max_height - y - chunk_world_pos_.y) {
         return biome.layers[i].GetBlock();
       }
     }
     return terrain_.sand;
   };
 
-  auto height = GetHeights(0.0083, 22);
+  auto height = GetHeights(0.0013, MaxBlockHeight);
   for (int y = 0; y < ChunkLength; y++) {
     int i = 0;
     for (int z = 0; z < ChunkLength; z++) {
       for (int x = 0; x < ChunkLength; x++, i++) {
-        if (y <= height[i]) {
+        if (y + chunk_world_pos_.y <= height[i]) {
           SetBlock(x, y, z, get_block(y, height[i]));
         }
       }
@@ -70,7 +68,7 @@ void TerrainGenerator::GenerateBiome() {
 void TerrainGenerator::GenerateNoise(BlockType block, float frequency) {
   ZoneScoped;
   auto height = GetHeights(frequency, 22);
-  for (int y = 0; y < ChunkLength; y++) {
+  for (int y = chunk_world_pos_.y; y < chunk_world_pos_.y + ChunkLength; y++) {
     int i = 0;
     for (int z = 0; z < ChunkLength; z++) {
       for (int x = 0; x < ChunkLength; x++, i++) {
