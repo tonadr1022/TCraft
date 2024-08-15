@@ -84,6 +84,8 @@ class Renderer {
   struct Settings {
     float chunk_cull_distance_min{0};
     float chunk_cull_distance_max{10000};
+    int extra_fov_degrees{0};
+    bool cull_frustum{true};
   };
   Settings settings;
 
@@ -135,8 +137,6 @@ class Renderer {
     float pad;
   };
   Buffer uniform_ubo_;
-
-  bool cull_frustum_{true};
 
   VertexArray static_chunk_vao_;
   DynamicBuffer<> static_chunk_ebo_;

@@ -4,7 +4,9 @@
 
 using FrustumData = float[6][4];
 struct Frustum {
+  Frustum() = default;
   explicit Frustum(const glm::mat4& clip_matrix);
+  void SetData(const glm::mat4& clip_matrix);
 
   enum Plane { Right, Left, Top, Bottom, Front, Back };
   enum PlaneComponent { X, Y, Z, Dist };

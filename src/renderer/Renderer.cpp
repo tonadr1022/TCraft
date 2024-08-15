@@ -235,12 +235,21 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     // bind and generate indirect draw commands and uniform buffers with compute shader
     auto cull_shader = shader_manager_.GetShader("chunk_cull");
     cull_shader->Bind();
+    Frustum frustum;
+    if (settings.extra_fov_degrees > 0) {
+      auto aspect_ratio = Window::Get().GetAspectRatio();
+      frustum.SetData(glm::perspective(glm::radians(SettingsManager::Get().fps_cam_fov_deg +
+                                                    settings.extra_fov_degrees),
+                                       aspect_ratio, 0.01f, 10000.f) *
+                      render_info.view_matrix);
+    } else {
+      frustum.SetData(render_info.vp_matrix);
+    }
     cull_shader->SetVec3("u_view_pos", render_info.view_pos);
-    cull_shader->SetBool("u_cull_frustum", cull_frustum_);
+    cull_shader->SetBool("u_cull_frustum", settings.cull_frustum);
     cull_shader->SetFloat("u_min_cull_dist", settings.chunk_cull_distance_min);
     cull_shader->SetFloat("u_max_cull_dist", settings.chunk_cull_distance_max);
     // A UBO could be used, but this is more straightforward
-    Frustum frustum(render_info.vp_matrix);
     const auto& frustum_data = frustum.GetData();
     cull_shader->SetVec4("plane0", frustum_data[0]);
     cull_shader->SetVec4("plane1", frustum_data[1]);
@@ -621,7 +630,8 @@ void Renderer::DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& vie
 
 void Renderer::OnImGui() {
   ImGui::Begin("Renderer");
-  ImGui::Checkbox("Cull Frustum", &cull_frustum_);
+  ImGui::Checkbox("Cull Frustum", &settings.cull_frustum);
+  ImGui::SliderInt("Extra FOV Degrees", &settings.extra_fov_degrees, 0, 360);
   ImGui::SliderFloat("Chunk Cull Distance Min", &settings.chunk_cull_distance_min, 0, 10000);
   ImGui::SliderFloat("Chunk Cull Distance Max", &settings.chunk_cull_distance_max, 0, 10000);
   ImGui::End();

@@ -2,7 +2,9 @@
 
 #include <glm/ext/matrix_float4x4.hpp>
 
-Frustum::Frustum(const glm::mat4& clip_matrix) {
+Frustum::Frustum(const glm::mat4& clip_matrix) { SetData(clip_matrix); }
+
+void Frustum::SetData(const glm::mat4& clip_matrix) {
   data_[Left][X] = clip_matrix[0][3] + clip_matrix[0][0];
   data_[Left][Y] = clip_matrix[1][3] + clip_matrix[1][0];
   data_[Left][Z] = clip_matrix[2][3] + clip_matrix[2][0];
