@@ -81,6 +81,11 @@ class Renderer {
 
   void RenderQuads();
   void RenderRegMeshes();
+  struct Settings {
+    float chunk_cull_distance_min{0};
+    float chunk_cull_distance_max{10000};
+  };
+  Settings settings;
 
  private:
   friend class Application;

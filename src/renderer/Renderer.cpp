@@ -237,6 +237,8 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     cull_shader->Bind();
     cull_shader->SetVec3("u_view_pos", render_info.view_pos);
     cull_shader->SetBool("u_cull_frustum", cull_frustum_);
+    cull_shader->SetFloat("u_min_cull_dist", settings.chunk_cull_distance_min);
+    cull_shader->SetFloat("u_max_cull_dist", settings.chunk_cull_distance_max);
     // A UBO could be used, but this is more straightforward
     Frustum frustum(render_info.vp_matrix);
     const auto& frustum_data = frustum.GetData();
@@ -620,5 +622,7 @@ void Renderer::DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& vie
 void Renderer::OnImGui() {
   ImGui::Begin("Renderer");
   ImGui::Checkbox("Cull Frustum", &cull_frustum_);
+  ImGui::SliderFloat("Chunk Cull Distance Min", &settings.chunk_cull_distance_min, 0, 10000);
+  ImGui::SliderFloat("Chunk Cull Distance Max", &settings.chunk_cull_distance_max, 0, 10000);
   ImGui::End();
 }
