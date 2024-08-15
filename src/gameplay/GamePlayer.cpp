@@ -153,6 +153,7 @@ void GamePlayer::OnImGui() {
                   : chunk->mesh_state == Chunk::State::Queued ? "Queued"
                                                               : "Not Finished");
     }
+    ImGui::Text("Pos Chunk Exists: %s", chunk ? "Yes" : "No");
   }
   ImGui::End();
 }

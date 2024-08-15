@@ -94,8 +94,10 @@ void WorldScene::Update(double dt) {
   chunk_manager_->SetCenter(player_.Position());
   chunk_manager_->Update(dt);
   const auto& state = chunk_manager_->GetStateStats();
-  if (state.loaded_chunks >= state.max_loaded_chunks) loaded_ = true;
+  if (state.meshed_chunks >= state.max_meshed_chunks) loaded_ = true;
   if (loaded_) player_.Update(dt);
+  if (!loaded_) time_ += dt;
+  // player_.Update(dt);
 }
 
 bool WorldScene::OnEvent(const SDL_Event& event) {
@@ -166,9 +168,6 @@ void WorldScene::Render() {
                         GL_UNSIGNED_BYTE, chunk_state_pixels_.data());
     prev_chunk_state_pixels_dims_ = dims;
 
-    // glTextureSubImage2D(chunk_state_tex_->GetTexture().Id(), 0, 0, 0, ChunkMapTexWidth,
-    //                     ChunkMapTexHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    // Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {500, 500}, {100, 100});
     glm::ivec2 quad_dims = loaded_ ? glm::ivec2{250, 250} : glm::ivec2{500, 500};
     glm::ivec2 quad_pos = loaded_ ? quad_dims / 2 : win_center;
     Renderer::Get().DrawQuad(chunk_state_tex_->Handle(), quad_pos, quad_dims);
@@ -195,4 +194,5 @@ void WorldScene::OnImGui() {
   ZoneScoped;
   chunk_manager_->OnImGui();
   player_.OnImGui();
+  ImGui::Text("time: %f", time_);
 }

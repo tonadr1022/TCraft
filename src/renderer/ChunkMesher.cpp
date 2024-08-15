@@ -287,7 +287,7 @@ void ChunkMesher::GenerateNaive(const BlockTypeArray& blocks, std::vector<ChunkV
 void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
                                  std::vector<ChunkVertex>& vertices,
                                  std::vector<uint32_t>& indices) {
-  Timer timer;
+  // Timer timer;
   for (const auto& chunk : chunks) {
     if (chunk == nullptr) return;
   }
@@ -504,10 +504,10 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
       }
     }
   }
-  static double total = 0;
-  static int count = 0;
-  count++;
-  double curr = timer.ElapsedMS();
-  total += curr;
-  spdlog::info("{}", total / count);
+  // static double total = 0;
+  // static int count = 0;
+  // count++;
+  // double curr = timer.ElapsedMS();
+  // total += curr;
+  // spdlog::info("{}", total / count);
 }

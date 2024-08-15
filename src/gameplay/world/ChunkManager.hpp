@@ -66,11 +66,9 @@ class ChunkManager {
   std::deque<ChunkMeshTask> chunk_mesh_finished_queue_;
 
   std::queue<glm::ivec3> chunk_terrain_queue_;
+  std::queue<glm::ivec3> chunk_fail_terrain_queue_;
+  std::queue<glm::ivec3> chunk_fail_mesh_queue_;
   std::deque<std::pair<glm::ivec3, ChunkData>> finished_chunk_terrain_queue_;
-
-  // uint32_t num_mesh_creations_{0};
-  // uint32_t total_vertex_count_{0};
-  // uint32_t total_index_count_{0};
 
   void PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, const glm::ivec3& pos,
                               bool add_new_chunks);

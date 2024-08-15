@@ -37,4 +37,5 @@ class WorldScene : public Scene {
   std::vector<uint8_t> chunk_state_pixels_;
   glm::ivec2 prev_chunk_state_pixels_dims_{};
   bool first_frame_{true};
+  double time_{0};
 };

@@ -81,39 +81,36 @@ void ChunkManager::Update(double /*dt*/) {
         TerrainGenerator gen{data, pos * ChunkLength, seed_, terrain_};
         // gen.GenerateNoise(3, frequency_);
         gen.GenerateBiome();
-        // gen.GenerateSolid(1);
-        // gen.GenerateChecker(1);
         {
           std::lock_guard<std::mutex> lock(mutex_);
-          auto it = chunk_map_.find(pos);
-          if (it != chunk_map_.end()) {
-            it->second->data = std::move(data);
-            it->second->terrain_state = Chunk::State::Finished;
-            state_stats_.loaded_chunks++;
-          }
-          // finished_chunk_terrain_queue_.emplace_back(pos, std::move(data));
+          finished_chunk_terrain_queue_.emplace_back(pos, std::move(data));
         }
       });
     }
   }
 
-  // if (tick_count % 2 == 0) {
-  //   ZoneScopedN("Process finsihed chunk terrain tasks");
-  //   while (!finished_chunk_terrain_queue_.empty()) {
-  //     auto& task = finished_chunk_terrain_queue_.front();
-  //     auto it = chunk_map_.find(finished_chunk_terrain_queue_.front().first);
-  //     if (it != chunk_map_.end()) {
-  //       it->second->data = std::move(task.second);
-  //       it->second->terrain_state = Chunk::State::Finished;
-  //     }
-  //     finished_chunk_terrain_queue_.pop_front();
-  //   }
-  // }
+  if (tick_count % 2 == 0) {
+    ZoneScopedN("Process finsihed chunk terrain tasks");
+    while (!finished_chunk_terrain_queue_.empty()) {
+      auto& task = finished_chunk_terrain_queue_.front();
+      auto it = chunk_map_.find(finished_chunk_terrain_queue_.front().first);
+      if (it != chunk_map_.end()) {
+        it->second->data = std::move(task.second);
+        it->second->terrain_state = Chunk::State::Finished;
+        state_stats_.loaded_chunks++;
+      }
+      finished_chunk_terrain_queue_.pop_front();
+    }
+  }
 
-  if (tick_count % 1 == 0) {
-    // state_stats_.loaded_chunks = 0;
-    // state_stats_.meshed_chunks = 0;
-    ZoneScopedN("Add to mesh queue");
+  state_stats_.max_meshed_chunks = ((load_distance_ - 1) * 2 + 1) * ((load_distance_ - 1) * 2 + 1);
+  state_stats_.max_loaded_chunks = (load_distance_ * 2 + 1) * (load_distance_ * 2 + 1);
+  bool loaded = state_stats_.meshed_chunks >= state_stats_.max_meshed_chunks;
+
+  // TODO: more robust ticks
+  if ((!loaded && tick_count % 2 == 0) || tick_count % 8 == 0) {
+    ZoneScopedN("Iterate chunks in range");
+    // Clockwise Spiral iterator starting from center
     constexpr static int Dx[] = {1, 0, -1, 0};
     constexpr static int Dy[] = {0, 1, 0, -1};
     int direction = 0;
@@ -121,14 +118,28 @@ void ChunkManager::Update(double /*dt*/) {
     int direction_steps_counter = 0;
     int turn_counter = 0;
     int load_len = (load_distance_) * 2 + 1;
+    int num_chunk_positions = load_len * load_len;
+    // First index such that highly likely doesn't have outside neighbor chunks such that a mesh
+    // can be created
+    int first_non_meshable_chunk_pos_idx = num_chunk_positions - (load_len * 4 - 4);
     glm::ivec3 pos = center_;
-    // TODO: infinite load length
+    // TODO: infinite load height
     pos.y = 0;
-    for (int i = 0; i < load_len * load_len; i++) {
+
+    // Throttle the number of chunks sent to the queue per frame so that mesh tasks are interleaved
+    int terrain_tasks_enqueued = 0;
+    int max_terrain_enqueues_per_tick = SettingsManager::Get().CoreCount();
+    // iterate through the chunks in range
+    for (int chunk_pos_idx = 0; chunk_pos_idx < num_chunk_positions; chunk_pos_idx++) {
       auto it = chunk_map_.find(pos);
+      // Make the chunk and enqueue for terrain if it doesn't exist yet
       if (it == chunk_map_.end()) {
-        ZoneScopedN("make chunks and send to terrain queue");
-        chunk_map_.try_emplace(pos, std::make_shared<Chunk>(pos));
+        terrain_tasks_enqueued++;
+        if (terrain_tasks_enqueued > max_terrain_enqueues_per_tick) break;
+        auto new_chunk = chunk_map_.try_emplace(pos, std::make_shared<Chunk>(pos));
+        new_chunk.first->second->terrain_state = Chunk::State::Queued;
+        chunk_terrain_queue_.emplace(pos);
+        // Add top and bottom chunks for padding
         // TODO: either allow infinite chunks vertically or cap it out and optimize
         glm::ivec3 pos_neg_y = {pos.x, pos.y - 1, pos.z};
         glm::ivec3 pos_pos_y = {pos.x, pos.y + 1, pos.z};
@@ -138,32 +149,33 @@ void ChunkManager::Update(double /*dt*/) {
           pos1.first->second->terrain_state = Chunk::State::Finished;
           pos2.first->second->terrain_state = Chunk::State::Finished;
         }
+      } else if (it->second->terrain_state == Chunk::State::NotFinished) {
+        // This case should never happen since any new chunk should be queued or finished. Avoid in
+        // debug mode
+        EASSERT(0);
         chunk_terrain_queue_.emplace(pos);
-      } else {
-        ZoneScopedN("emplace valid meshes into queue");
-        Chunk& chunk = *it->second;
-        EASSERT_MSG(!(chunk.mesh_state == Chunk::State::Queued &&
-                      chunk.terrain_state != Chunk::State::Finished),
-                    "invalid combo");
-        if (chunk.terrain_state == Chunk::State::Finished &&
-            chunk.mesh_state == Chunk::State::NotFinished && chunk.data.GetBlockCount() > 0) {
-          bool valid = true;
-          for (const auto& off : ChunkNeighborOffsets) {
-            glm::ivec3 nei = {pos.x + off[0], pos.y + off[1], pos.z + off[2]};
-            auto neighbor_it = chunk_map_.find(nei);
-            if (neighbor_it == chunk_map_.end() ||
-                it->second->terrain_state != Chunk::State::Finished) {
-              valid = false;
-              break;
-            }
+        // If the chunk is in meshing range, has terrain finished, and mesh hasn't been queued or
+        // finished, and has blocks to mesh, and all its neighbors have finished terrain gen, send
+        // to mesh queue
+      } else if (chunk_pos_idx < first_non_meshable_chunk_pos_idx &&
+                 it->second->terrain_state == Chunk::State::Finished &&
+                 it->second->mesh_state == Chunk::State::NotFinished &&
+                 it->second->data.GetBlockCount() > 0) {
+        bool all_neighbors_terrain_finished = true;
+        for (const auto& off : ChunkNeighborOffsets) {
+          auto neighbor_it = chunk_map_.find({pos.x + off[0], pos.y + off[1], pos.z + off[2]});
+          if (neighbor_it == chunk_map_.end() ||
+              it->second->terrain_state != Chunk::State::Finished) {
+            all_neighbors_terrain_finished = false;
+            break;
           }
-          if (valid) {
-            chunk_mesh_queue_.emplace(pos);
-          }
+        }
+        if (all_neighbors_terrain_finished) {
+          chunk_mesh_queue_.emplace(pos);
         }
       }
 
-      // iterate
+      // branchless iterate
       direction_steps_counter++;
       pos.x += Dx[direction];
       pos.z += Dy[direction];
@@ -175,10 +187,7 @@ void ChunkManager::Update(double /*dt*/) {
     }
   }
 
-  state_stats_.max_meshed_chunks = ((load_distance_ - 1) * 2 + 1) * ((load_distance_ - 1) * 2 + 1);
-  state_stats_.max_loaded_chunks = (load_distance_ * 2 + 1) * (load_distance_ * 2 + 1);
-
-  if ((tick_count + 2) % 2 == 0) {
+  if ((tick_count + 3) % 2 == 0) {
     ZoneScopedN("Process mesh chunks");
     // process remesh chunks
     while (!chunk_mesh_queue_.empty()) {
@@ -204,10 +213,6 @@ void ChunkManager::Update(double /*dt*/) {
         {
           std::lock_guard<std::mutex> lock(mutex_);
           chunk_mesh_finished_queue_.emplace_back(vertices, indices, pos);
-          auto it = chunk_map_.find(pos);
-          if (it != chunk_map_.end()) {
-            it->second->mesh_state = Chunk::State::Finished;
-          }
         }
       });
     }

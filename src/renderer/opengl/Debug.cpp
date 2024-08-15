@@ -91,4 +91,6 @@ void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum se
     default:
       break;
   }
+
+  EASSERT(0);
 }
