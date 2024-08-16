@@ -65,12 +65,14 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     Image image;
     int tex_idx = 0;
     std::vector<void*> all_texture_pixel_data;
+    std::vector<Image> images;
     for (const auto& tex_name : block_db_.GetTextureNamesInUse()) {
       util::LoadImage(image, GET_PATH("resources/textures/" + tex_name + ".png"));
       // TODO: handle other sizes/animations
       if (image.width != 32 || image.height != 32) continue;
       tex_name_to_idx[tex_name] = tex_idx++;
       all_texture_pixel_data.emplace_back(image.pixels);
+      images.emplace_back(image);
     }
     chunk_render_params_.chunk_tex_array_handle =
         TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
@@ -82,7 +84,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
                                              .filter_mode_max = GL_NEAREST,
                                              .texture_wrap = GL_REPEAT});
 
-    block_db_.LoadMeshData(tex_name_to_idx);
+    block_db_.LoadMeshData(tex_name_to_idx, images);
     for (auto* const p : all_texture_pixel_data) {
       util::FreeImage(p);
     }
@@ -157,7 +159,6 @@ void WorldScene::Render() {
     chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, 0, .5);
     if (dims != prev_chunk_state_pixels_dims_ || first_frame_) {
       first_frame_ = false;
-      spdlog::info("erasing and creating");
       MaterialManager::Get().Erase("chunk_state_map");
       chunk_state_tex_ = MaterialManager::Get().LoadTextureMaterial(
           "chunk_state_map", Texture2DCreateParamsEmpty{.width = static_cast<uint32_t>(dims.x),

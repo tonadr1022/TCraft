@@ -109,23 +109,24 @@ void BlockEditorScene::HandleEditModelChange() {
   ZoneScoped;
   if (edit_model_type_ == BlockModelType::All) {
     uint32_t all_tex_idx = tex_name_to_idx_[edit_model_data_all_.tex_all];
-    edit_model_block_.mesh_data = {.texture_indices = {all_tex_idx, all_tex_idx, all_tex_idx,
-                                                       all_tex_idx, all_tex_idx, all_tex_idx}};
+    edit_model_block_.mesh_data = {
+        {all_tex_idx, all_tex_idx, all_tex_idx, all_tex_idx, all_tex_idx, all_tex_idx}, {}};
   } else if (edit_model_type_ == BlockModelType::TopBottom) {
     uint32_t top_tex_idx = tex_name_to_idx_[edit_model_data_top_bot_.tex_top];
     uint32_t bot_tex_idx = tex_name_to_idx_[edit_model_data_top_bot_.tex_bottom];
     uint32_t side_tex_idx = tex_name_to_idx_[edit_model_data_top_bot_.tex_side];
-    edit_model_block_.mesh_data = {.texture_indices = {side_tex_idx, side_tex_idx, top_tex_idx,
-                                                       bot_tex_idx, side_tex_idx, side_tex_idx}};
+    edit_model_block_.mesh_data = {
+        {side_tex_idx, side_tex_idx, top_tex_idx, bot_tex_idx, side_tex_idx, side_tex_idx}, {}};
   } else {
-    edit_model_block_.mesh_data = {.texture_indices = {
+    edit_model_block_.mesh_data = {{
                                        tex_name_to_idx_[edit_model_data_unique_.tex_pos_x],
                                        tex_name_to_idx_[edit_model_data_unique_.tex_neg_x],
                                        tex_name_to_idx_[edit_model_data_unique_.tex_pos_y],
                                        tex_name_to_idx_[edit_model_data_unique_.tex_neg_y],
                                        tex_name_to_idx_[edit_model_data_unique_.tex_pos_z],
                                        tex_name_to_idx_[edit_model_data_unique_.tex_neg_z],
-                                   }};
+                                   },
+                                   {}};
   }
 
   std::vector<ChunkVertex> vertices;
@@ -142,24 +143,25 @@ void BlockEditorScene::HandleAddModelTextureChange(BlockModelType type) {
   ZoneScoped;
   if (type == BlockModelType::All) {
     uint32_t all_tex_idx = tex_name_to_idx_[add_model_data_all_.tex_all];
-    add_model_blocks_[0].mesh_data = {.texture_indices = {all_tex_idx, all_tex_idx, all_tex_idx,
-                                                          all_tex_idx, all_tex_idx, all_tex_idx}};
+    add_model_blocks_[0].mesh_data = {
+        {all_tex_idx, all_tex_idx, all_tex_idx, all_tex_idx, all_tex_idx, all_tex_idx}, {}};
 
   } else if (type == BlockModelType::TopBottom) {
     uint32_t top_tex_idx = tex_name_to_idx_[add_model_data_top_bot_.tex_top];
     uint32_t bot_tex_idx = tex_name_to_idx_[add_model_data_top_bot_.tex_bottom];
     uint32_t side_tex_idx = tex_name_to_idx_[add_model_data_top_bot_.tex_side];
-    add_model_blocks_[1].mesh_data = {.texture_indices = {side_tex_idx, side_tex_idx, top_tex_idx,
-                                                          bot_tex_idx, side_tex_idx, side_tex_idx}};
+    add_model_blocks_[1].mesh_data = {
+        {side_tex_idx, side_tex_idx, top_tex_idx, bot_tex_idx, side_tex_idx, side_tex_idx}, {}};
   } else {
-    add_model_blocks_[2].mesh_data = {.texture_indices = {
+    add_model_blocks_[2].mesh_data = {{
                                           tex_name_to_idx_[add_model_data_unique_.tex_pos_x],
                                           tex_name_to_idx_[add_model_data_unique_.tex_neg_x],
                                           tex_name_to_idx_[add_model_data_unique_.tex_pos_y],
                                           tex_name_to_idx_[add_model_data_unique_.tex_neg_y],
                                           tex_name_to_idx_[add_model_data_unique_.tex_pos_z],
                                           tex_name_to_idx_[add_model_data_unique_.tex_neg_z],
-                                      }};
+                                      },
+                                      {}};
   }
 
   auto i = static_cast<uint32_t>(type);

@@ -106,10 +106,11 @@ void ChunkManager::Update(double /*dt*/) {
 
   state_stats_.max_meshed_chunks = ((load_distance_ - 1) * 2 + 1) * ((load_distance_ - 1) * 2 + 1);
   state_stats_.max_loaded_chunks = (load_distance_ * 2 + 1) * (load_distance_ * 2 + 1);
-  bool loaded = state_stats_.meshed_chunks >= state_stats_.max_meshed_chunks;
+  // bool loaded = state_stats_.meshed_chunks >= state_stats_.max_meshed_chunks;
 
   // TODO: more robust ticks
-  if ((!loaded && tick_count % 2 == 0) || tick_count % 8 == 0) {
+  // if ((!loaded && tick_count % 2 == 0) || tick_count % 8 == 0) {
+  {
     ZoneScopedN("Iterate chunks in range");
     // Clockwise Spiral iterator starting from center
     constexpr static int Dx[] = {1, 0, -1, 0};
@@ -138,7 +139,7 @@ void ChunkManager::Update(double /*dt*/) {
         terrain_tasks_enqueued++;
         if (terrain_tasks_enqueued > max_terrain_enqueues_per_tick) break;
         for (pos.y = 0; pos.y <= NumVerticalChunks; pos.y++) {
-          auto new_chunk = chunk_map_.try_emplace(pos, std::make_shared<Chunk>(pos));
+          auto new_chunk = chunk_map_.emplace(pos, std::make_shared<Chunk>(pos));
           new_chunk.first->second->terrain_state = Chunk::State::Queued;
           chunk_terrain_queue_.emplace(pos);
         }
@@ -158,7 +159,7 @@ void ChunkManager::Update(double /*dt*/) {
         // debug mode
         EASSERT(0);
         chunk_terrain_queue_.emplace(pos);
-      } else {
+      } else if (chunk_pos_idx < first_non_meshable_chunk_pos_idx) {
         for (pos.y = 0; pos.y <= NumVerticalChunks; pos.y++) {
           auto vert_it = chunk_map_.find(pos);
           EASSERT(vert_it != chunk_map_.end());
@@ -214,13 +215,15 @@ void ChunkManager::Update(double /*dt*/) {
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, true);
       thread_pool_.detach_task([this, a, pos] {
-        ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData(), ChunkLength};
+        ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
         std::vector<ChunkVertex> vertices;
         std::vector<uint32_t> indices;
-        if (mesh_greedy_)
+        if (mesh_greedy_) {
+          // mesher.GenerateLODGreedy(a[13]->data, vertices, indices);
           mesher.GenerateGreedy(a, vertices, indices);
-        else
+        } else {
           mesher.GenerateSmart(a, vertices, indices);
+        }
         {
           std::lock_guard<std::mutex> lock(mutex_);
           chunk_mesh_finished_queue_.emplace_back(vertices, indices, pos);
@@ -265,7 +268,7 @@ void ChunkManager::Update(double /*dt*/) {
 
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, true);
-      ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData(), ChunkLength};
+      ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
       std::vector<ChunkVertex> vertices;
       std::vector<uint32_t> indices;
       if (mesh_greedy_)
@@ -287,7 +290,6 @@ void ChunkManager::UnloadChunksOutOfRange() {
   ZoneScoped;
   for (auto it = chunk_map_.begin(); it != chunk_map_.end();) {
     if (abs(it->first.x - center_.x) > load_distance_ ||
-        abs(it->first.y - center_.y) > load_distance_ ||
         abs(it->first.z - center_.z) > load_distance_) {
       if (it->second->mesh_handle != 0)
         Renderer::Get().FreeStaticChunkMesh(it->second->mesh_handle);

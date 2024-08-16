@@ -49,7 +49,7 @@ void TerrainGenerator::GenerateBiome() {
         return biome.layers[i].GetBlock();
       }
     }
-    return terrain_.sand;
+    return terrain_.stone;
   };
 
   auto height = GetHeights(0.0013, MaxBlockHeight);

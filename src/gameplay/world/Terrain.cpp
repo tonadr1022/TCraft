@@ -86,18 +86,16 @@ void Terrain::Load(const BlockDB& block_db) {
           if (!name.is_string()) {
             spdlog::error("invalid name type in biome {}", biome.formatted_name);
           }
-          if (name == "air") {
-            layer.block_types.emplace_back(0);
+
+          const BlockData* block_data = block_db.GetBlockData(name);
+          if (!block_data) {
+            spdlog::error("block name {} not found", std::string(name));
+            layer.block_types.emplace_back(default_block_data->id);
           } else {
-            const BlockData* block_data = block_db.GetBlockData(name);
-            if (!block_data) {
-              spdlog::error("block name {} not found", std::string(name));
-              layer.block_types.emplace_back(default_block_data->id);
-            } else {
-              layer.block_types.emplace_back(block_data->id);
-            }
+            layer.block_types.emplace_back(block_data->id);
           }
         }
+
         for (auto& freq : layer_data["frequencies"]) {
           if (!freq.is_number_float()) {
             spdlog::error("invalid frequency type in biome {}", biome.formatted_name);
@@ -141,17 +139,15 @@ void Terrain::Load(const BlockDB& block_db) {
         if (!name.is_string()) {
           spdlog::error("invalid name type in biome {}", biome.formatted_name);
         }
-        if (name == "air") {
-          layer.block_types.emplace_back(0);
+
+        const BlockData* block_data = block_db.GetBlockData(name);
+        if (!block_data) {
+          spdlog::error("block name {} not found", std::string(name));
+          layer.block_types.emplace_back(default_block_data->id);
         } else {
-          const BlockData* block_data = block_db.GetBlockData(name);
-          if (!block_data) {
-            spdlog::error("block name {} not found", std::string(name));
-            layer.block_types.emplace_back(default_block_data->id);
-          } else {
-            layer.block_types.emplace_back(block_data->id);
-          }
+          layer.block_types.emplace_back(block_data->id);
         }
+
         // Only one block in the layer, so it has 100% freq
         layer.block_type_frequencies.emplace_back(1);
         auto y_count = layer_data["y_count"];

@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "application/SettingsManager.hpp"
+#include "resource/Image.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -17,6 +18,63 @@ const std::vector<BlockData>& BlockDB::GetBlockData() const { return block_data_
 // load block data that includes the models that are in use.
 // Load each model, and grab each of the texture names they use and store temporarily
 // with the textures in use, load the texture 2d array, and then update the mesh data
+
+void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
+                           const std::vector<Image>& image_data) {
+  // reserve 0 index for air
+  block_mesh_data_.emplace_back(default_mesh_data_);
+
+  auto get_avg_color = [](const Image& img) -> glm::ivec3 {
+    const uint8_t* pix_ptr = static_cast<uint8_t*>(img.pixels);
+    glm::ivec3 pix_counts{0, 0, 0};
+    for (int i = 0; i < img.width * img.height * img.channels; i += img.channels) {
+      pix_counts.x += pix_ptr[i];
+      pix_counts.y += pix_ptr[i + 1];
+      pix_counts.z += pix_ptr[i + 2];
+      pix_ptr += img.channels;
+    }
+    pix_counts /= (img.width * img.height);
+    return pix_counts;
+  };
+
+  // load block mesh data array
+  for (size_t i = 1; i < block_model_names_.size(); i++) {
+    const auto& model_name = block_model_names_[i];
+    BlockModelData data_general = model_name_to_model_data_[model_name];
+    BlockMeshData mesh_data = default_mesh_data_;
+    if (BlockModelDataAll* data = std::get_if<BlockModelDataAll>(&data_general)) {
+      auto idx = tex_name_to_idx[data->tex_all];
+      std::fill(mesh_data.texture_indices.begin(), mesh_data.texture_indices.end(), idx);
+      std::fill(mesh_data.avg_colors.begin(), mesh_data.avg_colors.end(),
+                get_avg_color(image_data[idx]));
+
+    } else if (BlockModelDataTopBot* data = std::get_if<BlockModelDataTopBot>(&data_general)) {
+      uint32_t side_idx = tex_name_to_idx[data->tex_side];
+      uint32_t top_idx = tex_name_to_idx[data->tex_top];
+      uint32_t bot_idx = tex_name_to_idx[data->tex_bottom];
+      glm::ivec3 side_avg_color = get_avg_color(image_data[side_idx]);
+      mesh_data.avg_colors = {side_avg_color, side_avg_color, get_avg_color(image_data[top_idx]),
+                              get_avg_color(image_data[bot_idx])};
+      mesh_data.texture_indices = {side_idx, side_idx, top_idx, bot_idx, side_idx, side_idx};
+    } else if (BlockModelDataUnique* data = std::get_if<BlockModelDataUnique>(&data_general)) {
+      uint32_t pos_x_idx = tex_name_to_idx[data->tex_pos_x],
+               neg_x_idx = tex_name_to_idx[data->tex_neg_x],
+               pos_y_idx = tex_name_to_idx[data->tex_pos_y],
+               neg_y_idx = tex_name_to_idx[data->tex_neg_y],
+               pos_z_idx = tex_name_to_idx[data->tex_pos_z],
+               neg_z_idx = tex_name_to_idx[data->tex_neg_z];
+      mesh_data.texture_indices = {
+          pos_x_idx, neg_x_idx, pos_y_idx, neg_y_idx, pos_z_idx, neg_z_idx,
+      };
+      mesh_data.avg_colors = {
+          get_avg_color(image_data[pos_x_idx]), get_avg_color(image_data[neg_x_idx]),
+          get_avg_color(image_data[pos_y_idx]), get_avg_color(image_data[neg_y_idx]),
+          get_avg_color(image_data[pos_z_idx]), get_avg_color(image_data[neg_z_idx]),
+      };
+    }
+    block_mesh_data_.emplace_back(mesh_data);
+  }
+}
 
 void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx) {
   // reserve 0 index for air
@@ -135,6 +193,7 @@ void BlockDB::LoadBlockData() {
                 .formatted_name = "Air",
                 .move_slow_multiplier = block_defaults_.move_slow_multiplier,
                 .emits_light = false});
+  block_name_to_data_idx_.emplace(block_data_arr_[0].name, 0);
   block_model_names_.emplace_back("air");
 
   for (uint32_t i = 1; i < id; i++) {

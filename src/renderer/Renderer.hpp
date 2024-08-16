@@ -123,6 +123,8 @@ class Renderer {
   struct MeshAlloc {
     uint32_t vbo_handle;
     uint32_t ebo_handle;
+    uint32_t vertices_count;
+    uint32_t indices_count;
   };
 
   struct ChunkMeshAlloc {
@@ -206,6 +208,10 @@ class Renderer {
   struct Stats {
     uint32_t textured_quad_draw_calls{0};
     uint32_t color_quad_draw_calls{0};
+    uint32_t total_chunk_vertices{0};
+    uint32_t total_chunk_indices{0};
+    uint32_t total_reg_mesh_vertices{0};
+    uint32_t total_reg_mesh_indices{0};
   };
   Stats stats_;
 

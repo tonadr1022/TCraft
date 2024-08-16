@@ -36,6 +36,7 @@ The first step I took to reduce driver overhead, and thus improve rendering perf
 In my last iteration of a Minecraft-esque engine, I culled meshes outside the view frustum on the CPU, testing every bounding box one at a time. This time, powered by the ability to arbitrarily generate draw commands in a buffer, I learned to cull meshes in a compute shader and generate the draw command buffer completely on the GPU. That means meshes are now tested against the view frustum in parallel. This in itself is faster, and it further reduces overhead by gnerating the optimal number of draw commands without CPU interaction, other than dispatching the compute shader and updating the draw command buffer when meshes are added or removed.
 
 Pipeline Steps:
+
 1. If a chunk mesh allocation or free occurred during a frame, reallocate the draw command buffer, uniform shader storage buffer (that stores chunk mesh positions (or model matrices if it weren't to be axis aligned)), draw info buffer that contains vertex/index offsets and sizes, as well as AABBs.
 2. Bind the aforementioned buffers and uniforms including view frustum and clear and bind the draw count parameter buffer that's atomically incremented during compute execution.
 3. Dispatch the compute and place a barrier for shader storage buffer

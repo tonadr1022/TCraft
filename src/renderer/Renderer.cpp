@@ -427,10 +427,13 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
 
   vbo_handle =
       chunk_vbo_.Allocate(sizeof(ChunkVertex) * vertices.size(), vertices.data(), chunk_vbo_offset);
-
+  stats_.total_chunk_vertices += vertices.size();
+  stats_.total_chunk_indices += indices.size();
   chunk_allocs_.emplace(id, MeshAlloc{
                                 .vbo_handle = vbo_handle,
                                 .ebo_handle = ebo_handle,
+                                .vertices_count = static_cast<uint32_t>(vertices.size()),
+                                .indices_count = static_cast<uint32_t>(indices.size()),
                             });
   chunk_dei_cmds_.emplace(
       id, DrawElementsIndirectCommand{
@@ -469,21 +472,32 @@ uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
   static_chunk_allocs_.try_emplace(id, MeshAlloc{
                                            .vbo_handle = vbo_handle,
                                            .ebo_handle = ebo_handle,
+                                           .vertices_count = static_cast<uint32_t>(vertices.size()),
+                                           .indices_count = static_cast<uint32_t>(indices.size()),
                                        });
+  stats_.total_chunk_vertices += vertices.size();
+  stats_.total_chunk_indices += indices.size();
   static_chunk_buffer_dirty_ = true;
   return id;
 }
 
 uint32_t Renderer::AllocateMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
   ZoneScoped;
+  if (vertices.empty() || indices.empty()) {
+    spdlog::error("no vertices or indices");
+    return 0;
+  }
   uint32_t vbo_offset;
   uint32_t ebo_offset;
   uint32_t id = rand();
+  // TODO: handle error case of no space/failed alloc
   reg_mesh_allocs_.try_emplace(
       id, MeshAlloc{.vbo_handle = reg_mesh_vbo_.Allocate(sizeof(Vertex) * vertices.size(),
                                                          vertices.data(), vbo_offset),
                     .ebo_handle = reg_mesh_ebo_.Allocate(sizeof(uint32_t) * indices.size(),
-                                                         indices.data(), ebo_offset)});
+                                                         indices.data(), ebo_offset),
+                    .vertices_count = static_cast<uint32_t>(vertices.size()),
+                    .indices_count = static_cast<uint32_t>(indices.size())});
   reg_mesh_dei_cmds_.try_emplace(
       id, DrawElementsIndirectCommand{
               .count = static_cast<uint32_t>(indices.size()),
@@ -492,6 +506,8 @@ uint32_t Renderer::AllocateMesh(std::vector<Vertex>& vertices, std::vector<uint3
               .base_vertex = static_cast<uint32_t>(vbo_offset / sizeof(Vertex)),
               .base_instance = 0,
           });
+  stats_.total_reg_mesh_vertices -= vertices.size();
+  stats_.total_reg_mesh_indices -= indices.size();
   return id;
 }
 
@@ -520,6 +536,8 @@ void Renderer::FreeRegMesh(uint32_t handle) {
     spdlog::error("FreeRegMesh: handle not found: {}", handle);
     return;
   }
+  stats_.total_reg_mesh_vertices -= it->second.vertices_count;
+  stats_.total_reg_mesh_indices -= it->second.indices_count;
   reg_mesh_vbo_.Free(it->second.vbo_handle);
   reg_mesh_ebo_.Free(it->second.ebo_handle);
   reg_mesh_dei_cmds_.erase(it->first);
@@ -532,6 +550,8 @@ void Renderer::FreeChunkMesh(uint32_t handle) {
   if (it == chunk_allocs_.end()) {
     spdlog::error("FreeChunkMesh: handle not found: {}", handle);
   }
+  stats_.total_chunk_indices -= it->second.indices_count;
+  stats_.total_chunk_vertices -= it->second.vertices_count;
   chunk_vbo_.Free(it->second.vbo_handle);
   chunk_ebo_.Free(it->second.ebo_handle);
   chunk_dei_cmds_.erase(it->first);
@@ -546,6 +566,8 @@ void Renderer::FreeStaticChunkMesh(uint32_t handle) {
     spdlog::error("FreeStaticChunkMesh: handle not found: {}", handle);
     return;
   }
+  stats_.total_chunk_indices -= it->second.indices_count;
+  stats_.total_chunk_vertices -= it->second.vertices_count;
   static_chunk_vbo_.Free(it->second.vbo_handle);
   static_chunk_ebo_.Free(it->second.ebo_handle);
   static_chunk_allocs_.erase(it);
@@ -566,7 +588,8 @@ void Renderer::StartFrame(const Window& window) {
     chunk_frame_draw_cmd_uniforms_.clear();
     quad_textured_uniforms_.clear();
     quad_color_uniforms_.clear();
-    stats_ = {};
+    stats_.textured_quad_draw_calls = 0;
+    stats_.color_quad_draw_calls = 0;
   }
 
   {
@@ -630,6 +653,8 @@ void Renderer::DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& vie
 
 void Renderer::OnImGui() {
   ImGui::Begin("Renderer");
+  ImGui::Text("Chunk Vertices: %i", stats_.total_chunk_vertices);
+  ImGui::Text("Chunk Indices: %i", stats_.total_chunk_indices);
   ImGui::Checkbox("Cull Frustum", &settings.cull_frustum);
   ImGui::SliderInt("Extra FOV Degrees", &settings.extra_fov_degrees, 0, 360);
   ImGui::SliderFloat("Chunk Cull Distance Min", &settings.chunk_cull_distance_min, 0, 10000);

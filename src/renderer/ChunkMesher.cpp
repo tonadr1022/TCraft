@@ -10,8 +10,8 @@
 #include "util/Timer.hpp"
 
 ChunkMesher::ChunkMesher(const std::vector<BlockData>& db_block_data,
-                         const std::vector<BlockMeshData>& db_mesh_data, int chunk_length)
-    : db_block_data(db_block_data), db_mesh_data(db_mesh_data), chunk_length(chunk_length) {}
+                         const std::vector<BlockMeshData>& db_mesh_data)
+    : db_block_data(db_block_data), db_mesh_data(db_mesh_data) {}
 
 namespace {
 
@@ -182,12 +182,15 @@ void ChunkMesher::GenerateBlock(std::vector<ChunkVertex>& vertices, std::vector<
   }
 }
 
-uint8_t ChunkMesher::PosInChunkMeshToChunkNeighborOffset(int x, int y, int z) const {
-  x = (x >= chunk_length) - (x < 0);
-  y = (y >= chunk_length) - (y < 0);
-  z = (z >= chunk_length) - (z < 0);
+namespace {
+
+uint8_t PosInChunkMeshToChunkNeighborOffset(int x, int y, int z) {
+  x = (x >= ChunkLength) - (x < 0);
+  y = (y >= ChunkLength) - (y < 0);
+  z = (z >= ChunkLength) - (z < 0);
   return ChunkNeighborOffsetToIdx(x, y, z);
 }
+}  // namespace
 
 bool ChunkMesher::ShouldShowFace(BlockType curr_block, BlockType compare_block) {
   // TODO: transparency
@@ -215,9 +218,9 @@ void ChunkMesher::GenerateSmart(const ChunkNeighborArray& chunks,
   int z;
   int face_idx;
   const BlockTypeArray& mesh_chunk_blocks = *chunks[13]->data.blocks_;
-  for (y = 0; y < chunk_length; y++) {
-    for (z = 0; z < chunk_length; z++) {
-      for (x = 0; x < chunk_length; x++, idx++) {
+  for (y = 0; y < ChunkLength; y++) {
+    for (z = 0; z < ChunkLength; z++) {
+      for (x = 0; x < ChunkLength; x++, idx++) {
         BlockType block = mesh_chunk_blocks[idx];
         if (block == 0) continue;
         for (face_idx = 0; face_idx < 6; face_idx++) {
@@ -226,9 +229,9 @@ void ChunkMesher::GenerateSmart(const ChunkNeighborArray& chunks,
           nz = z + NeighborOffsets[face_idx][2];
           if (ChunkData::IsOutOfBounds(nx, ny, nz)) {
             if ((*chunks[PosInChunkMeshToChunkNeighborOffset(nx, ny, nz)])
-                    .data.GetBlock((nx + chunk_length) % chunk_length,
-                                   (ny + chunk_length) % chunk_length,
-                                   (nz + chunk_length) % chunk_length) == 0) {
+                    .data.GetBlock((nx + ChunkLength) % ChunkLength,
+                                   (ny + ChunkLength) % ChunkLength,
+                                   (nz + ChunkLength) % ChunkLength) == 0) {
               // AddQuad(face_idx, x, y, z, vertices, indices,
               //         db_mesh_data[block].texture_indices[face_idx]);
               AddQuad(face_idx, x, y, z, vertices, indices, 0);
@@ -259,9 +262,9 @@ void ChunkMesher::GenerateNaive(const BlockTypeArray& blocks, std::vector<ChunkV
   };
 
   int idx = 0;
-  for (int y = 0; y < chunk_length; y++) {
-    for (int z = 0; z < chunk_length; z++) {
-      for (int x = 0; x < chunk_length; x++, idx++) {
+  for (int y = 0; y < ChunkLength; y++) {
+    for (int z = 0; z < ChunkLength; z++) {
+      for (int x = 0; x < ChunkLength; x++, idx++) {
         ZoneScopedN("for loop iter");
         BlockType block = blocks[idx];
         if (block == 0) continue;
@@ -284,6 +287,165 @@ void ChunkMesher::GenerateNaive(const BlockTypeArray& blocks, std::vector<ChunkV
   }
 }
 
+void ChunkMesher::GenerateLODGreedy(const ChunkData& chunk_data, std::vector<ChunkVertex>& vertices,
+                                    std::vector<uint32_t>& indices) {
+  ZoneScoped;
+  if (chunk_data.GetBlockCount() == 0) return;
+  // TODO: make parameter
+  std::array<BlockType, ChunkVolume / 8> blocks;
+  uint32_t f = 2;
+  DownSampleChunk(*chunk_data.blocks_, blocks);
+  int chunk_length = ChunkLength / f;
+  auto get_index = [chunk_length](int x, int y, int z) -> int {
+    return x + z * chunk_length + y * chunk_length * chunk_length;
+  };
+
+  for (std::size_t axis = 0; axis < 3; ++axis) {
+    const std::size_t u = (axis + 1) % 3;
+    const std::size_t v = (axis + 2) % 3;
+
+    // TODO: make parameter
+    int x[3] = {0}, q[3] = {0}, block_mask[ChunkArea / 4];
+
+    // Compute mask
+    q[axis] = 1;
+    for (x[axis] = -1; x[axis] < chunk_length;) {
+      std::size_t counter = 0;
+      for (x[v] = 0; x[v] < chunk_length; ++x[v]) {
+        for (x[u] = 0; x[u] < chunk_length; ++x[u], ++counter) {
+          bool block1_oob = x[axis] < 0, block2_oob = chunk_length - 1 <= x[axis];
+          const BlockType block1 = block1_oob ? 0 : blocks[get_index(x[0], x[1], x[2])];
+          const BlockType block2 =
+              block2_oob ? 0 : blocks[get_index(x[0] + q[0], x[1] + q[1], x[2] + q[2])];
+
+          if (!block1_oob && ShouldShowFace(block1, block2)) {
+            block_mask[counter] = block1;
+            // &face_info[chunk::GetIndex(x[0], x[1], x[2])][axis << 1];
+
+          } else if (!block2_oob && ShouldShowFace(block2, block1)) {
+            block_mask[counter] = -block2;
+            // &face_info[chunk::GetIndex(x[0] + q[0], x[1] + q[1], x[2] + q[2])][(axis << 1) | 1];
+          } else {
+            block_mask[counter] = 0;
+          }
+        }
+      }
+
+      ++x[axis];
+
+      // Generate mesh for mask using lexicographic ordering
+      uint32_t width = 0, height = 0;
+
+      counter = 0;
+      for (uint32_t j = 0; j < static_cast<uint32_t>(chunk_length); ++j) {
+        for (uint32_t i = 0; i < static_cast<uint32_t>(chunk_length);) {
+          int quad_type = block_mask[counter];
+          if (quad_type) {
+            // Compute width
+            for (width = 1; quad_type == block_mask[counter + width] &&
+                            i + width < static_cast<uint32_t>(chunk_length);
+                 ++width);
+
+            // Compute height
+            bool done = false;
+            for (height = 1; j + height < static_cast<uint32_t>(chunk_length); ++height) {
+              for (uint32_t k = 0; k < width; ++k) {
+                uint32_t ind = counter + k + height * chunk_length;
+                if (quad_type != block_mask[ind]) {
+                  done = true;
+                  break;
+                }
+              }
+
+              if (done) break;
+            }
+
+            // Add quad
+            x[u] = i;
+            x[v] = j;
+
+            int du[3] = {0}, dv[3] = {0};
+
+            int quad_face = ((axis << 1) | (quad_type <= 0));
+
+            if (quad_type > 0) {
+              dv[v] = height * 2;
+              du[u] = width * 2;
+            } else {
+              quad_type = -quad_type;
+              du[v] = height * 2;
+              dv[u] = width * 2;
+            }
+
+            uint32_t tex_idx = db_mesh_data[quad_type].texture_indices[quad_face];
+            int vx = x[0] * 2;
+            int vy = x[1] * 2;
+            int vz = x[2] * 2;
+
+            int v00u = du[u] + dv[u];
+            int v00v = du[v] + dv[v];
+            int v01u = dv[u];
+            int v01v = dv[v];
+            int v10u = 0;
+            int v10v = 0;
+            int v11u = du[u];
+            int v11v = du[v];
+
+            if (quad_face == 1) {
+              std::swap(v00u, v01v);
+              std::swap(v00v, v01u);
+              std::swap(v11u, v10v);
+              std::swap(v11v, v10u);
+            } else if (quad_face == 0) {
+              std::swap(v11u, v11v);
+              std::swap(v01u, v01v);
+              std::swap(v00u, v00v);
+            } else if (quad_face == 4) {
+              std::swap(v00u, v01u);
+              std::swap(v00v, v01v);
+              std::swap(v11u, v10u);
+              std::swap(v11v, v10v);
+            }
+
+            uint32_t v_data2 = GetVertexData2(tex_idx);
+            uint32_t v00_data1 = GetVertexData1(vx, vy, vz, v00u, v00v, 3);
+            uint32_t v01_data1 = GetVertexData1(vx + du[0], vy + du[1], vz + du[2], v01u, v01v, 3);
+            uint32_t v10_data1 = GetVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1],
+                                                vz + du[2] + dv[2], v10u, v10v, 3);
+            uint32_t v11_data1 = GetVertexData1(vx + dv[0], vy + dv[1], vz + dv[2], v11u, v11v, 3);
+
+            int base_vertex_idx = vertices.size();
+            vertices.emplace_back(v00_data1, v_data2);
+            vertices.emplace_back(v01_data1, v_data2);
+            vertices.emplace_back(v10_data1, v_data2);
+            vertices.emplace_back(v11_data1, v_data2);
+
+            indices.push_back(base_vertex_idx + 1);
+            indices.push_back(base_vertex_idx + 2);
+            indices.push_back(base_vertex_idx + 3);
+            indices.push_back(base_vertex_idx);
+            indices.push_back(base_vertex_idx + 1);
+            indices.push_back(base_vertex_idx + 3);
+
+            for (std::size_t b = 0; b < width; ++b)
+              for (std::size_t a = 0; a < height; ++a) {
+                size_t ind = counter + b + a * chunk_length;
+                block_mask[ind] = 0;
+              }
+
+            // Increment counters
+            i += width;
+            counter += width;
+          } else {
+            ++i;
+            ++counter;
+          }
+        }
+      }
+    }
+  }
+}
+
 void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
                                  std::vector<ChunkVertex>& vertices,
                                  std::vector<uint32_t>& indices) {
@@ -294,7 +456,8 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   BlockTypeArray* mesh_chunk_blocks_ptr = (*chunks[13]).data.GetBlocks();
   if (!mesh_chunk_blocks_ptr) return;
   const BlockTypeArray& mesh_chunk_blocks = *mesh_chunk_blocks_ptr;
-  auto get_block = [this, &chunks, &mesh_chunk_blocks](int x, int y, int z) -> BlockType {
+  int chunk_length = ChunkLength;
+  auto get_block = [chunk_length, &chunks, &mesh_chunk_blocks](int x, int y, int z) -> BlockType {
     if (ChunkData::IsOutOfBounds(x, y, z)) {
       return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])
           .data.GetBlock((x + chunk_length) % chunk_length, (y + chunk_length) % chunk_length,
@@ -510,4 +673,70 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   // double curr = timer.ElapsedMS();
   // total += curr;
   // spdlog::info("{}", total / count);
+}
+
+namespace {
+
+int MostCommonInteger(const std::span<BlockType, 8>& arr) {
+  ZoneScoped;
+  int most_common = arr[0];
+  int max_count = 0;
+
+  for (int i = 0; i < arr.size(); ++i) {
+    int count = 0;
+    for (int j = 0; j < arr.size(); ++j) {
+      if (arr[i] == arr[j]) {
+        count++;
+      }
+    }
+    if (count > max_count) {
+      max_count = count;
+      most_common = arr[i];
+    }
+  }
+
+  return most_common;
+}
+
+}  // namespace
+void ChunkMesher::DownSampleChunk(const std::array<BlockType, ChunkVolume>& blocks,
+                                  std::array<BlockType, ChunkVolume / 8>& out) {
+  ZoneScoped;
+  uint32_t f = 2;
+  uint32_t chunk_length = ChunkLength / f;
+  auto get_index = [chunk_length](int x, int y, int z) -> int {
+    return x + z * chunk_length + y * chunk_length * chunk_length;
+  };
+
+  std::array<BlockType, 8> types;
+  // std::unordered_map<BlockType, uint32_t> counts;
+  for (uint32_t new_y = 0; new_y < chunk_length; new_y++) {
+    for (uint32_t new_z = 0; new_z < chunk_length; new_z++) {
+      for (uint32_t new_x = 0; new_x < chunk_length; new_x++) {
+        // accumulate
+        int i = 0;
+        for (uint32_t dy = 0; dy < f; dy++) {
+          for (uint32_t dz = 0; dz < f; dz++) {
+            for (uint32_t dx = 0; dx < f; dx++, i++) {
+              types[i] = blocks[chunk::GetIndex(new_x * f + dx, new_y * f + dy, new_z * f + dz)];
+              // counts[blocks[chunk::GetIndex(new_x * f + dx, new_y * f + dy, new_z * f + dz)]]++;
+            }
+          }
+        }
+
+        BlockType most_common_vox = 0;
+        int most_common_idx = 0;
+        for (int i = 0; i < 100; i++) {
+        }
+        // out[get_index(new_x, new_y, new_z)] = *std::max_element(counts.begin(), counts.end());
+        out[get_index(new_x, new_y, new_z)] = MostCommonInteger(types);
+        types.fill(0);
+        // std::max_element(counts.begin(), counts.end(),
+        //                  [](const std::pair<BlockType, int>& a,
+        //                     const std::pair<BlockType, int>& b) { return a.second < b.second;
+        //                     })
+        //     ->first;
+      }
+    }
+  }
 }

@@ -219,6 +219,7 @@ void Window::PollEvents() {
       case SDL_MOUSEWHEEL:
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP:
+        if (ImGui::GetIO().WantCaptureMouse) break;
         event_callback_(event);
       default:
         break;

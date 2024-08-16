@@ -1,13 +1,17 @@
 #pragma once
 
 #include <array>
+#include <glm/vec3.hpp>
 #include <nlohmann/json_fwd.hpp>
 
 #include "gameplay/world/ChunkDef.hpp"
 
+struct Image;
+
 struct BlockMeshData {
   // pos x,neg x, pos y, neg y, pos z, neg z
   std::array<uint32_t, 6> texture_indices;
+  std::array<glm::ivec3, 6> avg_colors;
 };
 
 struct BlockData {
@@ -56,6 +60,8 @@ class BlockDB {
 
   // void Init();
   void LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx);
+  void LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
+                    const std::vector<Image>& image_data);
   void WriteBlockData(const BlockData& data, const std::string& model_name) const;
   static void WriteBlockModelTypeAll(const BlockModelDataAll& data, const std::string& path);
   static void WriteBlockModelTypeTopBot(const BlockModelDataTopBot& data, const std::string& path);
