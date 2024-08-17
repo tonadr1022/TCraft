@@ -92,7 +92,7 @@ void TerrainGenerator::GenerateBiome() {
   };
 
   auto height_map =
-      GetHeightMap(0.0013, MaxBlockHeight, chunk_world_pos_[0], chunk_world_pos_[1], seed_);
+      GetHeightMap(0.0013, MaxBlockHeight / 2, chunk_world_pos_[0], chunk_world_pos_[1], seed_);
   int j = 0;
   for (int y = 0; y < ChunkLength * NumVerticalChunks; y++) {
     int i = 0;

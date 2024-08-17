@@ -24,11 +24,20 @@ struct ChunkStateData {
   int height;
 };
 
+struct LODChunkMeshTask {
+  std::vector<ChunkVertex> vertices;
+  std::vector<uint32_t> indices;
+  glm::ivec2 pos;
+  LODLevel lod_level;
+};
+
 class ChunkManager {
  public:
   explicit ChunkManager(BlockDB& block_db);
   ~ChunkManager();
 
+  void AddNewChunks(bool first_load);
+  void Init(const glm::ivec3& start_pos);
   void Update(double dt);
   // TODO: either make non trivial or remove
   void SetSeed(int seed);
@@ -63,7 +72,7 @@ class ChunkManager {
   glm::ivec3 center_{};
   glm::ivec3 prev_center_{};
   std::mutex mutex_;
-  std::queue<glm::ivec3> chunk_mesh_queue_;
+  std::queue<glm::ivec2> chunk_mesh_queue_;
   std::unordered_set<glm::ivec3> chunk_mesh_queue_immediate_;
   std::deque<ChunkMeshTask> chunk_mesh_finished_queue_;
 
@@ -75,16 +84,18 @@ class ChunkManager {
                               bool add_new_chunks);
   static void AddRelatedChunks(const glm::ivec3& block_pos_in_chunk, const glm::ivec3& chunk_pos,
                                std::unordered_set<glm::ivec3>& chunk_set);
+  bool ChunkPosOutsideHorizontalRange(int x, int z, int dist, const glm::ivec2& pos);
   bool mesh_greedy_{true};
 
   float frequency_;
   StateStats state_stats_;
-  uint32_t chunk_dist_lod_1_{5};
+  int chunk_dist_lod_1_{5};
+  bool first_load_completed_{false};
 
   BS::thread_pool thread_pool_;
 
   void FreeChunkMesh(uint32_t& handle);
   void SendChunkMeshTaskNoLOD(const glm::ivec3& pos);
-  void SendChunkMeshTaskLOD1(const glm::ivec3& pos);
+  void SendChunkMeshTaskLOD1(const glm::ivec2& pos);
   void AllocateChunkMesh();
 };

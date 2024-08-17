@@ -89,6 +89,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
       util::FreeImage(p);
     }
   }
+  chunk_manager_->Init(player_.Position());
 }
 
 void WorldScene::Update(double dt) {
@@ -162,7 +163,8 @@ void WorldScene::Render() {
   {
     ZoneScopedN("Chunk state render");
     glm::ivec2 dims;
-    chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, 0, .5, chunk_map_mode_);
+    chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, state_pix_y_, .5,
+                                             chunk_map_mode_);
     if (dims != prev_chunk_state_pixels_dims_ || first_frame_) {
       first_frame_ = false;
       MaterialManager::Get().Erase("chunk_state_map");
@@ -200,6 +202,8 @@ WorldScene::~WorldScene() {
 void WorldScene::OnImGui() {
   ZoneScoped;
   chunk_manager_->OnImGui();
+
   player_.OnImGui();
   ImGui::Text("time: %f", time_);
+  ImGui::SliderInt("Chunk State Y", &state_pix_y_, 0, NumVerticalChunks);
 }
