@@ -24,7 +24,10 @@ layout(std140, binding = 0) uniform Matrices
     vec3 cam_pos;
 };
 
+uniform bool u_UseAO = true;
+
 const float AOcurve[4] = float[4](0.55, 0.75, 0.87, 1.0);
+//const float AOcurve[4] = float[4](0.3, 0.5, 0.7, 1.0);
 
 void main() {
     uint x = bitfieldExtract(data.x, 0, 6);
@@ -38,5 +41,9 @@ void main() {
     gl_Position = vp_matrix * pos_world_space;
     vs_out.pos_world_space = vec3(pos_world_space);
     vs_out.tex_coords = vec3(u, v, tex_idx);
-    vs_out.color = vec3(AOcurve[bitfieldExtract(data.x, 18, 2)]);
+    if (u_UseAO) {
+        vs_out.color = vec3(AOcurve[bitfieldExtract(data.x, 18, 2)]);
+    } else {
+        vs_out.color = vec3(1);
+    }
 }

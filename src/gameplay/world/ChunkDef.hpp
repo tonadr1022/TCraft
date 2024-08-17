@@ -14,6 +14,8 @@ class ChunkData;
 class Chunk;
 
 using BlockTypeArray = std::array<BlockType, ChunkVolume>;
+using BlockTypeArrayLOD1 = std::array<BlockType, ChunkVolume / 8>;
+
 using ChunkNeighborArray = std::array<std::shared_ptr<Chunk>, 27>;
 
 enum class ChunkState { None, TerrainQueued, TerrainFinished, MeshQueued, MeshFinished };

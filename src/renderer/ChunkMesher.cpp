@@ -292,9 +292,9 @@ void ChunkMesher::GenerateLODGreedy(const ChunkData& chunk_data, std::vector<Chu
   ZoneScoped;
   if (chunk_data.GetBlockCount() == 0) return;
   // TODO: make parameter
-  std::array<BlockType, ChunkVolume / 8> blocks;
+  // std::array<BlockType, ChunkVolume / 8> blocks;
+  const auto& blocks = *chunk_data.blocks_lod_1_;
   uint32_t f = 2;
-  DownSampleChunk(*chunk_data.blocks_, blocks);
   int chunk_length = ChunkLength / f;
   auto get_index = [chunk_length](int x, int y, int z) -> int {
     return x + z * chunk_length + y * chunk_length * chunk_length;
@@ -454,18 +454,15 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   if (!mesh_chunk_blocks_ptr) return;
   const BlockTypeArray& mesh_chunk_blocks = *mesh_chunk_blocks_ptr;
   int chunk_length = ChunkLength;
-  auto get_block = [chunk_length, &chunks, &mesh_chunk_blocks](int x, int y, int z) -> BlockType {
-    if (ChunkData::IsOutOfBounds(x, y, z)) {
-      return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])
-          .data.GetBlock((x + chunk_length) % chunk_length, (y + chunk_length) % chunk_length,
-                         (z + chunk_length) % chunk_length);
-    }
-    return mesh_chunk_blocks[chunk::GetIndex(x, y, z)];
+  auto get_block = [chunk_length, &chunks](int x, int y, int z) -> BlockType {
+    return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])
+        .data.GetBlock((x + chunk_length) % chunk_length, (y + chunk_length) % chunk_length,
+                       (z + chunk_length) % chunk_length);
   };
 
   std::unordered_map<uint32_t, std::array<FaceInfo, 6>> face_info_map;
   BlockType neighbors[27];
-  auto get_face_info = [&face_info_map, &get_block, &mesh_chunk_blocks, &neighbors](
+  auto get_face_info = [&face_info_map, &get_block, mesh_chunk_blocks, &neighbors](
                            int x, int y, int z, uint32_t face) -> FaceInfo& {
     uint32_t idx = chunk::GetIndex(x, y, z);
     auto it = face_info_map.find(idx);
@@ -513,21 +510,23 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
       std::size_t counter = 0;
       for (x[v] = 0; x[v] < chunk_length; ++x[v]) {
         for (x[u] = 0; x[u] < chunk_length; ++x[u], ++counter) {
-          const BlockType block1 = get_block(x[0], x[1], x[2]);
-          const BlockType block2 = get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
-
           bool block1_oob = x[axis] < 0, block2_oob = chunk_length - 1 <= x[axis];
+          const BlockType block1 = block1_oob
+                                       ? get_block(x[0], x[1], x[2])
+                                       : mesh_chunk_blocks[chunk::GetIndex(x[0], x[1], x[2])];
+          const BlockType block2 =
+              block2_oob
+                  ? get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2])
+                  : mesh_chunk_blocks[chunk::GetIndex(x[0] + q[0], x[1] + q[1], x[2] + q[2])];
 
           if (!block1_oob && ShouldShowFace(block1, block2)) {
             block_mask[counter] = block1;
             info_mask[counter] = &get_face_info(x[0], x[1], x[2], axis << 1);
-            // &face_info[chunk::GetIndex(x[0], x[1], x[2])][axis << 1];
 
           } else if (!block2_oob && ShouldShowFace(block2, block1)) {
             block_mask[counter] = -block2;
             info_mask[counter] =
                 &get_face_info(x[0] + q[0], x[1] + q[1], x[2] + q[2], axis << 1 | 1);
-            // &face_info[chunk::GetIndex(x[0] + q[0], x[1] + q[1], x[2] + q[2])][(axis << 1) | 1];
           } else {
             block_mask[counter] = 0;
             info_mask[counter] = nullptr;
@@ -670,65 +669,4 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   // double curr = timer.ElapsedMS();
   // total += curr;
   // spdlog::info("{}", total / count);
-}
-
-namespace {
-
-int MostCommonInteger(const std::span<BlockType, 8>& arr) {
-  ZoneScoped;
-  int most_common;
-  for (int i = 0; i < 8; i++) {
-    if (arr[i] != 0) {
-      most_common = arr[i];
-    }
-  }
-  int max_count = 0;
-
-  for (int i = 0; i < 8; ++i) {
-    int count = 0;
-    for (int j = 0; j < 8; ++j) {
-      if (arr[i] == arr[j] && arr[i] != 0) {
-        count++;
-      }
-    }
-    if (count > max_count) {
-      max_count = count;
-      most_common = arr[i];
-    }
-  }
-
-  return most_common;
-}
-
-}  // namespace
-void ChunkMesher::DownSampleChunk(const std::array<BlockType, ChunkVolume>& blocks,
-                                  std::array<BlockType, ChunkVolume / 8>& out) {
-  ZoneScoped;
-  uint32_t f = 2;
-  uint32_t chunk_length = ChunkLength / f;
-  auto get_index = [chunk_length](int x, int y, int z) -> int {
-    return x + z * chunk_length + y * chunk_length * chunk_length;
-  };
-
-  std::array<BlockType, 8> types;
-  // std::unordered_map<BlockType, uint32_t> counts;
-  for (uint32_t new_y = 0; new_y < chunk_length; new_y++) {
-    for (uint32_t new_z = 0; new_z < chunk_length; new_z++) {
-      for (uint32_t new_x = 0; new_x < chunk_length; new_x++) {
-        // accumulate
-        int i = 0;
-        for (uint32_t dy = 0; dy < f; dy++) {
-          for (uint32_t dz = 0; dz < f; dz++) {
-            for (uint32_t dx = 0; dx < f; dx++, i++) {
-              types[i] = blocks[chunk::GetIndex(new_x * f + dx, new_y * f + dy, new_z * f + dz)];
-              // counts[blocks[chunk::GetIndex(new_x * f + dx, new_y * f + dy, new_z * f + dz)]]++;
-            }
-          }
-        }
-
-        out[get_index(new_x, new_y, new_z)] = MostCommonInteger(types);
-        types.fill(0);
-      }
-    }
-  }
 }

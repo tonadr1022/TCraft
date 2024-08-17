@@ -97,9 +97,9 @@ void WorldScene::Update(double dt) {
   chunk_manager_->Update(dt);
   const auto& state = chunk_manager_->GetStateStats();
   if (state.meshed_chunks >= state.max_meshed_chunks) loaded_ = true;
-  if (loaded_) player_.Update(dt);
+  // if (loaded_) player_.Update(dt);
   if (!loaded_) time_ += dt;
-  // player_.Update(dt);
+  player_.Update(dt);
 }
 
 bool WorldScene::OnEvent(const SDL_Event& event) {
@@ -107,17 +107,25 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
     return true;
   }
   if (!loaded_) return false;
-  switch (event.type) {
-    case SDL_KEYDOWN:
-      if (event.key.keysym.sym == SDLK_p && event.key.keysym.mod & KMOD_ALT) {
-        scene_manager_.LoadScene("main_menu");
-        return true;
-      }
-      if (event.key.keysym.sym == SDLK_r && event.key.keysym.mod & KMOD_CTRL &&
-          event.key.keysym.mod & KMOD_SHIFT) {
-        chunk_manager_ = std::make_unique<ChunkManager>(block_db_);
-        chunk_manager_->SetSeed(seed_);
-      }
+  if (event.type == SDL_KEYDOWN) {
+    if (event.key.keysym.sym == SDLK_p && event.key.keysym.mod & KMOD_ALT) {
+      scene_manager_.LoadScene("main_menu");
+      return true;
+    }
+    if (event.key.keysym.sym == SDLK_r && event.key.keysym.mod & KMOD_CTRL &&
+        event.key.keysym.mod & KMOD_SHIFT) {
+      chunk_manager_ = std::make_unique<ChunkManager>(block_db_);
+      chunk_manager_->SetSeed(seed_);
+      return true;
+    }
+  } else if (event.type == SDL_MOUSEBUTTONDOWN) {
+    auto pos = Window::Get().GetMousePosition();
+    auto dims = Window::Get().GetWindowSize();
+    if (pos.x < dims.x / 2 && dims.y - pos.y < dims.y / 2) {
+      chunk_map_mode_ = static_cast<ChunkManager::ChunkMapMode>(
+          (static_cast<int>(chunk_map_mode_) + 1) %
+          (static_cast<int>(ChunkManager::ChunkMapMode::Count)));
+    }
   }
   return false;
 }
@@ -154,7 +162,7 @@ void WorldScene::Render() {
   {
     ZoneScopedN("Chunk state render");
     glm::ivec2 dims;
-    chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, 0, .5);
+    chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, 0, .5, chunk_map_mode_);
     if (dims != prev_chunk_state_pixels_dims_ || first_frame_) {
       first_frame_ = false;
       MaterialManager::Get().Erase("chunk_state_map");

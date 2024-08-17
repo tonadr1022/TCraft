@@ -39,8 +39,10 @@ class ChunkManager {
   bool BlockPosExists(const glm::ivec3& world_pos) const;
   void OnImGui();
   void SetCenter(const glm::vec3& world_pos);
+
+  enum class ChunkMapMode { ChunkState, LODLevels, Count };
   void PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::ivec2& out_dims, int y_level,
-                                float opacity);
+                                float opacity, ChunkMapMode mode);
   void UnloadChunksOutOfRange();
 
   struct StateStats {
@@ -77,7 +79,12 @@ class ChunkManager {
 
   float frequency_;
   StateStats state_stats_;
-  uint32_t lod_down_chunk_dist_{24};
+  uint32_t chunk_dist_lod_1_{5};
 
   BS::thread_pool thread_pool_;
+
+  void FreeChunkMesh(uint32_t& handle);
+  void SendChunkMeshTaskNoLOD(const glm::ivec3& pos);
+  void SendChunkMeshTaskLOD1(const glm::ivec3& pos);
+  void AllocateChunkMesh();
 };

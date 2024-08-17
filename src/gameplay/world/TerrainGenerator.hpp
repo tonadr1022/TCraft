@@ -12,6 +12,7 @@ class TerrainGenerator {
   explicit TerrainGenerator(std::array<ChunkData, NumVerticalChunks>& chunks,
                             const glm::ivec2& chunk_world_pos, int seed, const Terrain& terrain);
   void GenerateBiome();
+  void GenerateSolid(BlockType block);
 
  private:
   std::array<ChunkData, NumVerticalChunks>& chunks_;

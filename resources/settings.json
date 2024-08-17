@@ -3,8 +3,8 @@
     "imgui_enabled": true
   },
   "chunk_manager": {
-    "frequency": 1.0,
-    "load_distance": 36
+    "frequency": 0.7960000038146973,
+    "load_distance": 40
   },
   "main": {
     "fps_cam_fov_deg": 71.0,

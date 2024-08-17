@@ -8,7 +8,6 @@
 #include "gameplay/world/ChunkData.hpp"
 #include "gameplay/world/ChunkDef.hpp"
 #include "gameplay/world/Terrain.hpp"
-#include "util/Timer.hpp"
 
 namespace {
 
@@ -32,13 +31,13 @@ std::vector<int> GetHeightMap(float frequency, float multiplier, int start_x, in
   return height;
 }
 
-std::vector<float> GetNoiseMap2D(float frequency, int start_x, int start_z, int seed) {
-  std::vector<float> noise_map(ChunkArea);
-  auto fn_noise = FastNoise::New<FastNoise::White>();
-  fn_noise->GenUniformGrid2D(noise_map.data(), start_x, start_z, ChunkLength, ChunkLength,
-                             frequency, seed);
-  return noise_map;
-}
+// std::vector<float> GetNoiseMap2D(float frequency, int start_x, int start_z, int seed) {
+//   std::vector<float> noise_map(ChunkArea);
+//   auto fn_noise = FastNoise::New<FastNoise::White>();
+//   fn_noise->GenUniformGrid2D(noise_map.data(), start_x, start_z, ChunkLength, ChunkLength,
+//                              frequency, seed);
+//   return noise_map;
+// }
 
 std::vector<float> GetNoiseMap3D(float frequency, int start_x, int start_z, int seed, int height) {
   std::vector<float> noise_map(height * ChunkArea);
@@ -128,6 +127,14 @@ void SingleChunkTerrainGenerator::GenerateNoise(BlockType block, float frequency
         }
       }
     }
+  }
+}
+
+void TerrainGenerator::GenerateSolid(BlockType block) {
+  for (auto& chunk : chunks_) {
+    chunk.blocks_ = std::make_unique<BlockTypeArray>();
+    std::fill(chunk.blocks_->begin(), chunk.blocks_->end(), block);
+    chunk.block_count_ = ChunkVolume;
   }
 }
 

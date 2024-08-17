@@ -24,8 +24,6 @@ class ChunkMesher {
 
   static void GenerateBlock(std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
                             const std::array<uint32_t, 6>& tex_indices);
-  void DownSampleChunk(const std::array<BlockType, ChunkVolume>& blocks,
-                       std::array<BlockType, ChunkVolume / 8>& out);
 
   const std::vector<BlockData>& db_block_data;
   const std::vector<BlockMeshData>& db_mesh_data;

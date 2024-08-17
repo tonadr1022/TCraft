@@ -14,11 +14,15 @@ class ChunkData {
   [[nodiscard]] BlockType GetBlock(const glm::ivec3& pos) const;
   [[nodiscard]] BlockType GetBlock(int x, int y, int z) const;
   [[nodiscard]] BlockTypeArray* GetBlocks() const { return blocks_.get(); }
+  [[nodiscard]] inline bool HasLOD1() const { return has_lod_1_; }
 
   [[nodiscard]] static inline int GetIndex(glm::ivec3 pos) {
-    return pos.y << 10 | pos.z << 5 | pos.x;
+    return pos.y * ChunkArea + pos.z * ChunkLength + pos.x;
   }
-  [[nodiscard]] static inline int GetIndex(int x, int y, int z) { return y << 10 | z << 5 | x; }
+
+  [[nodiscard]] static inline int GetIndex(int x, int y, int z) {
+    return y * ChunkArea + z * ChunkLength + x;
+  }
 
   // return true if x, y, or z are not between 0-31 inclusive.
   [[nodiscard]] static inline bool IsOutOfBounds(int x, int y, int z) {
@@ -29,13 +33,14 @@ class ChunkData {
     return (pos.x & 0b1111100000) || (pos.y & 0b1111100000) || (pos.z & 0b1111100000);
   }
 
-  // TODO: remove getter if this is going to remain public
-  // BlockTypeArray blocks_{0};
-  std::unique_ptr<std::array<BlockType, ChunkVolume>> blocks_{nullptr};
+  std::unique_ptr<BlockTypeArray> blocks_{nullptr};
+  std::unique_ptr<BlockTypeArrayLOD1> blocks_lod_1_{nullptr};
+  void DownSample();
   [[nodiscard]] int GetBlockCount() const;
 
  private:
   friend class TerrainGenerator;
   friend class SingleChunkTerrainGenerator;
   int block_count_{0};
+  bool has_lod_1_{false};
 };

@@ -86,6 +86,8 @@ class Renderer {
     float chunk_cull_distance_max{10000};
     int extra_fov_degrees{0};
     bool cull_frustum{true};
+    bool chunk_render_use_texture{true};
+    bool chunk_use_ao{true};
   };
   Settings settings;
 

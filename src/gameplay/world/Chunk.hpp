@@ -2,10 +2,12 @@
 
 #include "ChunkData.hpp"
 
+enum class LODLevel { NoMesh, Regular, One, Two, Three };
 struct ChunkMeshTask {
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
   glm::ivec3 pos;
+  LODLevel lod_level;
 };
 
 class Chunk {
@@ -15,6 +17,7 @@ class Chunk {
 
   ChunkData data;
   uint32_t mesh_handle{0};
+  LODLevel lod_level{LODLevel::NoMesh};
 
   enum class State { NotFinished, Queued, Finished };
   State terrain_state{State::NotFinished};

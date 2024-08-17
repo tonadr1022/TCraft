@@ -276,7 +276,11 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     // }
 
     // draw using the uniforms and indirect buffers
-    shader_manager_.GetShader("chunk_batch")->Bind();
+    auto chunk_shader = shader_manager_.GetShader("chunk_batch");
+    chunk_shader->Bind();
+    chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
+    chunk_shader->SetBool("u_UseAO", settings.chunk_use_ao);
+
     const auto& chunk_tex_arr =
         TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
     chunk_tex_arr.Bind(0);
@@ -352,7 +356,6 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
     shader->Bind();
     reg_mesh_vao_.Bind();
     tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
-    // spdlog::info("size {}", reg_mesh_dei_cmds_.size());
     glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
                                 reg_mesh_frame_dei_cmds_.size(), 0);
   }
@@ -666,6 +669,8 @@ void Renderer::OnImGui() {
   ImGui::Text("Static Chunk VBO Allocs: %i", static_chunk_vbo_.NumActiveAllocs());
   ImGui::Text("Static Chunk EBO Allocs: %i", static_chunk_ebo_.NumActiveAllocs());
   ImGui::Checkbox("Cull Frustum", &settings.cull_frustum);
+  ImGui::Checkbox("Chunk Use Texture", &settings.chunk_render_use_texture);
+  ImGui::Checkbox("Chunk Use AO", &settings.chunk_use_ao);
   ImGui::SliderInt("Extra FOV Degrees", &settings.extra_fov_degrees, 0, 360);
   ImGui::SliderFloat("Chunk Cull Distance Min", &settings.chunk_cull_distance_min, 0, 10000);
   ImGui::SliderFloat("Chunk Cull Distance Max", &settings.chunk_cull_distance_max, 0, 10000);
