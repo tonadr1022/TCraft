@@ -1,5 +1,6 @@
 #pragma once
 
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
 #include "gameplay/world/ChunkDef.hpp"
@@ -8,8 +9,22 @@ struct Terrain;
 
 class TerrainGenerator {
  public:
-  explicit TerrainGenerator(ChunkData& chunk, const glm::ivec3& chunk_world_pos, int seed,
-                            const Terrain& terrain);
+  explicit TerrainGenerator(std::array<ChunkData, NumVerticalChunks>& chunks,
+                            const glm::ivec2& chunk_world_pos, int seed, const Terrain& terrain);
+  void GenerateBiome();
+
+ private:
+  std::array<ChunkData, NumVerticalChunks>& chunks_;
+  const Terrain& terrain_;
+  glm::ivec2 chunk_world_pos_;
+  int seed_;
+  void SetBlock(int x, int y, int z, BlockType block);
+};
+
+class SingleChunkTerrainGenerator {
+ public:
+  explicit SingleChunkTerrainGenerator(ChunkData& chunk, const glm::ivec3& chunk_world_pos,
+                                       int seed, const Terrain& terrain);
   void GenerateSolid(BlockType block);
   void GenerateChecker(BlockType block);
   void GenerateChecker(std::vector<BlockType>& blocks);
@@ -17,7 +32,6 @@ class TerrainGenerator {
   void GenerateLayers(BlockType block);
   void GeneratePyramid(std::vector<BlockType>& blocks);
   void GenerateNoise(BlockType block, float frequency);
-  void GenerateBiome();
 
  private:
   ChunkData& chunk_;
@@ -26,5 +40,4 @@ class TerrainGenerator {
   int seed_;
   void SetBlock(int x, int y, int z, BlockType block);
   void SetBlock(const glm::ivec3& pos, BlockType block);
-  [[nodiscard]] std::vector<int> GetHeights(float frequency, float multiplier) const;
 };

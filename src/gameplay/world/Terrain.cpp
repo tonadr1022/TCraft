@@ -6,20 +6,23 @@
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
-BlockType BiomeLayer::GetBlock() const {
-  float r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-  float s = 0;
-  for (size_t i = 0; i < block_type_frequencies.size(); i++) {
-    s += block_type_frequencies[i];
-    if (s >= r) return block_types[i];
+BlockType BiomeLayer::GetBlock(float rand_neg_1_to_1) const {
+  if (block_type_frequencies.size() == 1) {
+    return block_types[0];
   }
-  spdlog::error("unintended {} {}", s, r);
+  float sum = 0;
+  for (size_t i = 0; i < block_type_frequencies.size(); i++) {
+    sum += block_type_frequencies[i];
+    if (sum >= abs(rand_neg_1_to_1)) return block_types[i];
+  }
+  EASSERT_MSG(0, "Unreachable");
   return block_types[0];
 }
 
 void Terrain::Load(const BlockDB& block_db) {
   // Should never fail
   stone = block_db.GetBlockData("stone")->id;
+  // default_id = block_db.GetBlockData("air")->id;
   sand = block_db.GetBlockData("sand")->id;
 
   ZoneScoped;
@@ -134,6 +137,7 @@ void Terrain::Load(const BlockDB& block_db) {
           biome.layer_y_counts.emplace_back(1);
         }
         biome.layers.emplace_back(layer);
+
       } else if (layer_data.contains("name")) {
         auto name = layer_data["name"];
         if (!name.is_string()) {
@@ -165,6 +169,13 @@ void Terrain::Load(const BlockDB& block_db) {
       spdlog::info("Biome {}: must have at least one layer");
       continue;
     }
+
+    int layer_y_sum = 0;
+    for (const auto layer_y_count : biome.layer_y_counts) {
+      layer_y_sum += layer_y_count;
+    }
+    biome.layer_y_sum = layer_y_sum;
+
     biomes.emplace_back(biome);
   }
 }

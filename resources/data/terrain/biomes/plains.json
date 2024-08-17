@@ -6,7 +6,6 @@
       "names": ["dirt", "plains_grass", "full_grass"],
       "frequencies": [0.1, 0.4, 0.5],
       "y_count": 5
-    },
-    { "name": "sand", "y_count": 2 }
+    }
   ]
 }

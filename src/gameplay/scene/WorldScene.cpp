@@ -137,9 +137,7 @@ void WorldScene::Render() {
     Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
     auto ray_cast_pos = player_.GetRayCastBlockPos();
     if (ray_cast_pos != glm::NullIVec3) {
-      Renderer::Get().DrawBlockOutline(
-          ray_cast_pos, player_.GetCamera().GetView(),
-          player_.GetCamera().GetProjection(Window::Get().GetAspectRatio()));
+      Renderer::Get().DrawBlockOutline(ray_cast_pos, view, proj);
     }
   } else {
     // draw loading bar

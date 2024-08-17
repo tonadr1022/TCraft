@@ -320,11 +320,8 @@ void ChunkMesher::GenerateLODGreedy(const ChunkData& chunk_data, std::vector<Chu
 
           if (!block1_oob && ShouldShowFace(block1, block2)) {
             block_mask[counter] = block1;
-            // &face_info[chunk::GetIndex(x[0], x[1], x[2])][axis << 1];
-
           } else if (!block2_oob && ShouldShowFace(block2, block1)) {
             block_mask[counter] = -block2;
-            // &face_info[chunk::GetIndex(x[0] + q[0], x[1] + q[1], x[2] + q[2])][(axis << 1) | 1];
           } else {
             block_mask[counter] = 0;
           }
@@ -679,13 +676,18 @@ namespace {
 
 int MostCommonInteger(const std::span<BlockType, 8>& arr) {
   ZoneScoped;
-  int most_common = arr[0];
+  int most_common;
+  for (int i = 0; i < 8; i++) {
+    if (arr[i] != 0) {
+      most_common = arr[i];
+    }
+  }
   int max_count = 0;
 
-  for (int i = 0; i < arr.size(); ++i) {
+  for (int i = 0; i < 8; ++i) {
     int count = 0;
-    for (int j = 0; j < arr.size(); ++j) {
-      if (arr[i] == arr[j]) {
+    for (int j = 0; j < 8; ++j) {
+      if (arr[i] == arr[j] && arr[i] != 0) {
         count++;
       }
     }
@@ -724,18 +726,8 @@ void ChunkMesher::DownSampleChunk(const std::array<BlockType, ChunkVolume>& bloc
           }
         }
 
-        BlockType most_common_vox = 0;
-        int most_common_idx = 0;
-        for (int i = 0; i < 100; i++) {
-        }
-        // out[get_index(new_x, new_y, new_z)] = *std::max_element(counts.begin(), counts.end());
         out[get_index(new_x, new_y, new_z)] = MostCommonInteger(types);
         types.fill(0);
-        // std::max_element(counts.begin(), counts.end(),
-        //                  [](const std::pair<BlockType, int>& a,
-        //                     const std::pair<BlockType, int>& b) { return a.second < b.second;
-        //                     })
-        //     ->first;
       }
     }
   }

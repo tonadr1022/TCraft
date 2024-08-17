@@ -239,8 +239,8 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     if (settings.extra_fov_degrees > 0) {
       auto aspect_ratio = Window::Get().GetAspectRatio();
       frustum.SetData(glm::perspective(glm::radians(SettingsManager::Get().fps_cam_fov_deg +
-                                                    settings.extra_fov_degrees),
-                                       aspect_ratio, 0.01f, 10000.f) *
+                                                    settings.extra_fov_degrees + 180),
+                                       aspect_ratio, 0.01f, 3000.f) *
                       render_info.view_matrix);
     } else {
       frustum.SetData(render_info.vp_matrix);
@@ -266,6 +266,14 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     glDispatchCompute((static_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
     // Wait for data to be written to
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    // auto* cnt =
+    //     (GLuint*)glMapNamedBufferRange(static_chunk_draw_count_buffer_.Id(), 0, sizeof(GLuint),
+    //                                    GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT);
+    // if (cnt) {
+    //   spdlog::info("{}", *cnt);
+    //   glUnmapNamedBuffer(static_chunk_draw_count_buffer_.Id());
+    // }
 
     // draw using the uniforms and indirect buffers
     shader_manager_.GetShader("chunk_batch")->Bind();
@@ -655,6 +663,8 @@ void Renderer::OnImGui() {
   ImGui::Begin("Renderer");
   ImGui::Text("Chunk Vertices: %i", stats_.total_chunk_vertices);
   ImGui::Text("Chunk Indices: %i", stats_.total_chunk_indices);
+  ImGui::Text("Static Chunk VBO Allocs: %i", static_chunk_vbo_.NumActiveAllocs());
+  ImGui::Text("Static Chunk EBO Allocs: %i", static_chunk_ebo_.NumActiveAllocs());
   ImGui::Checkbox("Cull Frustum", &settings.cull_frustum);
   ImGui::SliderInt("Extra FOV Degrees", &settings.extra_fov_degrees, 0, 360);
   ImGui::SliderFloat("Chunk Cull Distance Min", &settings.chunk_cull_distance_min, 0, 10000);

@@ -8,6 +8,7 @@
 class ChunkData {
  public:
   void SetBlock(const glm::ivec3& pos, BlockType block);
+  void SetBlock(int x, int y, int z, BlockType block);
   void SetBlockNoCheck(const glm::ivec3& pos, BlockType block);
   [[nodiscard]] BlockType GetBlockNoCheck(const glm::ivec3& pos) const;
   [[nodiscard]] BlockType GetBlock(const glm::ivec3& pos) const;
@@ -35,5 +36,6 @@ class ChunkData {
 
  private:
   friend class TerrainGenerator;
+  friend class SingleChunkTerrainGenerator;
   int block_count_{0};
 };

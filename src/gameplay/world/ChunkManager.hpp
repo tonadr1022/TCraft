@@ -65,10 +65,9 @@ class ChunkManager {
   std::unordered_set<glm::ivec3> chunk_mesh_queue_immediate_;
   std::deque<ChunkMeshTask> chunk_mesh_finished_queue_;
 
-  std::queue<glm::ivec3> chunk_terrain_queue_;
-  std::queue<glm::ivec3> chunk_fail_terrain_queue_;
-  std::queue<glm::ivec3> chunk_fail_mesh_queue_;
-  std::deque<std::pair<glm::ivec3, ChunkData>> finished_chunk_terrain_queue_;
+  std::queue<glm::ivec2> chunk_terrain_queue_;
+  std::deque<std::pair<glm::ivec2, std::array<ChunkData, NumVerticalChunks>>>
+      finished_chunk_terrain_queue_;
 
   void PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, const glm::ivec3& pos,
                               bool add_new_chunks);
@@ -78,6 +77,7 @@ class ChunkManager {
 
   float frequency_;
   StateStats state_stats_;
+  uint32_t lod_down_chunk_dist_{24};
 
   BS::thread_pool thread_pool_;
 };

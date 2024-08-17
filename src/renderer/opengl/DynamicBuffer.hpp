@@ -111,14 +111,15 @@ class DynamicBuffer {
     offset = new_alloc.offset;
     return new_alloc.handle;
   }
+
   void Free(uint32_t handle) {
     ZoneScoped;
+    if (handle == 0) return;
     auto it = allocs_.end();
     for (it = allocs_.begin(); it != allocs_.end(); it++) {
       if (it->handle == handle) break;
     }
     if (it == allocs_.end()) {
-      spdlog::error("Allocation handle not found: {}", handle);
       return;
     }
 
@@ -127,6 +128,7 @@ class DynamicBuffer {
 
     --num_active_allocs_;
   }
+
   [[nodiscard]] inline bool Valid() const { return id_ != 0; }
   [[nodiscard]] inline uint32_t NumActiveAllocs() const { return num_active_allocs_; }
 
