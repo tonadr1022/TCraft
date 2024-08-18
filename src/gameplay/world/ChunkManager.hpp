@@ -63,6 +63,7 @@ class ChunkManager {
   };
 
   const StateStats& GetStateStats() const { return state_stats_; }
+  bool IsLoaded() const;
 
  private:
   BlockDB& block_db_;

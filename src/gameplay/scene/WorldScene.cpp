@@ -97,7 +97,7 @@ void WorldScene::Update(double dt) {
   chunk_manager_->SetCenter(player_.Position());
   chunk_manager_->Update(dt);
   const auto& state = chunk_manager_->GetStateStats();
-  if (state.meshed_chunks >= state.max_chunks) loaded_ = true;
+  loaded_ = loaded_ || chunk_manager_->IsLoaded();
   // if (loaded_) player_.Update(dt);
   if (!loaded_) time_ += dt;
   player_.Update(dt);

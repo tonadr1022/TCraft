@@ -146,7 +146,6 @@ void ChunkManager::Update(double /*dt*/) {
       for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
         if (!chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
               chunk->mesh_state = Chunk::State::Queued;
-              state_stats_.loaded_chunks++;
             })) {
           valid = false;
           break;
@@ -257,13 +256,11 @@ void ChunkManager::Update(double /*dt*/) {
         mesher.GenerateGreedy(a, vertices, indices);
       else
         mesher.GenerateSmart(a, vertices, indices);
-      if (chunk->mesh_state == Chunk::State::Finished) {
-        FreeChunkMesh(chunk->mesh_handle);
-      }
+
+      FreeChunkMesh(chunk->mesh_handle);
       chunk->mesh_handle =
           Renderer::Get().AllocateStaticChunk(vertices, indices, pos * ChunkLength);
       state_stats_.meshed_chunks++;
-
       chunk->mesh_state = Chunk::State::Finished;
     }
     chunk_mesh_queue_immediate_.clear();
@@ -503,6 +500,8 @@ void ChunkManager::OnImGui() {
     ImGui::Checkbox("Greedy Meshing", &mesh_greedy_);
     ImGui::SliderFloat("Frequency", &frequency_, 0.1, 10);
     int old_lod1_distance = chunk_dist_lod_1_;
+    ImGui::BeginDisabled(thread_pool_.get_tasks_running() > 0 ||
+                         !chunk_mesh_finished_queue_.empty());
     if (ImGui::SliderInt("LOD 1 Distance", &chunk_dist_lod_1_, std::min(5, load_distance_ - 1),
                          load_distance_ - 1)) {
       // if greater, need to change old lod chunks into regular chunks
@@ -521,6 +520,7 @@ void ChunkManager::OnImGui() {
                       [this](const glm::ivec2& pos) { SendChunkMeshTaskLOD1(pos); });
       }
     }
+    ImGui::EndDisabled();
     if (ImGui::CollapsingHeader("Stats##chunk_manager_stats", ImGuiTreeNodeFlags_DefaultOpen)) {
       ImGui::Text("Center: %i %i %i", center_.x, center_.y, center_.z);
       ImGui::Text("Prev Center: %i %i %i", prev_center_.x, prev_center_.y, prev_center_.z);
@@ -623,10 +623,9 @@ void ChunkManager::SendChunkMeshTaskLOD1(const glm::ivec2& pos) {
           return;
         }
         if (chunk->data.GetBlockCount() == 0) {
+          std::lock_guard<std::mutex> lock(mutex_);
           chunk->lod_level = LODLevel::One;
           chunk->mesh_state = Chunk::State::Finished;
-          std::lock_guard<std::mutex> lock(mutex_);
-          state_stats_.meshed_chunks++;
           return;
         }
         std::vector<ChunkVertex> vertices;
@@ -725,4 +724,10 @@ void ChunkManager::Init(const glm::ivec3& start_pos) {
   SetCenter(start_pos);
   chunk_dist_lod_1_ = std::min(5, load_distance_ - 1);
   // AddNewChunks(true);
+}
+
+bool ChunkManager::IsLoaded() const {
+  return chunk_mesh_queue_.empty() && chunk_mesh_finished_queue_.empty() &&
+         chunk_terrain_queue_.empty() && chunk_mesh_finished_queue_.empty() &&
+         thread_pool_.get_tasks_running() == 0;
 }
