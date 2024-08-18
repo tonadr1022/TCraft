@@ -2,6 +2,7 @@
 
 #include <BS_thread_pool.hpp>
 #include <deque>
+#include <libcuckoo/cuckoohash_map.hh>
 
 #include "gameplay/world/Chunk.hpp"
 #include "gameplay/world/Terrain.hpp"
@@ -10,13 +11,13 @@
 
 #include <glm/gtx/hash.hpp>
 #include <glm/vec3.hpp>
-#include <unordered_map>
 
 #include "gameplay/world/ChunkData.hpp"
 
 class BlockDB;
 
-using ChunkMap = std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>>;
+using ChunkMap = libcuckoo::cuckoohash_map<glm::ivec3, std::shared_ptr<Chunk>>;
+// using ChunkMap = std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>>;
 
 struct ChunkStateData {
   std::vector<ChunkState> data;
@@ -36,7 +37,7 @@ class ChunkManager {
   explicit ChunkManager(BlockDB& block_db);
   ~ChunkManager();
 
-  void AddNewChunks(bool first_load);
+  void AddNewChunks(bool first_load, bool throttle = false);
   void Init(const glm::ivec3& start_pos);
   void Update(double dt);
   // TODO: either make non trivial or remove
@@ -52,11 +53,11 @@ class ChunkManager {
   enum class ChunkMapMode { ChunkState, LODLevels, Count };
   void PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::ivec2& out_dims, int y_level,
                                 float opacity, ChunkMapMode mode);
-  void UnloadChunksOutOfRange();
+  void UnloadChunksOutOfRange(const glm::ivec3& diff);
+  void UnloadChunksOutOfRange(int old_load_distance);
 
   struct StateStats {
-    uint32_t max_loaded_chunks{};
-    uint32_t max_meshed_chunks{};
+    uint32_t max_chunks{};
     uint32_t loaded_chunks{};
     uint32_t meshed_chunks{};
   };
@@ -75,10 +76,18 @@ class ChunkManager {
   std::queue<glm::ivec2> chunk_mesh_queue_;
   std::unordered_set<glm::ivec3> chunk_mesh_queue_immediate_;
   std::deque<ChunkMeshTask> chunk_mesh_finished_queue_;
+  using PositionIteratorFunc = std::function<void(const glm::ivec2&)>;
+  using PositionIteratorFuncIdx = std::function<void(const glm::ivec2&, int)>;
+  using VerticalPositionIteratorFunc = std::function<void(const glm::ivec3&)>;
+  void IterateChunks(int load_distance, const PositionIteratorFunc& func) const;
+  void IterateChunks(int load_distance, const PositionIteratorFuncIdx& func) const;
+  void IterateChunks(int start_distance, int load_distance, const PositionIteratorFunc& func) const;
+  void IterateChunks(int start_distance, int load_distance,
+                     const PositionIteratorFuncIdx& func) const;
+  void IterateChunksVertical(int load_distance, const VerticalPositionIteratorFunc& func) const;
 
   std::queue<glm::ivec2> chunk_terrain_queue_;
-  std::deque<std::pair<glm::ivec2, std::array<ChunkData, NumVerticalChunks>>>
-      finished_chunk_terrain_queue_;
+  std::deque<glm::ivec2> finished_chunk_terrain_queue_;
 
   void PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, const glm::ivec3& pos,
                               bool add_new_chunks);

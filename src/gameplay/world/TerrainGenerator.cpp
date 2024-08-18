@@ -5,7 +5,7 @@
 #include <glm/vec3.hpp>
 
 #include "EAssert.hpp"
-#include "gameplay/world/ChunkData.hpp"
+#include "gameplay/world/Chunk.hpp"
 #include "gameplay/world/ChunkDef.hpp"
 #include "gameplay/world/Terrain.hpp"
 
@@ -59,7 +59,7 @@ SingleChunkTerrainGenerator::SingleChunkTerrainGenerator(ChunkData& chunk,
 }
 
 void TerrainGenerator::SetBlock(int x, int y, int z, BlockType block) {
-  chunks_[y / ChunkLength].SetBlock(x, y % ChunkLength, z, block);
+  chunks_[y / ChunkLength]->data.SetBlock(x, y % ChunkLength, z, block);
 }
 
 void TerrainGenerator::GenerateBiome() {
@@ -91,8 +91,8 @@ void TerrainGenerator::GenerateBiome() {
     return terrain_.sand;
   };
 
-  auto height_map =
-      GetHeightMap(0.0013, MaxBlockHeight / 2, chunk_world_pos_[0], chunk_world_pos_[1], seed_);
+  auto height_map = GetHeightMap(0.0013, static_cast<float>(MaxBlockHeight) / 2,
+                                 chunk_world_pos_[0], chunk_world_pos_[1], seed_);
   int j = 0;
   for (int y = 0; y < ChunkLength * NumVerticalChunks; y++) {
     int i = 0;
@@ -131,10 +131,10 @@ void SingleChunkTerrainGenerator::GenerateNoise(BlockType block, float frequency
 }
 
 void TerrainGenerator::GenerateSolid(BlockType block) {
-  for (auto& chunk : chunks_) {
-    chunk.blocks_ = std::make_unique<BlockTypeArray>();
-    std::fill(chunk.blocks_->begin(), chunk.blocks_->end(), block);
-    chunk.block_count_ = ChunkVolume;
+  for (const auto& chunk : chunks_) {
+    chunk->data.blocks_ = std::make_unique<BlockTypeArray>();
+    std::fill(chunk->data.blocks_->begin(), chunk->data.blocks_->end(), block);
+    chunk->data.block_count_ = ChunkVolume;
   }
 }
 
@@ -201,7 +201,7 @@ void SingleChunkTerrainGenerator::SetBlock(int x, int y, int z, BlockType block)
   chunk_.block_count_++;
 }
 
-TerrainGenerator::TerrainGenerator(std::array<ChunkData, NumVerticalChunks>& chunks,
-                                   const glm::ivec2& chunk_world_pos, int seed,
-                                   const Terrain& terrain)
+TerrainGenerator::TerrainGenerator(
+    const std::array<std::shared_ptr<Chunk>, NumVerticalChunks>& chunks,
+    const glm::ivec2& chunk_world_pos, int seed, const Terrain& terrain)
     : chunks_(chunks), terrain_(terrain), chunk_world_pos_(chunk_world_pos), seed_(seed) {}

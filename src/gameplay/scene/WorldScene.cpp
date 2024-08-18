@@ -97,7 +97,7 @@ void WorldScene::Update(double dt) {
   chunk_manager_->SetCenter(player_.Position());
   chunk_manager_->Update(dt);
   const auto& state = chunk_manager_->GetStateStats();
-  if (state.meshed_chunks >= state.max_meshed_chunks) loaded_ = true;
+  if (state.meshed_chunks >= state.max_chunks) loaded_ = true;
   // if (loaded_) player_.Update(dt);
   if (!loaded_) time_ += dt;
   player_.Update(dt);
@@ -152,7 +152,7 @@ void WorldScene::Render() {
     // draw loading bar
     const auto& state = chunk_manager_->GetStateStats();
     float loading_percentage =
-        static_cast<float>(state.loaded_chunks) / static_cast<float>(state.max_loaded_chunks);
+        static_cast<float>(state.loaded_chunks) / static_cast<float>(state.max_chunks);
     for (int i = 0; i < 100; i++) {
       auto color = static_cast<float>(i) / 100.f >= loading_percentage ? color::Red : color::Green;
       Renderer::Get().DrawQuad(color, glm::ivec2{win_center.x + i * 3, win_center.y + 275},

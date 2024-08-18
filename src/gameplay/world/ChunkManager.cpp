@@ -40,24 +40,33 @@ ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {
 }
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
+  EASSERT_MSG(chunk_map_.contains(chunk_pos), "Set block in non existent chunk");
   auto chunk_pos = util::chunk::WorldToChunkPos(pos);
-  auto it = chunk_map_.find(chunk_pos);
-  EASSERT_MSG(it != chunk_map_.end(), "Set block in non existent chunk");
-  glm::ivec3 block_pos_in_chunk = util::chunk::WorldToPosInChunk(pos);
-  it->second->data.SetBlock(block_pos_in_chunk, block);
-  AddRelatedChunks(block_pos_in_chunk, chunk_pos, chunk_mesh_queue_immediate_);
+  chunk_map_.find_fn(chunk_pos,
+                     [this, &chunk_pos, &pos, block](const std::shared_ptr<Chunk>& chunk) {
+                       glm::ivec3 block_pos_in_chunk = util::chunk::WorldToPosInChunk(pos);
+                       chunk->data.SetBlock(block_pos_in_chunk, block);
+                       AddRelatedChunks(block_pos_in_chunk, chunk_pos, chunk_mesh_queue_immediate_);
+                     });
 }
 
 BlockType ChunkManager::GetBlock(const glm::ivec3& pos) const {
-  auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
-  EASSERT_MSG(it != chunk_map_.end(), "Get block in non existent chunk");
-  return it->second->data.GetBlock(util::chunk::WorldToPosInChunk(pos));
+  // debug only
+  EASSERT_MSG(chunk_map_.contains(util::chunk::WorldToChunkPos(pos)),
+              "Get block in non existent chunk");
+  BlockType block{0};
+  chunk_map_.find_fn(util::chunk::WorldToChunkPos(pos),
+                     [&block, &pos](const std::shared_ptr<Chunk>& chunk) {
+                       block = chunk->data.GetBlock(util::chunk::WorldToPosInChunk(pos));
+                     });
+  return block;
 }
 
 Chunk* ChunkManager::GetChunk(const glm::ivec3& pos) {
-  auto it = chunk_map_.find(util::chunk::WorldToChunkPos(pos));
-  if (it == chunk_map_.end()) return nullptr;
-  return it->second.get();
+  Chunk* ret = nullptr;
+  chunk_map_.find_fn(util::chunk::WorldToChunkPos(pos),
+                     [&ret](const std::shared_ptr<Chunk>& chunk) { ret = chunk.get(); });
+  return ret;
 }
 
 void ChunkManager::Update(double /*dt*/) {
@@ -75,31 +84,45 @@ void ChunkManager::Update(double /*dt*/) {
       auto pos = chunk_terrain_queue_.front();
       chunk_terrain_queue_.pop();
       // Chunk already exists at this point so no check
-      thread_pool_.detach_task([this, pos] {
+      std::array<std::shared_ptr<Chunk>, NumVerticalChunks> data;
+      glm::ivec3 p;
+      p.x = pos.x;
+      p.z = pos.y;
+      bool valid = true;
+      for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+        if (!chunk_map_.find_fn(
+                p, [this, &p, &data](const std::shared_ptr<Chunk>& chunk) { data[p.y] = chunk; })) {
+          spdlog::error("uh oh no chunk, {} {} {}", pos.x, p.y, pos.y);
+          valid = false;
+          break;
+        }
+      }
+      if (!valid) continue;
+      thread_pool_.detach_task([this, data, pos] {
         ZoneScopedN("chunk terrain task");
-        std::array<ChunkData, NumVerticalChunks> data;
+
         TerrainGenerator gen{data, pos * ChunkLength, seed_, terrain_};
         gen.GenerateBiome();
-        // gen.GenerateSolid(3);
         {
           std::lock_guard<std::mutex> lock(mutex_);
-          finished_chunk_terrain_queue_.emplace_back(pos, std::move(data));
+          finished_chunk_terrain_queue_.emplace_back(pos);
         }
       });
     }
   }
 
   {
-    ZoneScopedN("Process finsihed chunk terrain tasks");
+    ZoneScopedN("Process finished chunk terrain tasks");
     while (!finished_chunk_terrain_queue_.empty()) {
-      auto& [pos, data] = finished_chunk_terrain_queue_.front();
-      for (int i = 0; i < NumVerticalChunks; i++) {
-        auto it = chunk_map_.find({pos.x, i, pos.y});
-        if (it != chunk_map_.end()) {
-          it->second->data = std::move(data[i]);
-          it->second->terrain_state = Chunk::State::Finished;
+      auto pos = finished_chunk_terrain_queue_.front();
+      glm::ivec3 p;
+      p.x = pos.x;
+      p.z = pos.y;
+      for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+        chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
+          chunk->terrain_state = Chunk::State::Finished;
           state_stats_.loaded_chunks++;
-        }
+        });
       }
       finished_chunk_terrain_queue_.pop_front();
       // spdlog::info("{} {}", pos.x, pos.y);
@@ -107,52 +130,50 @@ void ChunkManager::Update(double /*dt*/) {
     }
   }
 
-  state_stats_.max_meshed_chunks =
-      ((load_distance_ - 1) * 2 + 1) * ((load_distance_ - 1) * 2 + 1) * NumVerticalChunks;
-  state_stats_.max_loaded_chunks =
-      (load_distance_ * 2 + 1) * (load_distance_ * 2 + 1) * NumVerticalChunks;
-  // bool loaded = state_stats_.meshed_chunks >= state_stats_.max_meshed_chunks;
-
-  // TODO: more robust ticks
+  state_stats_.max_chunks = (load_distance_ * 2 + 1) * (load_distance_ * 2 + 1) * NumVerticalChunks;
 
   {
     ZoneScopedN("Process mesh chunks");
     // process remesh chunks
     while (!chunk_mesh_queue_.empty()) {
       glm::ivec2 pos = chunk_mesh_queue_.front();
+      glm::ivec3 p;
+      p.x = pos.x;
+      p.z = pos.y;
       chunk_mesh_queue_.pop();
       // TODO: make queued state before the queue itself
-      for (int i = 0; i < NumVerticalChunks; i++) {
-        auto vert_it = chunk_map_.find({pos[0], i, pos[1]});
-        EASSERT(vert_it != chunk_map_.end());
-        EASSERT(vert_it->second->mesh_state != Chunk::State::Queued);
-        vert_it->second->mesh_state = Chunk::State::Queued;
+      bool valid = true;
+      for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+        if (!chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
+              chunk->mesh_state = Chunk::State::Queued;
+              state_stats_.loaded_chunks++;
+            })) {
+          valid = false;
+          break;
+        }
       }
+      if (!valid) continue;
 
       if (pos.x < center_.x - chunk_dist_lod_1_ || pos.x > center_.x + chunk_dist_lod_1_ ||
           pos.y < center_.z - chunk_dist_lod_1_ || pos.y > center_.z + chunk_dist_lod_1_) {
         // spdlog::info("{} {}", pos.x, pos.y);
         SendChunkMeshTaskLOD1(pos);
       } else {
-        for (int i = 0; i < NumVerticalChunks; i++) {
-          auto it = chunk_map_.find({pos[0], i, pos[1]});
-          if (it == chunk_map_.end()) {
-            continue;
-          }
-          Chunk& chunk = *it->second;
-          if (chunk.data.GetBlockCount() == 0) {
-            chunk.mesh_state = Chunk::State::Finished;
-            chunk.lod_level = LODLevel::Regular;
-            state_stats_.meshed_chunks++;
-            continue;
-          }
-          SendChunkMeshTaskNoLOD({pos[0], i, pos[1]});
+        for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+          chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
+            if (chunk->data.GetBlockCount() == 0) {
+              chunk->mesh_state = Chunk::State::Finished;
+              chunk->lod_level = LODLevel::Regular;
+              state_stats_.meshed_chunks++;
+            }
+          });
+          SendChunkMeshTaskNoLOD(p);
         }
       }
     }
   }
 
-  if (state_stats_.loaded_chunks >= state_stats_.max_loaded_chunks) first_load_completed_ = true;
+  if (state_stats_.loaded_chunks >= state_stats_.max_chunks) first_load_completed_ = true;
   // TODO: handle multiple direction change in one frame, ie teleportation
   if (pos_changed && first_load_completed_) {
     ZoneScopedN("Pos Changed");
@@ -162,9 +183,6 @@ void ChunkManager::Update(double /*dt*/) {
       for (pos.x = center_.x - chunk_dist_lod_1_; pos.x <= center_.x + chunk_dist_lod_1_; pos.x++) {
         pos.z = center_.z + chunk_dist_lod_1_;
         for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
-          auto it = chunk_map_.find(pos);
-          EASSERT(it != chunk_map_.end());
-          EASSERT(it->second->lod_level != LODLevel::Regular);
           SendChunkMeshTaskNoLOD(pos);
         }
         SendChunkMeshTaskLOD1({pos.x, prev_center_.z - chunk_dist_lod_1_});
@@ -174,9 +192,6 @@ void ChunkManager::Update(double /*dt*/) {
       for (pos.x = center_.x - chunk_dist_lod_1_; pos.x <= center_.x + chunk_dist_lod_1_; pos.x++) {
         pos.z = center_.z - chunk_dist_lod_1_;
         for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
-          auto it = chunk_map_.find({pos[0], pos[1], pos[2]});
-          EASSERT(it != chunk_map_.end());
-          EASSERT(it->second->lod_level != LODLevel::Regular);
           SendChunkMeshTaskNoLOD(pos);
         }
         SendChunkMeshTaskLOD1({pos.x, prev_center_.z + chunk_dist_lod_1_});
@@ -186,9 +201,6 @@ void ChunkManager::Update(double /*dt*/) {
       for (pos.z = center_.z - chunk_dist_lod_1_; pos.z <= center_.z + chunk_dist_lod_1_; pos.z++) {
         pos.x = center_.x + chunk_dist_lod_1_;
         for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
-          auto it = chunk_map_.find(pos);
-          EASSERT(it != chunk_map_.end());
-          EASSERT(it->second->lod_level != LODLevel::Regular);
           SendChunkMeshTaskNoLOD(pos);
         }
         SendChunkMeshTaskLOD1({prev_center_.x - chunk_dist_lod_1_, pos.z});
@@ -198,9 +210,9 @@ void ChunkManager::Update(double /*dt*/) {
       for (pos.z = center_.z - chunk_dist_lod_1_; pos.z <= center_.z + chunk_dist_lod_1_; pos.z++) {
         pos.x = center_.x - chunk_dist_lod_1_;
         for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
-          auto it = chunk_map_.find(pos);
-          EASSERT(it != chunk_map_.end());
-          EASSERT(it->second->lod_level != LODLevel::Regular);
+          // auto it = chunk_map_.find(pos);
+          // EASSERT(it != chunk_map_.end());
+          // EASSERT(it->second->lod_level != LODLevel::Regular);
           SendChunkMeshTaskNoLOD(pos);
         }
         SendChunkMeshTaskLOD1({prev_center_.x + chunk_dist_lod_1_, pos.z});
@@ -215,17 +227,16 @@ void ChunkManager::Update(double /*dt*/) {
     while (!chunk_mesh_finished_queue_.empty()) {
       if (timer.ElapsedMS() > 5) break;
       auto& task = chunk_mesh_finished_queue_.front();
-      auto it = chunk_map_.find(task.pos);
-      if (it != chunk_map_.end()) {
-        FreeChunkMesh(it->second->mesh_handle);
+      chunk_map_.find_fn(task.pos, [this, &task](const std::shared_ptr<Chunk>& chunk) {
+        FreeChunkMesh(chunk->mesh_handle);
         if (!task.vertices.empty()) {
-          it->second->mesh_handle = Renderer::Get().AllocateStaticChunk(task.vertices, task.indices,
-                                                                        task.pos * ChunkLength);
+          chunk->mesh_handle = Renderer::Get().AllocateStaticChunk(task.vertices, task.indices,
+                                                                   task.pos * ChunkLength);
         }
-        it->second->lod_level = task.lod_level;
-        it->second->mesh_state = Chunk::State::Finished;
+        chunk->lod_level = task.lod_level;
+        chunk->mesh_state = Chunk::State::Finished;
         state_stats_.meshed_chunks++;
-      }
+      });
       chunk_mesh_finished_queue_.pop_front();
     }
   }
@@ -233,17 +244,9 @@ void ChunkManager::Update(double /*dt*/) {
   {
     ZoneScopedN("Immediate chunk remesh");
     for (const auto& pos : chunk_mesh_queue_immediate_) {
-      auto it = chunk_map_.find(pos);
-      if (it == chunk_map_.end()) continue;
-      auto& chunk = it->second;
-      bool can_mesh = true;
-      for (const auto& offset : ChunkNeighborOffsets) {
-        if (!chunk_map_.contains(pos + glm::ivec3{offset[0], offset[1], offset[2]})) {
-          can_mesh = false;
-          break;
-        }
-      }
-      if (!can_mesh) continue;
+      if (!chunk_map_.contains(pos)) continue;
+      auto chunk = chunk_map_.find(pos);
+      if (chunk->data.GetBlockCount() == 0) continue;
 
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, true);
@@ -266,21 +269,74 @@ void ChunkManager::Update(double /*dt*/) {
     chunk_mesh_queue_immediate_.clear();
   }
 
+  if (!first_load_completed_) {
+    AddNewChunks(false, true);
+  }
   if (pos_changed) {
-    UnloadChunksOutOfRange();
-    AddNewChunks(false);
+    UnloadChunksOutOfRange(center_ - prev_center_);
+    AddNewChunks(false, true);
   }
 }
-void ChunkManager::UnloadChunksOutOfRange() {
+
+void ChunkManager::UnloadChunksOutOfRange(int old_load_distance) {
   ZoneScoped;
-  for (auto it = chunk_map_.begin(); it != chunk_map_.end();) {
-    if (abs(it->first.x - center_.x) > load_distance_ ||
-        abs(it->first.z - center_.z) > load_distance_) {
-      FreeChunkMesh(it->second->mesh_handle);
-      it = chunk_map_.erase(it);
-      state_stats_.loaded_chunks--;
-    } else {
-      it++;
+  IterateChunks(old_load_distance, [this](const glm::ivec2& pos) {
+    if (abs(pos.x - center_.x) > load_distance_ || abs(pos.y - center_.z) > load_distance_) {
+      glm::ivec3 p;
+      p.x = pos.x;
+      p.z = pos.y;
+      for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+        if (chunk_map_.find_fn(p, [this, &p](auto& c) { FreeChunkMesh(c->mesh_handle); })) {
+          chunk_map_.erase(p);
+        }
+      }
+    }
+  });
+}
+
+void ChunkManager::UnloadChunksOutOfRange(const glm::ivec3& diff) {
+  ZoneScoped;
+  auto erase_fn = [this](const glm::ivec3& pos) {
+    if (chunk_map_.find_fn(pos, [this](auto& c) { FreeChunkMesh(c->mesh_handle); })) {
+      chunk_map_.erase(pos);
+    }
+  };
+  if (diff.z == 1) {
+    glm::ivec3 pos;
+    pos.z = prev_center_.z - load_distance_;
+    for (pos.x = prev_center_.x - load_distance_; pos.x <= prev_center_.x + load_distance_;
+         pos.x++) {
+      for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
+        erase_fn(pos);
+      }
+    }
+  } else if (diff.z == -1) {
+    glm::ivec3 pos;
+    pos.z = prev_center_.z + load_distance_;
+    for (pos.x = prev_center_.x - load_distance_; pos.x <= prev_center_.x + load_distance_;
+         pos.x++) {
+      for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
+        erase_fn(pos);
+      }
+    }
+  }
+  if (diff.x == 1) {
+    glm::ivec3 pos;
+    pos.x = prev_center_.x - load_distance_;
+    for (pos.z = prev_center_.z - load_distance_; pos.z <= prev_center_.z + load_distance_;
+         pos.z++) {
+      for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
+        erase_fn(pos);
+      }
+    }
+  } else if (diff.x == -1) {
+    glm::ivec3 pos;
+    pos.x = prev_center_.x + load_distance_;
+    for (pos.z = prev_center_.z - load_distance_; pos.z <= prev_center_.z + load_distance_;
+         pos.z++) {
+      for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
+        erase_fn(pos);
+      }
     }
   }
 }
@@ -288,7 +344,8 @@ void ChunkManager::UnloadChunksOutOfRange() {
 void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::ivec2& out_dims,
                                             int y_level, float opacity, ChunkMapMode mode) {
   ZoneScoped;
-  int length = (load_distance_) * 2 + 1;
+  int dist = load_distance_ + 1;
+  int length = dist * 2 + 1;
   out_dims.x = length;
   out_dims.y = length;
   glm::ivec3 iter;
@@ -304,50 +361,46 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
   };
 
   if (mode == ChunkMapMode::ChunkState) {
-    for (iter.z = center_.z - load_distance_; iter.z <= center_.z + load_distance_; iter.z++) {
-      for (iter.x = center_.x - load_distance_; iter.x <= center_.x + load_distance_; iter.x++) {
+    for (iter.z = center_.z - dist; iter.z <= center_.z + dist; iter.z++) {
+      for (iter.x = center_.x - dist; iter.x <= center_.x + dist; iter.x++) {
         if (iter.x == center_.x && iter.z == center_.z) {
           add_color(color::White);
         } else {
-          auto it = chunk_map_.find(iter);
-          if (it == chunk_map_.end()) {
+          if (!chunk_map_.find_fn(iter, [&add_color](const std::shared_ptr<Chunk>& chunk) {
+                if (chunk->mesh_handle != 0) {
+                  EASSERT(chunk.mesh_state == Chunk::State::Finished);
+                  add_color(color::Blue);
+                } else if (chunk->mesh_state == Chunk::State::Finished) {
+                  add_color(color::Green);
+                } else if (chunk->terrain_state == Chunk::State::Finished) {
+                  add_color(color::Red);
+                } else {
+                  add_color(color::Cyan);
+                }
+              })) {
             add_color(color::Black);
-          } else {
-            Chunk& chunk = *it->second;
-            if (chunk.mesh_handle != 0) {
-              EASSERT(chunk.mesh_state == Chunk::State::Finished);
-              add_color(color::Blue);
-            } else if (chunk.mesh_state == Chunk::State::Finished) {
-              add_color(color::Green);
-            } else if (chunk.terrain_state == Chunk::State::Finished) {
-              add_color(color::Red);
-            } else {
-              add_color(color::Cyan);
-            }
           }
         }
       }
     }
   } else {
-    for (iter.z = center_.z - load_distance_; iter.z <= center_.z + load_distance_; iter.z++) {
-      for (iter.x = center_.x - load_distance_; iter.x <= center_.x + load_distance_; iter.x++) {
+    for (iter.z = center_.z - dist; iter.z <= center_.z + dist; iter.z++) {
+      for (iter.x = center_.x - dist; iter.x <= center_.x + dist; iter.x++) {
         if (iter.x == center_.x && iter.z == center_.z) {
           add_color(color::White);
         } else {
-          auto it = chunk_map_.find(iter);
-          if (it == chunk_map_.end()) {
+          if (!chunk_map_.find_fn(iter, [&add_color](const std::shared_ptr<Chunk>& chunk) {
+                if (chunk->lod_level == LODLevel::NoMesh) {
+                  add_color(color::Blue);
+                } else if (chunk->lod_level == LODLevel::Regular) {
+                  add_color(color::Green);
+                } else if (chunk->lod_level == LODLevel::One) {
+                  add_color(color::Red);
+                } else {
+                  add_color(color::Cyan);
+                }
+              })) {
             add_color(color::Black);
-          } else {
-            Chunk& chunk = *it->second;
-            if (chunk.lod_level == LODLevel::NoMesh) {
-              add_color(color::Blue);
-            } else if (chunk.lod_level == LODLevel::Regular) {
-              add_color(color::Green);
-            } else if (chunk.lod_level == LODLevel::One) {
-              add_color(color::Red);
-            } else {
-              add_color(color::Cyan);
-            }
           }
         }
       }
@@ -355,23 +408,119 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
   }
 }
 
+void ChunkManager::IterateChunks(int start_distance, int load_distance,
+                                 const PositionIteratorFunc& func) const {
+  int start_idx = (start_distance * 2 + 1) * (start_distance * 2 + 1);
+  IterateChunks(load_distance, [&func, start_idx](const glm::ivec2& pos, int i) {
+    if (i >= start_idx) {
+      func(pos);
+    }
+  });
+}
+
+void ChunkManager::IterateChunks(int load_distance, const PositionIteratorFuncIdx& func) const {
+  // Clockwise Spiral iterator starting from center
+  constexpr static int Dx[] = {1, 0, -1, 0};
+  constexpr static int Dy[] = {0, 1, 0, -1};
+  int direction = 0;
+  int step_radius = 1;
+  int direction_steps_counter = 0;
+  int turn_counter = 0;
+  int load_len = (load_distance) * 2 + 1;
+  int num_chunk_positions = load_len * load_len;
+  glm::ivec2 pos{center_.x, center_.z};
+
+  for (int chunk_pos_idx = 0; chunk_pos_idx < num_chunk_positions; chunk_pos_idx++) {
+    func(pos, chunk_pos_idx);
+    // branchless iterate
+    direction_steps_counter++;
+    pos.x += Dx[direction];
+    pos.y += Dy[direction];
+    bool change_dir = direction_steps_counter == step_radius;
+    direction = (direction + change_dir) % 4;
+    direction_steps_counter *= !change_dir;
+    turn_counter += change_dir;
+    step_radius += change_dir * (1 - (turn_counter % 2));
+  }
+}
+
+void ChunkManager::IterateChunks(int load_distance, const PositionIteratorFunc& func) const {
+  // Clockwise Spiral iterator starting from center
+  constexpr static int Dx[] = {1, 0, -1, 0};
+  constexpr static int Dy[] = {0, 1, 0, -1};
+  int direction = 0;
+  int step_radius = 1;
+  int direction_steps_counter = 0;
+  int turn_counter = 0;
+  int load_len = (load_distance) * 2 + 1;
+  int num_chunk_positions = load_len * load_len;
+  glm::ivec2 pos{center_.x, center_.z};
+
+  for (int chunk_pos_idx = 0; chunk_pos_idx < num_chunk_positions; chunk_pos_idx++) {
+    func(pos);
+    // branchless iterate
+    direction_steps_counter++;
+    pos.x += Dx[direction];
+    pos.y += Dy[direction];
+    bool change_dir = direction_steps_counter == step_radius;
+    direction = (direction + change_dir) % 4;
+    direction_steps_counter *= !change_dir;
+    turn_counter += change_dir;
+    step_radius += change_dir * (1 - (turn_counter % 2));
+  }
+}
+
+void ChunkManager::IterateChunksVertical(int load_distance,
+                                         const VerticalPositionIteratorFunc& func) const {
+  IterateChunks(load_distance, [&func](const glm::ivec2& pos) {
+    glm::ivec3 p{pos.x, 0, pos.y};
+    for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+      func(p);
+    }
+  });
+}
+
 ChunkManager::~ChunkManager() {
   thread_pool_.wait();
-  for (auto& [pos, chunk] : chunk_map_) {
-    FreeChunkMesh(chunk->mesh_handle);
-  }
+  IterateChunks(load_distance_, [this](const glm::ivec2& pos) {
+    glm::ivec3 p{pos.x, 0, pos.y};
+    for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+      chunk_map_.find_fn(
+          p, [this](const std::shared_ptr<Chunk>& chunk) { FreeChunkMesh(chunk->mesh_handle); });
+    }
+  });
   nlohmann::json j = {{"load_distance", load_distance_}, {"frequency", frequency_}};
   SettingsManager::Get().SaveSetting(j, "chunk_manager");
 }
 
 void ChunkManager::OnImGui() {
   if (ImGui::CollapsingHeader("Chunk Manager", ImGuiTreeNodeFlags_DefaultOpen)) {
+    int old_load_distance = load_distance_;
     if (ImGui::SliderInt("Load Distance", &load_distance_, 1, 72)) {
-      UnloadChunksOutOfRange();
+      UnloadChunksOutOfRange(old_load_distance);
       AddNewChunks(false);
     }
     ImGui::Checkbox("Greedy Meshing", &mesh_greedy_);
     ImGui::SliderFloat("Frequency", &frequency_, 0.1, 10);
+    int old_lod1_distance = chunk_dist_lod_1_;
+    if (ImGui::SliderInt("LOD 1 Distance", &chunk_dist_lod_1_, std::min(5, load_distance_ - 1),
+                         load_distance_ - 1)) {
+      // if greater, need to change old lod chunks into regular chunks
+      // if less, need to change regular chunks into lod chunks
+      if (old_lod1_distance < chunk_dist_lod_1_) {
+        // change to regular chunks
+        IterateChunksVertical(chunk_dist_lod_1_, [this](const glm::ivec3& pos) {
+          auto chunk = chunk_map_.find(pos);
+          if (chunk->lod_level != LODLevel::Regular) {
+            SendChunkMeshTaskNoLOD(pos);
+          }
+        });
+      } else {
+        // change to lod chunks
+        IterateChunks(chunk_dist_lod_1_, old_lod1_distance,
+                      [this](const glm::ivec2& pos) { SendChunkMeshTaskLOD1(pos); });
+      }
+    }
     if (ImGui::CollapsingHeader("Stats##chunk_manager_stats", ImGuiTreeNodeFlags_DefaultOpen)) {
       ImGui::Text("Center: %i %i %i", center_.x, center_.y, center_.z);
       ImGui::Text("Prev Center: %i %i %i", prev_center_.x, prev_center_.y, prev_center_.z);
@@ -381,10 +530,8 @@ void ChunkManager::OnImGui() {
       ImGui::Text("Chunk Mesh Finish Queue:  %zu", chunk_mesh_finished_queue_.size());
       ImGui::Text("Chunk Terrain Queue:  %zu", chunk_terrain_queue_.size());
       ImGui::Text("Chunk Terrain Finish Queue:  %zu", finished_chunk_terrain_queue_.size());
-      ImGui::Text("Chunks Loaded: %i, Max: %i", state_stats_.loaded_chunks,
-                  state_stats_.max_loaded_chunks);
-      ImGui::Text("Chunks Meshed: %i, Max: %i", state_stats_.meshed_chunks,
-                  state_stats_.max_meshed_chunks);
+      ImGui::Text("Chunks:  Loaded: %i, Meshed: %i Max: %i", state_stats_.loaded_chunks,
+                  state_stats_.meshed_chunks, state_stats_.max_chunks);
     }
   }
 }
@@ -398,18 +545,16 @@ void ChunkManager::PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, co
   ZoneScoped;
   for (const auto& off : ChunkNeighborOffsets) {
     glm::ivec3 neighbor_pos = {pos.x + off[0], pos.y + off[1], pos.z + off[2]};
-    auto neighbor_it = chunk_map_.find(neighbor_pos);
-    if (neighbor_it == chunk_map_.end()) {
-      // spdlog::info("add new chunk {} {} {}", neighbor_pos.x, neighbor_pos.y, neighbor_pos.z);
+    if (!chunk_map_.find_fn(
+            neighbor_pos, [&neighbor_array, &off](const std::shared_ptr<Chunk>& chunk) {
+              neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = chunk;
+            })) {
+      spdlog::error("chunk not found needed for neighbor");
       if (add_new_chunks) {
-        auto new_chunk =
-            chunk_map_.try_emplace(neighbor_pos, std::make_shared<Chunk>(neighbor_pos));
-        neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = new_chunk.first->second;
-      } else {
-        neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = nullptr;
+        auto new_chunk = std::make_shared<Chunk>(neighbor_pos);
+        chunk_map_.insert(neighbor_pos, new_chunk);
+        neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = new_chunk;
       }
-    } else {
-      neighbor_array[ChunkNeighborOffsetToIdx(off[0], off[1], off[2])] = neighbor_it->second;
     }
   }
 }
@@ -469,41 +614,48 @@ void ChunkManager::FreeChunkMesh(uint32_t& handle) {
 
 void ChunkManager::SendChunkMeshTaskLOD1(const glm::ivec2& pos) {
   thread_pool_.detach_task([this, pos] {
-    for (int i = 0; i < NumVerticalChunks; i++) {
-      std::vector<ChunkVertex> vertices;
-      std::vector<uint32_t> indices;
-      auto it = chunk_map_.find({pos[0], i, pos[1]});
-      if (it == chunk_map_.end()) return;
-      auto chunk = it->second;
-      // spdlog::info("{} {} {}", pos.x, i, pos.y);
-      // EASSERT(chunk->lod_level != LODLevel::One);
-      if (chunk->lod_level == LODLevel::One) {
-        continue;
-      }
-      // spdlog::info("{} {} {}", pos.x, pos.y, pos.z);
-      ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
-      if (mesh_greedy_) {
-        chunk->data.DownSample();
-        mesher.GenerateLODGreedy(chunk->data, vertices, indices);
-      } else {
-        EASSERT_MSG(0, "TODO");
-        // mesher.GenerateSmart(it->second->data, vertices, indices);
-      }
-      {
+    glm::ivec3 p;
+    p.x = pos.x;
+    p.z = pos.y;
+    for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+      chunk_map_.find_fn(p, [this, &p](const std::shared_ptr<Chunk>& chunk) {
+        if (chunk->lod_level == LODLevel::One) {
+          return;
+        }
+        if (chunk->data.GetBlockCount() == 0) {
+          chunk->lod_level = LODLevel::One;
+          chunk->mesh_state = Chunk::State::Finished;
+          std::lock_guard<std::mutex> lock(mutex_);
+          state_stats_.meshed_chunks++;
+          return;
+        }
+        std::vector<ChunkVertex> vertices;
+        std::vector<uint32_t> indices;
+        ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
+        if (mesh_greedy_) {
+          chunk->data.DownSample();
+          mesher.GenerateLODGreedy(chunk->data, vertices, indices);
+        } else {
+          EASSERT_MSG(0, "TODO");
+          // mesher.GenerateSmart(it->second->data, vertices, indices);
+        }
         std::lock_guard<std::mutex> lock(mutex_);
-        // static std::unordered_map<glm::ivec3, int> finished;
-        // if (finished.contains({pos[0], i, pos[1]})) {
-        //   spdlog::info("{} {} {} {}", pos.x, i, pos.y, finished.at({pos[0], i, pos[1]}));
-        // }
-        // finished[glm::ivec3{pos[0], i, pos[1]}]++;
-        chunk_mesh_finished_queue_.emplace_back(vertices, indices, glm::ivec3{pos[0], i, pos[1]},
+        chunk_mesh_finished_queue_.emplace_back(std::move(vertices), std::move(indices), p,
                                                 LODLevel::One);
-      }
+      });
     }
   });
 }
 
 void ChunkManager::SendChunkMeshTaskNoLOD(const glm::ivec3& pos) {
+  int num_blocks = 0;
+  if (!chunk_map_.find_fn(pos, [&num_blocks](const std::shared_ptr<Chunk>& chunk) {
+        num_blocks = chunk->data.GetBlockCount();
+      })) {
+    return;
+  }
+  if (!num_blocks) return;
+
   ChunkNeighborArray a;
   PopulateChunkNeighbors(a, pos, true);
   thread_pool_.detach_task([this, a, pos] {
@@ -517,12 +669,13 @@ void ChunkManager::SendChunkMeshTaskNoLOD(const glm::ivec3& pos) {
     }
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      chunk_mesh_finished_queue_.emplace_back(vertices, indices, pos, LODLevel::Regular);
+      chunk_mesh_finished_queue_.emplace_back(std::move(vertices), std::move(indices), pos,
+                                              LODLevel::Regular);
     }
   });
 }
 
-void ChunkManager::AddNewChunks(bool first_load) {
+void ChunkManager::AddNewChunks(bool first_load, bool throttle) {
   // Clockwise Spiral iterator starting from center
   constexpr static int Dx[] = {1, 0, -1, 0};
   constexpr static int Dy[] = {0, 1, 0, -1};
@@ -535,41 +688,41 @@ void ChunkManager::AddNewChunks(bool first_load) {
   glm::ivec3 pos = center_;
   pos.y = 0;
 
-  for (int chunk_pos_idx = 0; chunk_pos_idx < num_chunk_positions; chunk_pos_idx++) {
-    if (first_load) {
-      for (pos.y = 0; pos.y <= NumVerticalChunks; pos.y++) {
-        auto new_chunk = chunk_map_.emplace(pos, std::make_shared<Chunk>(pos));
-        new_chunk.first->second->terrain_state = Chunk::State::Queued;
-      }
-      chunk_terrain_queue_.emplace(pos.x, pos.z);
-    } else {
+  if (!first_load) {
+    int max_per_call = SettingsManager::Get().CoreCount() * 3;
+    int curr = 0;
+    for (int chunk_pos_idx = 0; chunk_pos_idx < num_chunk_positions; chunk_pos_idx++) {
       bool new_chunk_column = false;
-      for (pos.y = 0; pos.y <= NumVerticalChunks; pos.y++) {
-        auto it = chunk_map_.find(pos);
-        if (it == chunk_map_.end()) {
+      if (throttle && curr > max_per_call) break;
+      for (pos.y = -1; pos.y <= NumVerticalChunks; pos.y++) {
+        if (!chunk_map_.contains(pos)) {
           new_chunk_column = true;
-          auto new_chunk = chunk_map_.emplace(pos, std::make_shared<Chunk>(pos));
-          new_chunk.first->second->terrain_state = Chunk::State::Queued;
+          auto chunk = std::make_shared<Chunk>(pos);
+          chunk->terrain_state = Chunk::State::Queued;
+          chunk_map_.insert(pos, chunk);
         }
       }
       if (new_chunk_column) {
         chunk_terrain_queue_.emplace(pos.x, pos.z);
       }
-    }
 
-    // branchless iterate
-    direction_steps_counter++;
-    pos.x += Dx[direction];
-    pos.z += Dy[direction];
-    bool change_dir = direction_steps_counter == step_radius;
-    direction = (direction + change_dir) % 4;
-    direction_steps_counter *= !change_dir;
-    turn_counter += change_dir;
-    step_radius += change_dir * (1 - (turn_counter % 2));
+      // branchless iterate
+      direction_steps_counter++;
+      pos.x += Dx[direction];
+      pos.z += Dy[direction];
+      bool change_dir = direction_steps_counter == step_radius;
+      direction = (direction + change_dir) % 4;
+      direction_steps_counter *= !change_dir;
+      turn_counter += change_dir;
+      step_radius += change_dir * (1 - (turn_counter % 2));
+    }
+  } else {
   }
 }
+
 void ChunkManager::Init(const glm::ivec3& start_pos) {
   ZoneScoped;
   SetCenter(start_pos);
-  AddNewChunks(true);
+  chunk_dist_lod_1_ = std::min(5, load_distance_ - 1);
+  // AddNewChunks(true);
 }
