@@ -42,5 +42,6 @@ class ChunkData {
   friend class TerrainGenerator;
   friend class SingleChunkTerrainGenerator;
   int block_count_{0};
+  bool lod_needs_refresh_{true};
   bool has_lod_1_{false};
 };

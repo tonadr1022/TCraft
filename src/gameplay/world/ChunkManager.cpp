@@ -40,8 +40,8 @@ ChunkManager::ChunkManager(BlockDB& block_db) : block_db_(block_db) {
 }
 
 void ChunkManager::SetBlock(const glm::ivec3& pos, BlockType block) {
-  EASSERT_MSG(chunk_map_.contains(chunk_pos), "Set block in non existent chunk");
   auto chunk_pos = util::chunk::WorldToChunkPos(pos);
+  EASSERT_MSG(chunk_map_.contains(chunk_pos), "Set block in non existent chunk");
   chunk_map_.find_fn(chunk_pos,
                      [this, &chunk_pos, &pos, block](const std::shared_ptr<Chunk>& chunk) {
                        glm::ivec3 block_pos_in_chunk = util::chunk::WorldToPosInChunk(pos);
@@ -91,7 +91,7 @@ void ChunkManager::Update(double /*dt*/) {
       bool valid = true;
       for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
         if (!chunk_map_.find_fn(
-                p, [this, &p, &data](const std::shared_ptr<Chunk>& chunk) { data[p.y] = chunk; })) {
+                p, [&p, &data](const std::shared_ptr<Chunk>& chunk) { data[p.y] = chunk; })) {
           spdlog::error("uh oh no chunk, {} {} {}", pos.x, p.y, pos.y);
           valid = false;
           break;
@@ -103,32 +103,40 @@ void ChunkManager::Update(double /*dt*/) {
 
         TerrainGenerator gen{data, pos * ChunkLength, seed_, terrain_};
         gen.GenerateBiome();
+        for (int i = 0; i < NumVerticalChunks; i++) {
+          data[i]->data.DownSample();
+          // TODO: see if race condition somewhere?
+          data[i]->terrain_state = Chunk::State::Finished;
+        }
         {
           std::lock_guard<std::mutex> lock(mutex_);
-          finished_chunk_terrain_queue_.emplace_back(pos);
+          // for (int i = 0; i < NumVerticalChunks; i++) {
+          // }
+          state_stats_.loaded_chunks += NumVerticalChunks;
+          chunk_mesh_queue_.emplace(pos);
         }
       });
     }
   }
 
-  {
-    ZoneScopedN("Process finished chunk terrain tasks");
-    while (!finished_chunk_terrain_queue_.empty()) {
-      auto pos = finished_chunk_terrain_queue_.front();
-      glm::ivec3 p;
-      p.x = pos.x;
-      p.z = pos.y;
-      for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
-        chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
-          chunk->terrain_state = Chunk::State::Finished;
-          state_stats_.loaded_chunks++;
-        });
-      }
-      finished_chunk_terrain_queue_.pop_front();
-      // spdlog::info("{} {}", pos.x, pos.y);
-      chunk_mesh_queue_.emplace(pos);
-    }
-  }
+  // {
+  //   ZoneScopedN("Process finished chunk terrain tasks");
+  //   while (!finished_chunk_terrain_queue_.empty()) {
+  //     auto pos = finished_chunk_terrain_queue_.front();
+  //     glm::ivec3 p;
+  //     p.x = pos.x;
+  //     p.z = pos.y;
+  //     for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
+  //       chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
+  //         chunk->terrain_state = Chunk::State::Finished;
+  //         state_stats_.loaded_chunks++;
+  //       });
+  //     }
+  //     finished_chunk_terrain_queue_.pop_front();
+  //     // spdlog::info("{} {}", pos.x, pos.y);
+  //     chunk_mesh_queue_.emplace(pos);
+  //   }
+  // }
 
   state_stats_.max_chunks = (load_distance_ * 2 + 1) * (load_distance_ * 2 + 1) * NumVerticalChunks;
 
@@ -144,7 +152,7 @@ void ChunkManager::Update(double /*dt*/) {
       // TODO: make queued state before the queue itself
       bool valid = true;
       for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
-        if (!chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
+        if (!chunk_map_.find_fn(p, [](const std::shared_ptr<Chunk>& chunk) {
               chunk->mesh_state = Chunk::State::Queued;
             })) {
           valid = false;
@@ -159,13 +167,6 @@ void ChunkManager::Update(double /*dt*/) {
         SendChunkMeshTaskLOD1(pos);
       } else {
         for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
-          chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
-            if (chunk->data.GetBlockCount() == 0) {
-              chunk->mesh_state = Chunk::State::Finished;
-              chunk->lod_level = LODLevel::Regular;
-              state_stats_.meshed_chunks++;
-            }
-          });
           SendChunkMeshTaskNoLOD(p);
         }
       }
@@ -209,9 +210,6 @@ void ChunkManager::Update(double /*dt*/) {
       for (pos.z = center_.z - chunk_dist_lod_1_; pos.z <= center_.z + chunk_dist_lod_1_; pos.z++) {
         pos.x = center_.x - chunk_dist_lod_1_;
         for (pos.y = 0; pos.y < NumVerticalChunks; pos.y++) {
-          // auto it = chunk_map_.find(pos);
-          // EASSERT(it != chunk_map_.end());
-          // EASSERT(it->second->lod_level != LODLevel::Regular);
           SendChunkMeshTaskNoLOD(pos);
         }
         SendChunkMeshTaskLOD1({prev_center_.x + chunk_dist_lod_1_, pos.z});
@@ -283,7 +281,7 @@ void ChunkManager::UnloadChunksOutOfRange(int old_load_distance) {
       p.x = pos.x;
       p.z = pos.y;
       for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
-        if (chunk_map_.find_fn(p, [this, &p](auto& c) { FreeChunkMesh(c->mesh_handle); })) {
+        if (chunk_map_.find_fn(p, [this](auto& c) { FreeChunkMesh(c->mesh_handle); })) {
           chunk_map_.erase(p);
         }
       }
@@ -365,7 +363,7 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
         } else {
           if (!chunk_map_.find_fn(iter, [&add_color](const std::shared_ptr<Chunk>& chunk) {
                 if (chunk->mesh_handle != 0) {
-                  EASSERT(chunk.mesh_state == Chunk::State::Finished);
+                  EASSERT(chunk->mesh_state == Chunk::State::Finished);
                   add_color(color::Blue);
                 } else if (chunk->mesh_state == Chunk::State::Finished) {
                   add_color(color::Green);
@@ -631,13 +629,9 @@ void ChunkManager::SendChunkMeshTaskLOD1(const glm::ivec2& pos) {
         std::vector<ChunkVertex> vertices;
         std::vector<uint32_t> indices;
         ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
-        if (mesh_greedy_) {
-          chunk->data.DownSample();
-          mesher.GenerateLODGreedy(chunk->data, vertices, indices);
-        } else {
-          EASSERT_MSG(0, "TODO");
-          // mesher.GenerateSmart(it->second->data, vertices, indices);
-        }
+        chunk->data.DownSample();
+        mesher.GenerateLODGreedy(chunk->data, vertices, indices);
+
         std::lock_guard<std::mutex> lock(mutex_);
         chunk_mesh_finished_queue_.emplace_back(std::move(vertices), std::move(indices), p,
                                                 LODLevel::One);
@@ -648,12 +642,19 @@ void ChunkManager::SendChunkMeshTaskLOD1(const glm::ivec2& pos) {
 
 void ChunkManager::SendChunkMeshTaskNoLOD(const glm::ivec3& pos) {
   int num_blocks = 0;
-  if (!chunk_map_.find_fn(pos, [&num_blocks](const std::shared_ptr<Chunk>& chunk) {
+  if (!chunk_map_.find_fn(pos, [this, &num_blocks](const std::shared_ptr<Chunk>& chunk) {
         num_blocks = chunk->data.GetBlockCount();
+        if (!num_blocks) {
+          std::lock_guard<std::mutex> lock(mutex_);
+          chunk->lod_level = LODLevel::Regular;
+          chunk->mesh_state = Chunk::State::Finished;
+        }
       })) {
     return;
   }
-  if (!num_blocks) return;
+  if (!num_blocks) {
+    return;
+  }
 
   ChunkNeighborArray a;
   PopulateChunkNeighbors(a, pos, true);

@@ -21,6 +21,7 @@ void ChunkData::SetBlock(int x, int y, int z, BlockType block) {
   BlockType curr = (*blocks_)[index];
   block_count_ += (curr == 0 && block != 0);
   block_count_ -= (curr != 0 && block == 0);
+  lod_needs_refresh_ = true;
   (*blocks_)[index] = block;
 }
 
@@ -32,8 +33,9 @@ int ChunkData::GetBlockCount() const { return block_count_; }
 
 void ChunkData::DownSample() {
   ZoneScoped;
-  if (has_lod_1_) return;
+  if (has_lod_1_ && !lod_needs_refresh_) return;
   has_lod_1_ = true;
+  lod_needs_refresh_ = false;
   if (block_count_ == 0) return;
   if (blocks_lod_1_ == nullptr) blocks_lod_1_ = std::make_unique<BlockTypeArrayLOD1>();
   uint32_t f = 2;
