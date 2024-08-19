@@ -97,6 +97,7 @@ class ChunkManager {
   StateStats state_stats_;
   int chunk_dist_lod_1_{5};
   bool first_load_completed_{false};
+  bool update_chunks_on_move_{true};
 
   BS::thread_pool thread_pool_;
 

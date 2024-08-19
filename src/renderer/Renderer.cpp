@@ -82,24 +82,16 @@ void Renderer::Init() {
   static_chunk_ebo_.Init(UINT32_MAX / 2, sizeof(uint32_t));
   static_chunk_vao_.AttachVertexBuffer(static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   static_chunk_vao_.AttachElementBuffer(static_chunk_ebo_.Id());
-  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxChunkDrawCmds / 2,
-                                   GL_DYNAMIC_STORAGE_BIT);
   static_chunk_draw_count_buffer_.Init(sizeof(GLuint), 0, nullptr);
-  chunk_uniform_ssbo_.Init(sizeof(StaticChunkDrawCmdUniform) * MaxChunkDrawCmds,
-                           GL_DYNAMIC_STORAGE_BIT);
 
   lod_static_chunk_vao_.Init();
   lod_static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
-  lod_static_chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'00, sizeof(ChunkVertex));
+  lod_static_chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
   lod_static_chunk_ebo_.Init(UINT32_MAX / 2, sizeof(uint32_t));
-  lod_static_chunk_vao_.AttachVertexBuffer(static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
-  lod_static_chunk_vao_.AttachElementBuffer(static_chunk_ebo_.Id());
-  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxChunkDrawCmds / 2,
-                                   GL_DYNAMIC_STORAGE_BIT);
+  lod_static_chunk_vao_.AttachVertexBuffer(lod_static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
+  lod_static_chunk_vao_.AttachElementBuffer(lod_static_chunk_ebo_.Id());
   lod_static_chunk_draw_count_buffer_.Init(sizeof(GLuint), 0, nullptr);
-  lod_static_chunk_uniform_ssbo_.Init(sizeof(StaticChunkDrawCmdUniform) * MaxChunkDrawCmds,
-                                      GL_DYNAMIC_STORAGE_BIT);
 
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
@@ -253,7 +245,6 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     // if an allocation change happend this frame (alloc or free), reset the buffers
     if (static_chunk_buffer_dirty_) {
       static_chunk_buffer_dirty_ = false;
-
       static_chunk_draw_info_buffer_.Init(
           static_chunk_vbo_.Allocs().size() * static_chunk_vbo_.AllocSize(), GL_DYNAMIC_STORAGE_BIT,
           static_chunk_vbo_.Allocs().data());
@@ -317,14 +308,15 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     if (lod_static_chunk_buffer_dirty_) {
       lod_static_chunk_buffer_dirty_ = false;
       lod_static_chunk_draw_info_buffer_.Init(
-          lod_static_chunk_vbo_.Allocs().size() * static_chunk_vbo_.AllocSize(),
+          lod_static_chunk_vbo_.Allocs().size() * lod_static_chunk_vbo_.AllocSize(),
           GL_DYNAMIC_STORAGE_BIT, lod_static_chunk_vbo_.Allocs().data());
       lod_static_chunk_draw_indirect_buffer_.Init(
           lod_static_chunk_vbo_.NumActiveAllocs() * sizeof(DrawElementsIndirectCommand),
           GL_DYNAMIC_STORAGE_BIT);
       lod_static_chunk_uniform_ssbo_.Init(
           lod_static_chunk_vbo_.Allocs().size() * sizeof(StaticChunkDrawCmdUniform),
-          GL_DYNAMIC_STORAGE_BIT, nullptr);
+          GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT,
+          nullptr);
     }
 
     // reset the index counter for cull compute shader
@@ -348,6 +340,31 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     auto chunk_shader = shader_manager_.GetShader("lod_chunk_batch");
     chunk_shader->Bind();
     chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
+    // static int i = 0;
+    // if (i++ == 0) {
+    //   auto* cnt = (StaticChunkDrawCmdUniform*)glMapNamedBufferRange(
+    //       lod_static_chunk_uniform_ssbo_.Id(), 0, sizeof(GLuint),
+    //       GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT);
+    //   if (cnt) {
+    //     StaticChunkDrawCmdUniform* c = cnt;
+    //     spdlog::info("positions");
+    //     for (int i = 0; i < 8; i++) {
+    //       spdlog::info("{} {} {}", c->pos.x, c->pos.y, c->pos.z);
+    //       c++;
+    //     }
+    //     // spdlog::info("{}", *cnt);
+    //     glUnmapNamedBuffer(lod_static_chunk_uniform_ssbo_.Id());
+    //   }
+    // }
+
+    // auto* cnt =
+    //     (GLuint*)glMapNamedBufferRange(lod_static_chunk_draw_count_buffer_.Id(), 0,
+    //     sizeof(GLuint),
+    //                                    GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT);
+    // if (cnt) {
+    //   spdlog::info("{}", *cnt);
+    //   glUnmapNamedBuffer(lod_static_chunk_draw_count_buffer_.Id());
+    // }
 
     const auto& chunk_tex_arr =
         TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
@@ -522,7 +539,6 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
               .base_vertex = static_cast<uint32_t>(chunk_vbo_offset / sizeof(ChunkVertex)),
               .base_instance = 0,
           });
-  static_chunk_buffer_dirty_ = true;
   return id;
 }
 uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
@@ -581,6 +597,8 @@ uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
             });
     stats_.total_chunk_vertices += vertices.size();
     stats_.total_chunk_indices += indices.size();
+    stats_.lod_chunk_vertices += vertices.size();
+    stats_.lod_chunk_indices += indices.size();
     lod_static_chunk_buffer_dirty_ = true;
   }
   return id;
@@ -687,6 +705,8 @@ void Renderer::FreeStaticChunkMesh(uint32_t handle) {
     }
     stats_.total_chunk_indices -= it->second.indices_count;
     stats_.total_chunk_vertices -= it->second.vertices_count;
+    stats_.lod_chunk_indices -= it->second.indices_count;
+    stats_.lod_chunk_indices -= it->second.vertices_count;
     lod_static_chunk_vbo_.Free(it->second.vbo_handle);
     lod_static_chunk_ebo_.Free(it->second.ebo_handle);
     lod_static_chunk_allocs_.erase(it);

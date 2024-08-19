@@ -50,8 +50,8 @@ constexpr int VertexLookup[120] = {
 };
 /* clang-format on */
 
-uint32_t GetLODVertexData1(int x, int y, int z) { return x | y << 8 | z << 16; }
-uint32_t GetLODVertexData2(int u, int v, uint32_t tex_idx) { return (u | v << 8 | tex_idx << 16); }
+uint32_t GetLODVertexData1(int x, int y, int z) { return x | y << 10 | z << 20; }
+uint32_t GetLODVertexData2(int u, int v, uint32_t tex_idx) { return (u | v << 10 | tex_idx << 20); }
 
 uint32_t GetVertexData1(uint8_t x, uint8_t y, uint8_t z, uint8_t u, uint8_t v, uint8_t ao) {
   return (x | y << 6 | z << 12 | ao << 18 | u << 20 | v << 26);
@@ -683,12 +683,10 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
   int chunk_length = ChunkLength / f;
   int chunk_area = chunk_length * chunk_length;
   int chunk_volume = chunk_area * chunk_length;
+
   glm::ivec3 dims = {chunk_length, chunk_length * NumVerticalChunks, chunk_length};
-  // auto get_index = [&chunk_length, &dims](int x, int y, int z) -> int {
-  //   return x + z * dims.z + y * chunk_length * chunk_length * NumVerticalChunks;
-  // };
-  auto get_block = [&chunk_data, &chunk_length, &chunk_volume](int x, int y, int z) {
-    return chunk_data[y / chunk_volume]->data.GetBlockLOD1(x, y % chunk_volume, z);
+  auto get_block = [&chunk_data, &chunk_volume, &chunk_length](int x, int y, int z) {
+    return chunk_data[y / chunk_length]->data.GetBlockLOD1(x, y % chunk_length, z);
   };
 
   std::vector<int> block_mask(chunk_length * chunk_length * NumVerticalChunks);
@@ -699,7 +697,6 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
     // TODO: make parameter
     int x[3] = {0}, q[3] = {0};
 
-    int i = 0;
     // Compute mask
     q[axis] = 1;
     for (x[axis] = -1; x[axis] < dims[axis];) {
@@ -724,11 +721,11 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
       ++x[axis];
 
       // Generate mesh for mask using lexicographic ordering
-      uint32_t width = 0, height = 0;
+      int width = 0, height = 0;
 
       counter = 0;
       for (int j = 0; j < dims[v]; ++j) {
-        for (uint32_t i = 0; i < dims[u];) {
+        for (int i = 0; i < dims[u];) {
           int quad_type = block_mask[counter];
           if (quad_type) {
             // Compute width
@@ -738,7 +735,7 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
             // Compute height
             bool done = false;
             for (height = 1; j + height < dims[v]; ++height) {
-              for (uint32_t k = 0; k < width; ++k) {
+              for (int k = 0; k < width; ++k) {
                 if (quad_type != block_mask[counter + k + height * dims[u]]) {
                   done = true;
                   break;
@@ -754,13 +751,16 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
 
             int du[3] = {0}, dv[3] = {0};
 
-            int quad_face = ((axis << 1) | (quad_type <= 0));
-
-            if (quad_type < 0) {
+            if (quad_type > 0) {
+              dv[v] = height * 2;
+              du[u] = width * 2;
+            } else {
               quad_type = -quad_type;
+              du[v] = height * 2;
+              dv[u] = width * 2;
             }
-            du[v] = height * 2;
-            dv[u] = width * 2;
+
+            int quad_face = ((axis << 1) | (quad_type <= 0));
 
             uint32_t tex_idx = db_mesh_data[quad_type].texture_indices[quad_face];
             int vx = x[0] * 2;
@@ -794,10 +794,9 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
             indices.push_back(base_vertex_idx + 1);
             indices.push_back(base_vertex_idx + 3);
 
-            for (std::size_t b = 0; b < width; ++b)
-              for (std::size_t a = 0; a < height; ++a) {
-                size_t ind = counter + b + a * dims[u];
-                block_mask[ind] = 0;
+            for (int b = 0; b < width; ++b)
+              for (int a = 0; a < height; ++a) {
+                block_mask[counter + b + a * dims[u]] = 0;
               }
 
             // Increment counters

@@ -7,7 +7,7 @@
 
 BlockType ChunkData::GetBlockLOD1(int x, int y, int z) const {
   if (blocks_lod_1_ == nullptr) return 0;
-  return (*blocks_lod_1_)[x | z << 4 | y << 8];
+  return (*blocks_lod_1_)[x + z * 16 + y * 256];
 }
 
 BlockType ChunkData::GetBlock(int x, int y, int z) const {
@@ -44,10 +44,9 @@ void ChunkData::DownSample() {
   if (block_count_ == 0) return;
   if (blocks_lod_1_ == nullptr) blocks_lod_1_ = std::make_unique<BlockTypeArrayLOD1>();
   uint32_t f = 2;
+  // TODO: templatize downsampling
   uint32_t chunk_length = ChunkLength / f;
-  auto get_index = [chunk_length](int x, int y, int z) -> int {
-    return x + z * chunk_length + y * chunk_length * chunk_length;
-  };
+  auto get_index = [](int x, int y, int z) -> int { return x | z << 4 | y << 8; };
 
   std::array<BlockType, 8> types;
   for (uint32_t new_y = 0; new_y < chunk_length; new_y++) {

@@ -102,6 +102,7 @@ void ChunkManager::Update(double /*dt*/) {
         ZoneScopedN("chunk terrain task");
 
         TerrainGenerator gen{data, pos * ChunkLength, seed_, terrain_};
+        // gen.GenerateSolid(3);
         gen.GenerateBiome();
         for (int i = 0; i < NumVerticalChunks; i++) {
           data[i]->data.DownSample();
@@ -162,8 +163,8 @@ void ChunkManager::Update(double /*dt*/) {
       }
       if (!valid) continue;
 
-      if (pos.x < center_.x - chunk_dist_lod_1_ || pos.x > center_.x + chunk_dist_lod_1_ ||
-          pos.y < center_.z - chunk_dist_lod_1_ || pos.y > center_.z + chunk_dist_lod_1_) {
+      if (p.x < center_.x - chunk_dist_lod_1_ || p.x > center_.x + chunk_dist_lod_1_ ||
+          p.z < center_.z - chunk_dist_lod_1_ || p.z > center_.z + chunk_dist_lod_1_) {
         // spdlog::info("{} {}", pos.x, pos.y);
         SendChunkMeshTaskLOD1(pos);
       } else {
@@ -176,7 +177,7 @@ void ChunkManager::Update(double /*dt*/) {
 
   if (state_stats_.loaded_chunks >= state_stats_.max_chunks) first_load_completed_ = true;
   // TODO: handle multiple direction change in one frame, ie teleportation
-  if (pos_changed && first_load_completed_) {
+  if (pos_changed && first_load_completed_ && update_chunks_on_move_) {
     ZoneScopedN("Pos Changed");
     glm::ivec3 diff = center_ - prev_center_;
     if (diff.z == 1) {
@@ -227,6 +228,9 @@ void ChunkManager::Update(double /*dt*/) {
       auto& task = chunk_mesh_finished_queue_.front();
       chunk_map_.find_fn(task.pos, [this, &task](const std::shared_ptr<Chunk>& chunk) {
         FreeChunkMesh(chunk->mesh_handle);
+        lod_chunk_map_.find_fn(glm::ivec2{task.pos.x, task.pos.z},
+                               [this](uint32_t& handle) { FreeChunkMesh(handle); });
+
         if (!task.vertices.empty()) {
           chunk->mesh_handle = Renderer::Get().AllocateStaticChunk(
               task.vertices, task.indices, task.pos * ChunkLength, task.lod_level);
@@ -286,7 +290,7 @@ void ChunkManager::Update(double /*dt*/) {
   if (!first_load_completed_) {
     AddNewChunks(false, true);
   }
-  if (pos_changed) {
+  if (pos_changed && update_chunks_on_move_) {
     UnloadChunksOutOfRange(center_ - prev_center_);
     AddNewChunks(false, true);
   }
@@ -639,7 +643,7 @@ void ChunkManager::SendChunkMeshTaskLOD1(const glm::ivec2& pos) {
     ChunkStackArray arr{};
     bool done = false;
     for (p.y = 0; p.y < NumVerticalChunks; p.y++) {
-      chunk_map_.find_fn(p, [this, &p, &arr, &done](const std::shared_ptr<Chunk>& chunk) {
+      chunk_map_.find_fn(p, [&p, &arr, &done](const std::shared_ptr<Chunk>& chunk) {
         if (chunk->lod_level == LODLevel::One) {
           done = true;
           return;
