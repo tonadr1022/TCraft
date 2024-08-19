@@ -159,7 +159,7 @@ void WorldScene::Render() {
     }
   }
 
-  {
+  if (show_chunk_map_) {
     ZoneScopedN("Chunk state render");
     glm::ivec2 dims;
     chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, state_pix_y_, .5,
@@ -205,4 +205,5 @@ void WorldScene::OnImGui() {
   player_.OnImGui();
   ImGui::Text("time: %f", time_);
   ImGui::SliderInt("Chunk State Y", &state_pix_y_, 0, NumVerticalChunks);
+  ImGui::Checkbox("Show Chunk Map", &show_chunk_map_);
 }

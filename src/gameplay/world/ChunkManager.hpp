@@ -31,7 +31,7 @@ class ChunkManager {
   explicit ChunkManager(BlockDB& block_db);
   ~ChunkManager();
 
-  void AddNewChunks(bool first_load, bool throttle = false);
+  void AddNewChunks(bool throttle);
   void Init(const glm::ivec3& start_pos);
   void Update(double dt);
   // TODO: either make non trivial or remove
@@ -62,7 +62,7 @@ class ChunkManager {
  private:
   BlockDB& block_db_;
   ChunkMap chunk_map_;
-  LODChunkMap lod_chunk_map_;
+  LODChunkMap lod_chunk_handle_map_;
   Terrain terrain_;
   int seed_{};
   int load_distance_{};
@@ -95,7 +95,7 @@ class ChunkManager {
 
   float frequency_;
   StateStats state_stats_;
-  int chunk_dist_lod_1_{5};
+  int lod_1_load_distance_{5};
   bool first_load_completed_{false};
   bool update_chunks_on_move_{true};
 

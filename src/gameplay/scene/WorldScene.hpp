@@ -37,6 +37,7 @@ class WorldScene : public Scene {
   std::vector<uint8_t> chunk_state_pixels_;
   glm::ivec2 prev_chunk_state_pixels_dims_{};
   bool first_frame_{true};
+  bool show_chunk_map_{true};
   double time_{0};
   int state_pix_y_;
   ChunkManager::ChunkMapMode chunk_map_mode_;

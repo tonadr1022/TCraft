@@ -450,17 +450,15 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
                                  std::vector<ChunkVertex>& vertices,
                                  std::vector<uint32_t>& indices) {
   // Timer timer;
-  for (const auto& chunk : chunks) {
-    if (chunk == nullptr) return;
-  }
   BlockTypeArray* mesh_chunk_blocks_ptr = (*chunks[13]).data.GetBlocks();
   if (!mesh_chunk_blocks_ptr) return;
   const BlockTypeArray& mesh_chunk_blocks = *mesh_chunk_blocks_ptr;
   int chunk_length = ChunkLength;
   auto get_block = [chunk_length, &chunks](int x, int y, int z) -> BlockType {
-    return (*chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)])
-        .data.GetBlock((x + chunk_length) % chunk_length, (y + chunk_length) % chunk_length,
-                       (z + chunk_length) % chunk_length);
+    const std::shared_ptr<Chunk>& c = chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)];
+    if (c == nullptr) return 0;
+    return c->data.GetBlock((x + chunk_length) % chunk_length, (y + chunk_length) % chunk_length,
+                            (z + chunk_length) % chunk_length);
   };
 
   std::unordered_map<uint32_t, std::array<FaceInfo, 6>> face_info_map;
@@ -681,11 +679,9 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
   // TODO: make parameter
   uint32_t f = 2;
   int chunk_length = ChunkLength / f;
-  int chunk_area = chunk_length * chunk_length;
-  int chunk_volume = chunk_area * chunk_length;
 
   glm::ivec3 dims = {chunk_length, chunk_length * NumVerticalChunks, chunk_length};
-  auto get_block = [&chunk_data, &chunk_volume, &chunk_length](int x, int y, int z) {
+  auto get_block = [&chunk_data, &chunk_length](int x, int y, int z) {
     return chunk_data[y / chunk_length]->data.GetBlockLOD1(x, y % chunk_length, z);
   };
 

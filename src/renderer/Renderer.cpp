@@ -340,31 +340,6 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     auto chunk_shader = shader_manager_.GetShader("lod_chunk_batch");
     chunk_shader->Bind();
     chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
-    // static int i = 0;
-    // if (i++ == 0) {
-    //   auto* cnt = (StaticChunkDrawCmdUniform*)glMapNamedBufferRange(
-    //       lod_static_chunk_uniform_ssbo_.Id(), 0, sizeof(GLuint),
-    //       GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT);
-    //   if (cnt) {
-    //     StaticChunkDrawCmdUniform* c = cnt;
-    //     spdlog::info("positions");
-    //     for (int i = 0; i < 8; i++) {
-    //       spdlog::info("{} {} {}", c->pos.x, c->pos.y, c->pos.z);
-    //       c++;
-    //     }
-    //     // spdlog::info("{}", *cnt);
-    //     glUnmapNamedBuffer(lod_static_chunk_uniform_ssbo_.Id());
-    //   }
-    // }
-
-    // auto* cnt =
-    //     (GLuint*)glMapNamedBufferRange(lod_static_chunk_draw_count_buffer_.Id(), 0,
-    //     sizeof(GLuint),
-    //                                    GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT);
-    // if (cnt) {
-    //   spdlog::info("{}", *cnt);
-    //   glUnmapNamedBuffer(lod_static_chunk_draw_count_buffer_.Id());
-    // }
 
     const auto& chunk_tex_arr =
         TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);

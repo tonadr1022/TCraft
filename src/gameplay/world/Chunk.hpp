@@ -15,7 +15,6 @@ struct ChunkMeshTask {
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
   glm::ivec3 pos;
-  LODLevel lod_level;
 };
 
 class Chunk {
