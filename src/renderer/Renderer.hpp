@@ -5,6 +5,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 
+#include "gameplay/world/ChunkDef.hpp"
 #include "renderer/ChunkRenderParams.hpp"
 #include "renderer/Common.hpp"
 #include "renderer/Mesh.hpp"
@@ -54,7 +55,10 @@ class Renderer {
   void SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_handle,
                                 uint32_t material_handle);
   [[nodiscard]] uint32_t AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
-                                             std::vector<uint32_t>& indices, const glm::ivec3& pos);
+                                             std::vector<uint32_t>& indices, const glm::ivec3& pos,
+                                             LODLevel level);
+  uint32_t next_static_chunk_handle_{1};
+
   [[nodiscard]] uint32_t AllocateChunk(std::vector<ChunkVertex>& vertices,
                                        std::vector<uint32_t>& indices);
 
@@ -146,6 +150,8 @@ class Renderer {
   DynamicBuffer<> static_chunk_ebo_;
   VertexArray chunk_vao_;
   DynamicBuffer<> chunk_ebo_;
+  VertexArray lod_static_chunk_vao_;
+  DynamicBuffer<> lod_static_chunk_ebo_;
 
   struct AABB {
     glm::vec4 min;
@@ -170,12 +176,23 @@ class Renderer {
   Buffer chunk_draw_indirect_buffer_;
   Buffer chunk_uniform_ssbo_;
   std::unordered_map<uint32_t, MeshAlloc> static_chunk_allocs_;
+
+  DynamicBuffer<ChunkDrawInfo> lod_static_chunk_vbo_;
+  Buffer lod_static_chunk_draw_info_buffer_;
+  Buffer lod_static_chunk_draw_count_buffer_;
+  Buffer lod_static_chunk_uniform_ssbo_;
+  Buffer lod_static_chunk_draw_indirect_buffer_;
+  Buffer lod_chunk_draw_indirect_buffer_;
+  Buffer lod_chunk_uniform_ssbo_;
+  std::unordered_map<uint32_t, MeshAlloc> lod_static_chunk_allocs_;
+
   std::unordered_map<uint32_t, MeshAlloc> chunk_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> chunk_dei_cmds_;
   std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
   std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
   bool static_chunk_buffer_dirty_{true};
+  bool lod_static_chunk_buffer_dirty_{true};
 
   VertexArray reg_mesh_vao_;
   DynamicBuffer<> reg_mesh_vbo_;

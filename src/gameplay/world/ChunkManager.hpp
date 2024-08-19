@@ -17,19 +17,13 @@
 class BlockDB;
 
 using ChunkMap = libcuckoo::cuckoohash_map<glm::ivec3, std::shared_ptr<Chunk>>;
+using LODChunkMap = libcuckoo::cuckoohash_map<glm::ivec2, uint32_t>;
 // using ChunkMap = std::unordered_map<glm::ivec3, std::shared_ptr<Chunk>>;
 
 struct ChunkStateData {
   std::vector<ChunkState> data;
   int width;
   int height;
-};
-
-struct LODChunkMeshTask {
-  std::vector<ChunkVertex> vertices;
-  std::vector<uint32_t> indices;
-  glm::ivec2 pos;
-  LODLevel lod_level;
 };
 
 class ChunkManager {
@@ -68,6 +62,7 @@ class ChunkManager {
  private:
   BlockDB& block_db_;
   ChunkMap chunk_map_;
+  LODChunkMap lod_chunk_map_;
   Terrain terrain_;
   int seed_{};
   int load_distance_{};
@@ -76,7 +71,8 @@ class ChunkManager {
   std::mutex mutex_;
   std::queue<glm::ivec2> chunk_mesh_queue_;
   std::unordered_set<glm::ivec3> chunk_mesh_queue_immediate_;
-  std::deque<ChunkMeshTask> chunk_mesh_finished_queue_;
+  std::queue<ChunkMeshTask> chunk_mesh_finished_queue_;
+  std::queue<LODChunkMeshTask> lod_chunk_mesh_finished_queue_;
   using PositionIteratorFunc = std::function<void(const glm::ivec2&)>;
   using PositionIteratorFuncIdx = std::function<void(const glm::ivec2&, int)>;
   using VerticalPositionIteratorFunc = std::function<void(const glm::ivec3&)>;

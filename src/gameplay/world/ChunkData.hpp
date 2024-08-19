@@ -13,6 +13,7 @@ class ChunkData {
   [[nodiscard]] BlockType GetBlockNoCheck(const glm::ivec3& pos) const;
   [[nodiscard]] BlockType GetBlock(const glm::ivec3& pos) const;
   [[nodiscard]] BlockType GetBlock(int x, int y, int z) const;
+  [[nodiscard]] BlockType GetBlockLOD1(int x, int y, int z) const;
   [[nodiscard]] BlockTypeArray* GetBlocks() const { return blocks_.get(); }
   [[nodiscard]] inline bool HasLOD1() const { return has_lod_1_; }
 

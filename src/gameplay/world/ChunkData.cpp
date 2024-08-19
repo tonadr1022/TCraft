@@ -5,6 +5,11 @@
 
 #include "gameplay/world/ChunkHelpers.hpp"
 
+BlockType ChunkData::GetBlockLOD1(int x, int y, int z) const {
+  if (blocks_lod_1_ == nullptr) return 0;
+  return (*blocks_lod_1_)[x | z << 4 | y << 8];
+}
+
 BlockType ChunkData::GetBlock(int x, int y, int z) const {
   if (blocks_ == nullptr) return 0;
   return (*blocks_)[GetIndex(x, y, z)];

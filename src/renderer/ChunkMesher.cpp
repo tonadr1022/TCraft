@@ -50,6 +50,9 @@ constexpr int VertexLookup[120] = {
 };
 /* clang-format on */
 
+uint32_t GetLODVertexData1(int x, int y, int z) { return x | y << 8 | z << 16; }
+uint32_t GetLODVertexData2(int u, int v, uint32_t tex_idx) { return (u | v << 8 | tex_idx << 16); }
+
 uint32_t GetVertexData1(uint8_t x, uint8_t y, uint8_t z, uint8_t u, uint8_t v, uint8_t ao) {
   return (x | y << 6 | z << 12 | ao << 18 | u << 20 | v << 26);
 }
@@ -669,4 +672,143 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   // double curr = timer.ElapsedMS();
   // total += curr;
   // spdlog::info("{}", total / count);
+}
+
+void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
+                                     std::vector<ChunkVertex>& vertices,
+                                     std::vector<uint32_t>& indices) {
+  ZoneScoped;
+  // TODO: make parameter
+  uint32_t f = 2;
+  int chunk_length = ChunkLength / f;
+  int chunk_area = chunk_length * chunk_length;
+  int chunk_volume = chunk_area * chunk_length;
+  glm::ivec3 dims = {chunk_length, chunk_length * NumVerticalChunks, chunk_length};
+  // auto get_index = [&chunk_length, &dims](int x, int y, int z) -> int {
+  //   return x + z * dims.z + y * chunk_length * chunk_length * NumVerticalChunks;
+  // };
+  auto get_block = [&chunk_data, &chunk_length, &chunk_volume](int x, int y, int z) {
+    return chunk_data[y / chunk_volume]->data.GetBlockLOD1(x, y % chunk_volume, z);
+  };
+
+  std::vector<int> block_mask(chunk_length * chunk_length * NumVerticalChunks);
+  for (std::size_t axis = 0; axis < 3; ++axis) {
+    const std::size_t u = (axis + 1) % 3;
+    const std::size_t v = (axis + 2) % 3;
+
+    // TODO: make parameter
+    int x[3] = {0}, q[3] = {0};
+
+    int i = 0;
+    // Compute mask
+    q[axis] = 1;
+    for (x[axis] = -1; x[axis] < dims[axis];) {
+      std::size_t counter = 0;
+      for (x[v] = 0; x[v] < dims[v]; ++x[v]) {
+        for (x[u] = 0; x[u] < dims[u]; ++x[u], ++counter) {
+          bool block1_oob = x[axis] < 0, block2_oob = dims[axis] - 1 <= x[axis];
+          const BlockType block1 = block1_oob ? 0 : get_block(x[0], x[1], x[2]);
+          const BlockType block2 =
+              block2_oob ? 0 : get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
+
+          if (!block1_oob && ShouldShowFace(block1, block2)) {
+            block_mask[counter] = block1;
+          } else if (!block2_oob && ShouldShowFace(block2, block1)) {
+            block_mask[counter] = -block2;
+          } else {
+            block_mask[counter] = 0;
+          }
+        }
+      }
+
+      ++x[axis];
+
+      // Generate mesh for mask using lexicographic ordering
+      uint32_t width = 0, height = 0;
+
+      counter = 0;
+      for (int j = 0; j < dims[v]; ++j) {
+        for (uint32_t i = 0; i < dims[u];) {
+          int quad_type = block_mask[counter];
+          if (quad_type) {
+            // Compute width
+            for (width = 1; quad_type == block_mask[counter + width] && i + width < dims[u];
+                 ++width);
+
+            // Compute height
+            bool done = false;
+            for (height = 1; j + height < dims[v]; ++height) {
+              for (uint32_t k = 0; k < width; ++k) {
+                if (quad_type != block_mask[counter + k + height * dims[u]]) {
+                  done = true;
+                  break;
+                }
+              }
+
+              if (done) break;
+            }
+
+            // Add quad
+            x[u] = i;
+            x[v] = j;
+
+            int du[3] = {0}, dv[3] = {0};
+
+            int quad_face = ((axis << 1) | (quad_type <= 0));
+
+            if (quad_type < 0) {
+              quad_type = -quad_type;
+            }
+            du[v] = height * 2;
+            dv[u] = width * 2;
+
+            uint32_t tex_idx = db_mesh_data[quad_type].texture_indices[quad_face];
+            int vx = x[0] * 2;
+            int vy = x[1] * 2;
+            int vz = x[2] * 2;
+
+            int v00u = du[u] + dv[u];
+            int v00v = du[v] + dv[v];
+            int v01u = dv[u];
+            int v01v = dv[v];
+            int v10u = 0;
+            int v10v = 0;
+            int v11u = du[u];
+            int v11v = du[v];
+
+            int base_vertex_idx = vertices.size();
+            vertices.emplace_back(GetLODVertexData1(vx, vy, vz),
+                                  GetLODVertexData2(v00u, v00v, tex_idx));
+            vertices.emplace_back(GetLODVertexData1(vx + du[0], vy + du[1], vz + du[2]),
+                                  GetLODVertexData2(v01u, v01v, tex_idx));
+            vertices.emplace_back(
+                GetLODVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1], vz + du[2] + dv[2]),
+                GetLODVertexData2(v10u, v10v, tex_idx));
+            vertices.emplace_back(GetLODVertexData1(vx + dv[0], vy + dv[1], vz + dv[2]),
+                                  GetLODVertexData2(v11u, v11v, tex_idx));
+
+            indices.push_back(base_vertex_idx + 1);
+            indices.push_back(base_vertex_idx + 2);
+            indices.push_back(base_vertex_idx + 3);
+            indices.push_back(base_vertex_idx);
+            indices.push_back(base_vertex_idx + 1);
+            indices.push_back(base_vertex_idx + 3);
+
+            for (std::size_t b = 0; b < width; ++b)
+              for (std::size_t a = 0; a < height; ++a) {
+                size_t ind = counter + b + a * dims[u];
+                block_mask[ind] = 0;
+              }
+
+            // Increment counters
+            i += width;
+            counter += width;
+          } else {
+            ++i;
+            ++counter;
+          }
+        }
+      }
+    }
+  }
 }

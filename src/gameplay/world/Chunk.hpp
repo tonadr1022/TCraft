@@ -1,8 +1,16 @@
 #pragma once
 
+#include <glm/vec2.hpp>
+
 #include "ChunkData.hpp"
 
-enum class LODLevel { NoMesh, Regular, One, Two, Three };
+struct LODChunkMeshTask {
+  std::vector<ChunkVertex> vertices;
+  std::vector<uint32_t> indices;
+  glm::ivec2 pos;
+  LODLevel lod_level;
+};
+
 struct ChunkMeshTask {
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
