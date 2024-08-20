@@ -96,6 +96,7 @@ not_found:
 }
 
 const glm::ivec3& GamePlayer::GetRayCastBlockPos() const { return ray_cast_non_air_pos_; }
+const glm::ivec3& GamePlayer::GetAirRayCastBlockPos() const { return ray_cast_air_pos_; }
 
 void GamePlayer::Update(double dt) {
   RayCast();

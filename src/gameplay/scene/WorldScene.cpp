@@ -12,6 +12,7 @@
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Constants.hpp"
 #include "renderer/Renderer.hpp"
+#include "renderer/Shape.hpp"
 #include "renderer/opengl/Texture2d.hpp"
 #include "resource/Image.hpp"
 #include "resource/MaterialManager.hpp"
@@ -91,6 +92,15 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
       util::FreeImage(p);
     }
   }
+
+  std::vector<Vertex> cube_vertices;
+  for (size_t i = 0; i < CubeVertices.size(); i += 5) {
+    cube_vertices.emplace_back(glm::vec3{CubeVertices[i], CubeVertices[i + 1], CubeVertices[i + 2]},
+                               glm::vec2{CubeVertices[i + 3], CubeVertices[i + 4]});
+  }
+  std::vector cube_indices(CubeIndices.begin(), CubeIndices.end());
+  cube_mesh_.Allocate(cube_vertices, cube_indices);
+
   chunk_manager_->Init(player_.Position());
 }
 
@@ -148,7 +158,8 @@ void WorldScene::Render() {
     Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
     auto ray_cast_pos = player_.GetRayCastBlockPos();
     if (ray_cast_pos != glm::NullIVec3) {
-      Renderer::Get().DrawBlockOutline(ray_cast_pos, view, proj);
+      Renderer::Get().DrawLine(glm::translate(glm::mat4{1}, glm::vec3(ray_cast_pos)), glm::vec3(0),
+                               cube_mesh_.Handle(), true);
     }
   } else {
     // draw loading bar
@@ -165,8 +176,8 @@ void WorldScene::Render() {
   if (show_chunk_map_) {
     ZoneScopedN("Chunk state render");
     glm::ivec2 dims;
-    chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, state_pix_y_, .5,
-                                             chunk_map_mode_);
+    chunk_manager_->PopulateChunkStatePixels(chunk_state_pixels_, dims, chunk_map_display_y_level_,
+                                             .5, chunk_map_mode_);
     if (dims != prev_chunk_state_pixels_dims_ || first_frame_) {
       first_frame_ = false;
       MaterialManager::Get().Erase("chunk_state_map");
@@ -208,6 +219,6 @@ void WorldScene::OnImGui() {
 
   player_.OnImGui();
   ImGui::Text("time: %f", time_);
-  ImGui::SliderInt("Chunk State Y", &state_pix_y_, 0, NumVerticalChunks);
+  ImGui::SliderInt("Chunk State Y", &chunk_map_display_y_level_, 0, NumVerticalChunks);
   ImGui::Checkbox("Show Chunk Map", &show_chunk_map_);
 }

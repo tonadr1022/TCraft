@@ -90,8 +90,10 @@ class Renderer {
   void Init();
   void StartFrame(const Window& window);
   [[nodiscard]] bool OnEvent(const SDL_Event& event);
-  void DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
-                        const glm::mat4& projection);
+  // void DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
+  //                       const glm::mat4& projection);
+  void DrawLine(const glm::mat4& model, const glm::vec3& color, uint32_t mesh_handle,
+                bool ignore_depth = false);
 
   struct Settings {
     float chunk_cull_distance_min{0};
@@ -102,6 +104,14 @@ class Renderer {
     bool chunk_use_ao{true};
   };
   Settings settings;
+
+  // void DrawOutline(const glm::mat4& model, const glm::mat4& model_small, uint32_t mesh_handle);
+
+  // struct OutlineDrawCmd {
+  //   glm::mat4 model;
+  //   glm::mat4 model_small;
+  //   uint32_t mesh_handle;
+  // };
 
  private:
   friend class Application;
@@ -118,6 +128,8 @@ class Renderer {
   void DrawStaticChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
   void DrawNonStaticChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
   void DrawRegularMeshes(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+  void DrawLines(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+  // std::vector<OutlineDrawCmd> outline_draw_cmds_;
 
   // TODO: try without alignas
   struct StaticChunkDrawCmdUniform {
@@ -200,8 +212,9 @@ class Renderer {
 
   std::unordered_map<uint32_t, MeshAlloc> chunk_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> chunk_dei_cmds_;
-  std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
-  std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
+  std::pair<std::vector<ChunkDrawCmdUniform>, std::vector<uint32_t>> chunk_frame_uniforms_mesh_ids_;
+  // std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
+  // std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
   bool static_chunk_buffer_dirty_{true};
   bool lod_static_chunk_buffer_dirty_{true};
@@ -213,9 +226,8 @@ class Renderer {
   Buffer reg_mesh_draw_indirect_buffer_;
   std::unordered_map<uint32_t, MeshAlloc> reg_mesh_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> reg_mesh_dei_cmds_;
-  std::vector<uint32_t> reg_mesh_frame_draw_cmd_mesh_ids_;
-  std::vector<MaterialUniforms> reg_mesh_frame_draw_cmd_uniforms_;
-  std::vector<DrawElementsIndirectCommand> reg_mesh_frame_dei_cmds_;
+  std::pair<std::vector<MaterialUniforms>, std::vector<uint32_t>> reg_mesh_frame_uniforms_mesh_ids_;
+  std::vector<DrawElementsIndirectCommand> frame_dei_cmd_vec_;
 
   DynamicBuffer<> tex_materials_buffer_;
   std::unordered_map<uint32_t, uint32_t> material_allocs_;
@@ -235,8 +247,11 @@ class Renderer {
   std::vector<MaterialUniforms> quad_textured_uniforms_;
   std::vector<MaterialUniforms> static_textured_quad_uniforms_;
 
-  Buffer quad_color_uniform_ssbo_;
+  Buffer color_uniform_ssbo_;
   std::vector<ColorUniforms> quad_color_uniforms_;
+  std::pair<std::vector<ColorUniforms>, std::vector<uint32_t>> lines_frame_uniforms_mesh_ids_;
+  std::pair<std::vector<ColorUniforms>, std::vector<uint32_t>>
+      lines_no_depth_frame_uniforms_mesh_ids_;
 
   VertexArray cube_vao_;
   Buffer cube_vbo_;
@@ -256,10 +271,8 @@ class Renderer {
 
   void LoadShaders();
 
-  template <typename UniformType>
-  void SetMeshFrameDrawCommands(
-      Buffer& draw_indirect_buffer, std::vector<UniformType>& frame_draw_cmd_uniforms,
-      std::vector<uint32_t>& frame_draw_cmd_mesh_ids,
+  void SetDrawIndirectBufferData(
+      Buffer& draw_indirect_buffer, std::vector<uint32_t>& frame_draw_cmd_mesh_ids,
       std::vector<DrawElementsIndirectCommand>& frame_dei_cmds,
       std::unordered_map<uint32_t, DrawElementsIndirectCommand>& dei_cmds);
   void ShutdownInternal();

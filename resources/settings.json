@@ -4,8 +4,8 @@
   },
   "chunk_manager": {
     "frequency": 1.0,
-    "load_distance": 41,
-    "lod_1_load_distance": 37
+    "load_distance": 10,
+    "lod_1_load_distance": 7
   },
   "main": {
     "fps_cam_fov_deg": 75.0,

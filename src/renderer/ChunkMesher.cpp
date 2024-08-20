@@ -682,7 +682,8 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
 
   glm::ivec3 dims = {chunk_length, chunk_length * NumVerticalChunks, chunk_length};
   auto get_block = [&chunk_data, &chunk_length](int x, int y, int z) {
-    return chunk_data[y / chunk_length]->data.GetBlockLOD1(x, y % chunk_length, z);
+    const std::shared_ptr<Chunk>& c = chunk_data[y / chunk_length];
+    return c != nullptr ? c->data.GetBlockLOD1(x, y % chunk_length, z) : 0;
   };
 
   std::vector<int> block_mask(chunk_length * chunk_length * NumVerticalChunks);

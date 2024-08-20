@@ -5,6 +5,7 @@
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/ChunkRenderParams.hpp"
+#include "renderer/Mesh.hpp"
 
 class TextureMaterial;
 class Texture;
@@ -41,6 +42,8 @@ class WorldScene : public Scene {
   bool first_frame_{true};
   bool show_chunk_map_{true};
   double time_{0};
-  int state_pix_y_;
-  ChunkManager::ChunkMapMode chunk_map_mode_;
+  int chunk_map_display_y_level_{0};
+  ChunkManager::ChunkMapMode chunk_map_mode_{ChunkManager::ChunkMapMode::ChunkState};
+  std::vector<Mesh> outline_meshes_;
+  Mesh cube_mesh_;
 };

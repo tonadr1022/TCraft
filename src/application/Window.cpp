@@ -155,7 +155,7 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
                              window_flags);
   gl_context = SDL_GL_CreateContext(window_);
   SDL_GL_MakeCurrent(window_, gl_context);
-  SetVsync(false);
+  SetVsync(true);
 
   SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
   SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");

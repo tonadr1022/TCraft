@@ -15,6 +15,7 @@ class GamePlayer : public Player {
   void Update(double dt) override;
   void OnImGui() override;
   [[nodiscard]] const glm::ivec3& GetRayCastBlockPos() const;
+  [[nodiscard]] const glm::ivec3& GetAirRayCastBlockPos() const;
 
  private:
   glm::ivec3 ray_cast_non_air_pos_;
