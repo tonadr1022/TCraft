@@ -13,6 +13,7 @@
 #include "application/Input.hpp"
 #include "application/SceneManager.hpp"
 #include "renderer/Renderer.hpp"
+#include "renderer/ShaderManager.hpp"
 #include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
 #include "util/Paths.hpp"
@@ -28,6 +29,7 @@ Application::Application(int width, int height, const char* title) : scene_manag
   Renderer::Init(window_);
   TextureManager::Init();
   MaterialManager::Init();
+  ShaderManager::Init();
   SettingsManager::Get().Load(SettingsPath);
 
   auto app_settings_json = SettingsManager::Get().LoadSetting("application");
@@ -77,6 +79,7 @@ void Application::Run() {
   SettingsManager::Get().SaveSetting(app_settings_json, "application");
 
   scene_manager_.Shutdown();
+  ShaderManager::Shutdown();
   MaterialManager::Shutdown();
   TextureManager::Shutdown();
   Renderer::Shutdown();

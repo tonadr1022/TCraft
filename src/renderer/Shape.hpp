@@ -50,11 +50,37 @@ const std::array<float, 120> CubeVertices= {
   };
 /* clang-format on */
 
+constexpr const float CubePositionVertices[] = {
+    // positions
+    -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f,
+    1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f,
+
+    -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f,
+    -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,
+
+    1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+    1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f,
+
+    -1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,  1.0f,  1.0f,
+    1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
+
+    -1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  1.0f,
+    1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f,
+
+    -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f,
+    1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f};
+
 const std::array<Vertex, 4> QuadVertices = {{// positions        // texture Coords
                                              {glm::vec3{0.0f, 1.0f, 0.0f}, glm::vec2{0.0f, 1.0f}},
                                              {glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec2{0.0f, 0.0f}},
                                              {glm::vec3{1.0f, 1.0f, 0.0f}, glm::vec2{1.0f, 1.0f}},
                                              {glm::vec3{1.0f, 0.0f, 0.0f}, glm::vec2{1.0f, 0.0f}}}};
+
+const std::array<Vertex, 4> QuadVerticesFull = {{// positions        // texture Coords
+                                                 {glm::vec3{-1, 1, 0.0f}, glm::vec2{0.0f, 1.0f}},
+                                                 {glm::vec3{-1, -1, 0.0f}, glm::vec2{0.0f, 0.0f}},
+                                                 {glm::vec3{1, 1, 0.0f}, glm::vec2{1.0f, 1.0f}},
+                                                 {glm::vec3{1, -1, 0.0f}, glm::vec2{1.0f, 0.0f}}}};
 
 const std::array<Vertex, 4> QuadVerticesCentered = {
     {// positions        // texture Coords

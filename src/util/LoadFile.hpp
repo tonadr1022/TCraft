@@ -8,7 +8,7 @@
 
 namespace util {
 extern std::optional<std::string> LoadFromFile(const std::string& path);
-extern void LoadImage(Image& image, std::string_view path, bool flip = true);
+extern void LoadImage(Image& image, std::string_view path, int required_channels, bool flip = true);
 extern void FreeImage(void* pixels);
 extern nlohmann::json LoadJsonFile(const std::string& path);
 }  // namespace util

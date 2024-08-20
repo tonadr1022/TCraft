@@ -205,7 +205,9 @@ void Window::PollEvents() {
         if (event.window.event == SDL_WINDOWEVENT_CLOSE &&
             event.window.windowID == SDL_GetWindowID(window_)) {
           should_close_ = true;
+          break;
         }
+        event_callback_(event);
         break;
       case SDL_KEYDOWN:
       case SDL_KEYUP:

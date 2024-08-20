@@ -1,5 +1,6 @@
 #include "Renderer.hpp"
 
+#include <SDL_timer.h>
 #include <imgui.h>
 
 #include <cstdint>
@@ -59,6 +60,40 @@ void Renderer::Shutdown() {
   EASSERT_MSG(instance_ != nullptr, "Can't shutdown before initializing");
   instance_->ShutdownInternal();
   // delete instance_;
+}
+
+void Renderer::InitFrameBuffers() {
+  auto dims = Window::Get().GetWindowSize();
+  if (fbo1_tex_) {
+    glDeleteTextures(1, &fbo1_tex_);
+  }
+  glCreateTextures(GL_TEXTURE_2D, 1, &fbo1_tex_);
+  glTextureStorage2D(fbo1_tex_, 1, GL_RGBA8, dims.x, dims.y);
+  glTextureParameteri(fbo1_tex_, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTextureParameteri(fbo1_tex_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  // if (fbo1_depth_tex_) {
+  //   glDeleteTextures(1, &fbo1_depth_tex_);
+  // }
+  // glCreateTextures(GL_TEXTURE_2D, 1, &fbo1_depth_tex_);
+  // glTextureStorage2D(fbo1_depth_tex_, 1, GL_DEPTH24_STENCIL8, dims.x, dims.y);
+
+  if (rbo1_) {
+    glDeleteRenderbuffers(1, &rbo1_);
+  }
+  glCreateRenderbuffers(1, &rbo1_);
+  glNamedRenderbufferStorage(rbo1_, GL_DEPTH24_STENCIL8, dims.x, dims.y);
+
+  if (fbo1_) {
+    glDeleteFramebuffers(1, &fbo1_);
+  }
+  glCreateFramebuffers(1, &fbo1_);
+  glNamedFramebufferTexture(fbo1_, GL_COLOR_ATTACHMENT0, fbo1_tex_, 0);
+  glNamedFramebufferRenderbuffer(fbo1_, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo1_);
+
+  if (glCheckNamedFramebufferStatus(fbo1_, GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    spdlog::error("Frambuffer incomplete");
+  }
 }
 
 void Renderer::Init() {
@@ -123,7 +158,17 @@ void Renderer::Init() {
   quad_ebo_.Init(sizeof(uint32_t) * 6, 0, indices.data());
   quad_vao_.AttachVertexBuffer(quad_vbo_.Id(), 0, 0, sizeof(Vertex));
   quad_vao_.AttachElementBuffer(quad_ebo_.Id());
-  quad_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand), GL_DYNAMIC_STORAGE_BIT);
+
+  full_screen_quad_vao_.Init();
+  full_screen_quad_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
+  full_screen_quad_vao_.EnableAttribute<float>(1, 2, offsetof(Vertex, tex_coords));
+  vertices = {QuadVerticesFull.begin(), QuadVerticesFull.end()};
+  full_screen_quad_vbo_.Init(sizeof(Vertex) * 4, 0, vertices.data());
+  full_screen_quad_ebo_.Init(sizeof(uint32_t) * 6, 0, indices.data());
+  full_screen_quad_vao_.AttachVertexBuffer(full_screen_quad_vbo_.Id(), 0, 0, sizeof(Vertex));
+  full_screen_quad_vao_.AttachElementBuffer(full_screen_quad_ebo_.Id());
+
+  // TODO: track quad count and figure out better numbers, or make resizable if draw too many
   textured_quad_uniform_ssbo_.Init(sizeof(MaterialUniforms) * 1000, GL_DYNAMIC_STORAGE_BIT);
   quad_color_uniform_ssbo_.Init(sizeof(ColorUniforms) * 10000, GL_DYNAMIC_STORAGE_BIT);
 
@@ -138,9 +183,16 @@ void Renderer::Init() {
   cube_vao_.AttachElementBuffer(cube_ebo_.Id());
 
   tex_materials_buffer_.Init(sizeof(TextureMaterialData) * 1000, GL_DYNAMIC_STORAGE_BIT);
+
+  skybox_vao_.Init();
+  skybox_vao_.EnableAttribute<float>(0, 3, 0);
+  skybox_vbo_.Init(sizeof(CubePositionVertices), 0, CubePositionVertices);
+  skybox_vao_.AttachVertexBuffer(skybox_vbo_.Id(), 0, 0, sizeof(float) * 3);
+
+  InitFrameBuffers();
 }
 
-void Renderer::RenderQuads() {
+void Renderer::DrawQuads() {
   ZoneScoped;
   stats_.textured_quad_draw_calls += static_textured_quad_uniforms_.size();
   if (stats_.textured_quad_draw_calls == 0 && stats_.color_quad_draw_calls == 0) return;
@@ -160,7 +212,7 @@ void Renderer::RenderQuads() {
   if (stats_.textured_quad_draw_calls > 0) {
     ZoneScopedN("Quad render");
     // Uses a single draw elements indirect command using instancing
-    shader_manager_.GetShader("single_texture")->Bind();
+    ShaderManager::Get().GetShader("single_texture")->Bind();
     textured_quad_uniform_ssbo_.ResetOffset();
     if (static_textured_quad_uniforms_.size()) {
       textured_quad_uniform_ssbo_.SubData(
@@ -173,43 +225,25 @@ void Renderer::RenderQuads() {
     }
     textured_quad_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
-    DrawElementsIndirectCommand cmd{
-        .count = 6,
-        .instance_count = stats_.textured_quad_draw_calls,
-        .first_index = 0,
-        .base_vertex = 0,
-        .base_instance = 0,
-    };
-    quad_draw_indirect_buffer_.ResetOffset();
-    quad_draw_indirect_buffer_.SubData(sizeof(DrawElementsIndirectCommand), &cmd);
-    quad_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
+    glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr,
+                            stats_.textured_quad_draw_calls);
   }
   // TODO: static color quads
   if (stats_.color_quad_draw_calls > 0) {
-    shader_manager_.GetShader("color")->Bind();
+    ShaderManager::Get().GetShader("color")->Bind();
     quad_color_uniform_ssbo_.ResetOffset();
     quad_color_uniform_ssbo_.SubData(sizeof(ColorUniforms) * quad_color_uniforms_.size(),
                                      quad_color_uniforms_.data());
     quad_color_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    DrawElementsIndirectCommand cmd{
-        .count = 6,
-        .instance_count = stats_.color_quad_draw_calls,
-        .first_index = 0,
-        .base_vertex = 0,
-        .base_instance = 0,
-    };
-    quad_draw_indirect_buffer_.ResetOffset();
-    quad_draw_indirect_buffer_.SubData(sizeof(DrawElementsIndirectCommand), &cmd);
-    quad_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 1, 0);
+    glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr,
+                            stats_.color_quad_draw_calls);
   }
   glDisable(GL_BLEND);
   glDepthFunc(GL_LESS);
 }
 
-void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
-                                  const RenderInfo& render_info) {
+void Renderer::DrawStaticChunks(const ChunkRenderParams& render_params,
+                                const RenderInfo& render_info) {
   ZoneScoped;
   bool frustum_shader_set = false;
   auto set_frustum_shader_data = [this, &frustum_shader_set, &render_info](Shader& cull_shader) {
@@ -264,7 +298,7 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
                               GL_RED, GL_UNSIGNED_INT, &zero);
 
     // bind and generate indirect draw commands and uniform buffers with compute shader
-    auto cull_shader = shader_manager_.GetShader("chunk_cull");
+    auto cull_shader = ShaderManager::Get().GetShader("chunk_cull");
     set_frustum_shader_data(cull_shader.value());
 
     static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
@@ -285,7 +319,7 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     // }
 
     // draw using the uniforms and indirect buffers
-    auto chunk_shader = shader_manager_.GetShader("chunk_batch");
+    auto chunk_shader = ShaderManager::Get().GetShader("chunk_batch");
     chunk_shader->Bind();
     chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
     chunk_shader->SetBool("u_UseAO", settings.chunk_use_ao);
@@ -324,7 +358,7 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     glClearNamedBufferSubData(lod_static_chunk_draw_count_buffer_.Id(), GL_R32UI, 0, sizeof(GLuint),
                               GL_RED, GL_UNSIGNED_INT, &zero);
 
-    auto cull_shader = shader_manager_.GetShader("chunk_cull");
+    auto cull_shader = ShaderManager::Get().GetShader("chunk_cull");
     set_frustum_shader_data(cull_shader.value());
 
     lod_static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
@@ -337,7 +371,7 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     // draw using the uniforms and indirect buffers
-    auto chunk_shader = shader_manager_.GetShader("lod_chunk_batch");
+    auto chunk_shader = ShaderManager::Get().GetShader("lod_chunk_batch");
     chunk_shader->Bind();
     chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
 
@@ -355,7 +389,64 @@ void Renderer::RenderStaticChunks(const ChunkRenderParams& render_params,
   }
 }
 
-void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
+void Renderer::DrawNonStaticChunks(const ChunkRenderParams& render_params, const RenderInfo&) {
+  ZoneScoped;
+  if (chunk_frame_draw_cmd_uniforms_.empty()) return;
+  chunk_uniform_ssbo_.ResetOffset();
+  chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
+                              chunk_frame_draw_cmd_uniforms_.data());
+  chunk_frame_dei_cmds_.clear();
+  chunk_frame_dei_cmds_.reserve(chunk_frame_draw_cmd_uniforms_.size());
+  DrawElementsIndirectCommand cmd;
+  EASSERT_MSG(chunk_frame_draw_cmd_uniforms_.size() == chunk_frame_draw_cmd_mesh_ids_.size(),
+              "Per frame draw cmd size must equal mesh cmd size");
+  for (uint32_t i = 0; i < chunk_frame_draw_cmd_mesh_ids_.size(); i++) {
+    const auto& draw_cmd_info = chunk_dei_cmds_[chunk_frame_draw_cmd_mesh_ids_[i]];
+    cmd.base_instance = i;
+    cmd.base_vertex = draw_cmd_info.base_vertex;
+    cmd.instance_count = 1;
+    cmd.count = draw_cmd_info.count;
+    cmd.first_index = draw_cmd_info.first_index;
+    chunk_frame_dei_cmds_.emplace_back(cmd);
+  }
+  chunk_draw_indirect_buffer_.ResetOffset();
+  chunk_draw_indirect_buffer_.SubData(
+      sizeof(DrawElementsIndirectCommand) * chunk_frame_dei_cmds_.size(),
+      chunk_frame_dei_cmds_.data());
+
+  chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+  chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+
+  ShaderManager::Get().GetShader(render_params.shader_name)->Bind();
+  const auto& chunk_tex_arr =
+      TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
+  chunk_tex_arr.Bind(0);
+  chunk_vao_.Bind();
+  glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, chunk_frame_dei_cmds_.size(),
+                              0);
+}
+
+void Renderer::DrawRegularMeshes(const ChunkRenderParams&, const RenderInfo&) {
+  if (reg_mesh_frame_draw_cmd_uniforms_.empty()) return;
+  ZoneScopedN("Reg Mesh render");
+  reg_mesh_uniform_ssbo_.ResetOffset();
+  reg_mesh_uniform_ssbo_.SubData(
+      sizeof(MaterialUniforms) * reg_mesh_frame_draw_cmd_uniforms_.size(),
+      reg_mesh_frame_draw_cmd_uniforms_.data());
+  reg_mesh_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+  SetMeshFrameDrawCommands(reg_mesh_draw_indirect_buffer_, reg_mesh_frame_draw_cmd_uniforms_,
+                           reg_mesh_frame_draw_cmd_mesh_ids_, reg_mesh_frame_dei_cmds_,
+                           reg_mesh_dei_cmds_);
+  reg_mesh_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+  auto shader = ShaderManager::Get().GetShader("single_texture");
+  shader->Bind();
+  reg_mesh_vao_.Bind();
+  tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
+  glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
+                              reg_mesh_frame_dei_cmds_.size(), 0);
+}
+
+void Renderer::Render(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
   ZoneScoped;
   UBOUniforms uniform_data;
   uniform_data.vp_matrix = render_info.vp_matrix;
@@ -363,63 +454,62 @@ void Renderer::RenderWorld(const ChunkRenderParams& render_params, const RenderI
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
   uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
 
-  RenderStaticChunks(render_params, render_info);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo1_);
+  glClearColor(0.1, 0.1, 0.1, 0.1);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  if (!chunk_frame_draw_cmd_uniforms_.empty()) {
-    ZoneScopedN("Non static Chunk render");
-    chunk_uniform_ssbo_.ResetOffset();
-    chunk_uniform_ssbo_.SubData(sizeof(ChunkDrawCmdUniform) * chunk_frame_draw_cmd_uniforms_.size(),
-                                chunk_frame_draw_cmd_uniforms_.data());
-    chunk_frame_dei_cmds_.clear();
-    chunk_frame_dei_cmds_.reserve(chunk_frame_draw_cmd_uniforms_.size());
-    DrawElementsIndirectCommand cmd;
-    EASSERT_MSG(chunk_frame_draw_cmd_uniforms_.size() == chunk_frame_draw_cmd_mesh_ids_.size(),
-                "Per frame draw cmd size must equal mesh cmd size");
-    for (uint32_t i = 0; i < chunk_frame_draw_cmd_mesh_ids_.size(); i++) {
-      const auto& draw_cmd_info = chunk_dei_cmds_[chunk_frame_draw_cmd_mesh_ids_[i]];
-      cmd.base_instance = i;
-      cmd.base_vertex = draw_cmd_info.base_vertex;
-      cmd.instance_count = 1;
-      cmd.count = draw_cmd_info.count;
-      cmd.first_index = draw_cmd_info.first_index;
-      chunk_frame_dei_cmds_.emplace_back(cmd);
-    }
-    chunk_draw_indirect_buffer_.ResetOffset();
-    chunk_draw_indirect_buffer_.SubData(
-        sizeof(DrawElementsIndirectCommand) * chunk_frame_dei_cmds_.size(),
-        chunk_frame_dei_cmds_.data());
+  // // Sky
+  // auto sky_shader = ShaderManager::Get().GetShader("sky");
+  // sky_shader->Bind();
+  // glm::ivec2 moon_pos;
+  // // sky_shader->SetVec2("moonPosition", moon_pos);
+  // sky_shader->SetVec3("viewPos", render_info.view_pos);
+  // full_screen_quad_vao_.Bind();
+  // glDisable(GL_DEPTH_TEST);
+  // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
-    chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+  glEnable(GL_DEPTH_TEST);
 
-    shader_manager_.GetShader(render_params.shader_name)->Bind();
-    const auto& chunk_tex_arr =
-        TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
-    chunk_tex_arr.Bind(0);
-    chunk_vao_.Bind();
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
-                                chunk_frame_dei_cmds_.size(), 0);
-  }
+  glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 
-  if (reg_mesh_frame_draw_cmd_uniforms_.size() > 0) {
-    ZoneScopedN("Reg Mesh render");
-    reg_mesh_uniform_ssbo_.ResetOffset();
-    reg_mesh_uniform_ssbo_.SubData(
-        sizeof(MaterialUniforms) * reg_mesh_frame_draw_cmd_uniforms_.size(),
-        reg_mesh_frame_draw_cmd_uniforms_.data());
-    reg_mesh_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    SetMeshFrameDrawCommands(reg_mesh_draw_indirect_buffer_, reg_mesh_frame_draw_cmd_uniforms_,
-                             reg_mesh_frame_draw_cmd_mesh_ids_, reg_mesh_frame_dei_cmds_,
-                             reg_mesh_dei_cmds_);
-    reg_mesh_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
-    auto shader = shader_manager_.GetShader("single_texture");
-    shader->Bind();
-    reg_mesh_vao_.Bind();
-    tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
-    glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr,
-                                reg_mesh_frame_dei_cmds_.size(), 0);
-  }
-  RenderQuads();
+  DrawStaticChunks(render_params, render_info);
+  DrawNonStaticChunks(render_params, render_info);
+  DrawRegularMeshes(render_params, render_info);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  static const std::array<std::string, 6> Sky1Strings = {
+      GET_TEXTURE_PATH("skybox1/px.png"), GET_TEXTURE_PATH("skybox1/nx.png"),
+      GET_TEXTURE_PATH("skybox1/py.png"), GET_TEXTURE_PATH("skybox1/ny.png"),
+      GET_TEXTURE_PATH("skybox1/pz.png"), GET_TEXTURE_PATH("skybox1/nz.png"),
+  };
+
+  glDepthFunc(GL_LEQUAL);
+  skybox_vao_.Bind();
+  // TODO: rename to sky and make more parameters, and split off into separate form main render call
+  auto skybox_shader = ShaderManager::Get().GetShader("skybox").value();
+  skybox_shader.Bind();
+  skybox_shader.SetMat4("vp_matrix",
+                        render_info.proj_matrix * glm::mat4(glm::mat3(render_info.view_matrix)));
+
+  double curr_time = SDL_GetPerformanceCounter() * .000000001;
+  glm::vec3 sun_dir = glm::normalize(glm::vec3{glm::cos(curr_time), glm::sin(curr_time), 0});
+  skybox_shader.SetVec3("u_sun_direction", sun_dir);
+  skybox_shader.SetFloat("u_time", curr_time * 0.5);
+
+  glDrawArrays(GL_TRIANGLES, 0, 36);
+  glDepthFunc(GL_LESS);
+
+  DrawQuads();
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  ShaderManager::Get().GetShader("quad")->Bind();
+  full_screen_quad_vao_.Bind();
+  glDisable(GL_DEPTH_TEST);
+  glBindTexture(GL_TEXTURE_2D, fbo1_tex_);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 }
 
 template <typename UniformType>
@@ -711,9 +801,6 @@ void Renderer::StartFrame(const Window& window) {
     ZoneScopedN("OpenGL state");
     auto dims = window.GetWindowSize();
     glViewport(0, 0, dims.x, dims.y);
-    glClearColor(0.0, 0.0, 0.0, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
   }
 }
 
@@ -721,11 +808,16 @@ bool Renderer::OnEvent(const SDL_Event& event) {
   switch (event.type) {
     case SDL_KEYDOWN:
       if (event.key.keysym.sym == SDLK_r && event.key.keysym.mod & KMOD_ALT) {
-        shader_manager_.RecompileShaders();
+        ShaderManager::Get().RecompileShaders();
         return true;
       }
       if (event.key.keysym.sym == SDLK_w && event.key.keysym.mod & KMOD_ALT) {
         wireframe_enabled_ = !wireframe_enabled_;
+        return true;
+      }
+    case SDL_WINDOWEVENT:
+      if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+        HandleResize(event.window.data1, event.window.data2);
         return true;
       }
   }
@@ -733,33 +825,41 @@ bool Renderer::OnEvent(const SDL_Event& event) {
 }
 
 void Renderer::LoadShaders() {
-  shader_manager_.AddShader("color", {{GET_SHADER_PATH("color.vs.glsl"), ShaderType::Vertex},
-                                      {GET_SHADER_PATH("color.fs.glsl"), ShaderType::Fragment}});
-  shader_manager_.AddShader("chunk_batch_block",
-                            {{GET_SHADER_PATH("chunk_batch_block.vs.glsl"), ShaderType::Vertex},
-                             {GET_SHADER_PATH("chunk_batch_block.fs.glsl"), ShaderType::Fragment}});
-  shader_manager_.AddShader("chunk_batch",
-                            {{GET_SHADER_PATH("chunk_batch.vs.glsl"), ShaderType::Vertex},
-                             {GET_SHADER_PATH("chunk_batch.fs.glsl"), ShaderType::Fragment}});
-  shader_manager_.AddShader("lod_chunk_batch",
-                            {{GET_SHADER_PATH("lod_chunk_batch.vs.glsl"), ShaderType::Vertex},
-                             {GET_SHADER_PATH("lod_chunk_batch.fs.glsl"), ShaderType::Fragment}});
-  shader_manager_.AddShader("single_texture",
-                            {{GET_SHADER_PATH("single_texture.vs.glsl"), ShaderType::Vertex},
-                             {GET_SHADER_PATH("single_texture.fs.glsl"), ShaderType::Fragment}});
-  shader_manager_.AddShader("block_outline",
-                            {{GET_SHADER_PATH("block_outline.vs.glsl"), ShaderType::Vertex},
-                             {GET_SHADER_PATH("block_outline.gs.glsl"), ShaderType::Geometry},
-                             {GET_SHADER_PATH("block_outline.fs.glsl"), ShaderType::Fragment}});
-  shader_manager_.AddShader("chunk_cull",
-                            {{GET_SHADER_PATH("chunk_cull.cs.glsl"), ShaderType::Compute}});
+  ShaderManager::Get().AddShader("quad", {{GET_SHADER_PATH("quad.vs.glsl"), ShaderType::Vertex},
+                                          {GET_SHADER_PATH("quad.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader("skybox",
+                                 {{GET_SHADER_PATH("skybox.vs.glsl"), ShaderType::Vertex},
+                                  {GET_SHADER_PATH("skybox.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader("sky", {{GET_SHADER_PATH("sky.vs.glsl"), ShaderType::Vertex},
+                                         {GET_SHADER_PATH("sky.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader("color",
+                                 {{GET_SHADER_PATH("color.vs.glsl"), ShaderType::Vertex},
+                                  {GET_SHADER_PATH("color.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader(
+      "chunk_batch_block", {{GET_SHADER_PATH("chunk_batch_block.vs.glsl"), ShaderType::Vertex},
+                            {GET_SHADER_PATH("chunk_batch_block.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader("chunk_batch",
+                                 {{GET_SHADER_PATH("chunk_batch.vs.glsl"), ShaderType::Vertex},
+                                  {GET_SHADER_PATH("chunk_batch.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader(
+      "lod_chunk_batch", {{GET_SHADER_PATH("lod_chunk_batch.vs.glsl"), ShaderType::Vertex},
+                          {GET_SHADER_PATH("lod_chunk_batch.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader(
+      "single_texture", {{GET_SHADER_PATH("single_texture.vs.glsl"), ShaderType::Vertex},
+                         {GET_SHADER_PATH("single_texture.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader(
+      "block_outline", {{GET_SHADER_PATH("block_outline.vs.glsl"), ShaderType::Vertex},
+                        {GET_SHADER_PATH("block_outline.gs.glsl"), ShaderType::Geometry},
+                        {GET_SHADER_PATH("block_outline.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader("chunk_cull",
+                                 {{GET_SHADER_PATH("chunk_cull.cs.glsl"), ShaderType::Compute}});
 }
 
 void Renderer::DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
                                 const glm::mat4& projection) {
   glm::mat4 model = glm::translate(
       glm::scale(glm::translate(glm::mat4{1.f}, block_pos), glm::vec3(1.005f)), glm::vec3(-.0025f));
-  auto shader = shader_manager_.GetShader("block_outline");
+  auto shader = ShaderManager::Get().GetShader("block_outline");
   shader->Bind();
   shader->SetMat4("model", model);
   shader->SetMat4("view", view);
@@ -782,4 +882,8 @@ void Renderer::OnImGui() {
   ImGui::SliderFloat("Chunk Cull Distance Min", &settings.chunk_cull_distance_min, 0, 10000);
   ImGui::SliderFloat("Chunk Cull Distance Max", &settings.chunk_cull_distance_max, 0, 10000);
   ImGui::End();
+}
+void Renderer::HandleResize(int new_width, int new_height) {
+  glViewport(0, 0, new_width, new_height);
+  InitFrameBuffers();
 }

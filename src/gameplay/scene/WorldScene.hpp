@@ -7,6 +7,7 @@
 #include "renderer/ChunkRenderParams.hpp"
 
 class TextureMaterial;
+class Texture;
 class Window;
 
 class WorldScene : public Scene {
@@ -32,6 +33,7 @@ class WorldScene : public Scene {
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
   std::shared_ptr<TextureMaterial> chunk_state_tex_;
+  std::shared_ptr<Texture> sun_skybox_;
   std::shared_ptr<TextureMaterial> test_mat_;
 
   std::vector<uint8_t> chunk_state_pixels_;

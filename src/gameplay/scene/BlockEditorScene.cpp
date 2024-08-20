@@ -58,7 +58,7 @@ void BlockEditorScene::Reload() {
       std::string tex_name =
           file.path().parent_path().filename().string() + "/" + file.path().stem().string();
       auto str = file.path().parent_path().string() + "/" + file.path().filename().string();
-      util::LoadImage(image, str);
+      util::LoadImage(image, str, 4);
       if (image.width != 32 || image.height != 32) continue;
       tex_name_to_idx_[tex_name] = tex_idx++;
       all_texture_pixel_data.emplace_back(image.pixels);
@@ -217,10 +217,11 @@ void BlockEditorScene::Render() {
   }
   glm::mat4 proj = player_.GetCamera().GetProjection(window_.GetAspectRatio());
   glm::mat4 view = player_.GetCamera().GetView();
-  Renderer::Get().RenderWorld(chunk_render_params_, {.vp_matrix = proj * view,
-                                                     .view_matrix = view,
-                                                     .proj_matrix = proj,
-                                                     .view_pos = player_.Position()});
+  Renderer::Get().Render(chunk_render_params_, {.vp_matrix = proj * view,
+                                                .view_matrix = view,
+                                                .proj_matrix = proj,
+                                                .view_pos = player_.Position(),
+                                                .view_dir = player_.GetCamera().GetFront()});
 }
 
 void BlockEditorScene::ResetAddModelData() {

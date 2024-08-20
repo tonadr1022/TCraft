@@ -35,6 +35,7 @@ struct RenderInfo {
   glm::mat4 view_matrix;
   glm::mat4 proj_matrix;
   glm::vec3 view_pos;
+  glm::vec3 view_dir;
 };
 
 class Renderer {
@@ -49,7 +50,9 @@ class Renderer {
   bool render_chunks_{true};
   bool wireframe_enabled_{false};
 
-  void RenderWorld(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+  void SetUBOData(const RenderInfo& render_info);
+  void Render(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+  void BeginRender() const;
   // void Reset();
   void SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle);
   void SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_handle,
@@ -65,10 +68,17 @@ class Renderer {
   [[nodiscard]] uint32_t AllocateMesh(std::vector<Vertex>& vertices,
                                       std::vector<uint32_t>& indices);
   void DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size);
+  void DrawQuad(uint32_t material_handle, const glm::vec3& pos, const glm::vec2& size);
+
   void DrawQuad(const glm::vec3& color, const glm::vec2& center, const glm::vec2& size);
   void AddStaticQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size);
   void AddStaticQuads(std::vector<UserDrawCommand>& static_quad_draw_cmds);
   void RemoveStaticMeshes();
+
+  uint32_t fbo1_{};
+  uint32_t fbo1_tex_{};
+  uint32_t fbo1_depth_tex_{};
+  uint32_t rbo1_{};
 
   void FreeStaticChunkMesh(uint32_t handle);
   void FreeChunkMesh(uint32_t handle);
@@ -83,8 +93,6 @@ class Renderer {
   void DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
                         const glm::mat4& projection);
 
-  void RenderQuads();
-  void RenderRegMeshes();
   struct Settings {
     float chunk_cull_distance_min{0};
     float chunk_cull_distance_max{10000};
@@ -104,7 +112,12 @@ class Renderer {
   constexpr const static uint32_t MaxDrawCmds{1'000'000};
   constexpr const static uint32_t MaxChunkDrawCmds{1'000'00};
   constexpr const static uint32_t MaxUIDrawCmds{10'000};
-  ShaderManager shader_manager_;
+
+  void DrawQuads();
+  void RenderRegMeshes();
+  void DrawStaticChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+  void DrawNonStaticChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+  void DrawRegularMeshes(const ChunkRenderParams& render_params, const RenderInfo& render_info);
 
   // TODO: try without alignas
   struct StaticChunkDrawCmdUniform {
@@ -164,7 +177,6 @@ class Renderer {
     uint32_t first_index;
     uint32_t count;
   };
-  void RenderStaticChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
 
   DynamicBuffer<> chunk_vbo_;
 
@@ -212,9 +224,15 @@ class Renderer {
   VertexArray quad_vao_;
   Buffer quad_vbo_;
   Buffer quad_ebo_;
+  VertexArray full_screen_quad_vao_;
+  Buffer full_screen_quad_vbo_;
+  Buffer full_screen_quad_ebo_;
+
+  VertexArray skybox_vao_;
+  Buffer skybox_vbo_;
+
   Buffer textured_quad_uniform_ssbo_;
   std::vector<MaterialUniforms> quad_textured_uniforms_;
-  Buffer quad_draw_indirect_buffer_;
   std::vector<MaterialUniforms> static_textured_quad_uniforms_;
 
   Buffer quad_color_uniform_ssbo_;
@@ -245,4 +263,6 @@ class Renderer {
       std::vector<DrawElementsIndirectCommand>& frame_dei_cmds,
       std::unordered_map<uint32_t, DrawElementsIndirectCommand>& dei_cmds);
   void ShutdownInternal();
+  void HandleResize(int new_width, int new_height);
+  void InitFrameBuffers();
 };

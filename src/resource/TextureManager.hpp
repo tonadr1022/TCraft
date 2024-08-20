@@ -16,9 +16,13 @@ class TextureManager {
                               std::unordered_map<std::string, uint32_t>& name_to_idx);
   void Remove2dArray(uint32_t handle);
 
-  [[nodiscard]] std::shared_ptr<Texture2D> Load(const Texture2DCreateParams& params);
-  [[nodiscard]] std::shared_ptr<Texture2D> Load(const std::string& name,
-                                                const Texture2DCreateParamsEmpty& params);
+  [[nodiscard]] std::shared_ptr<Texture> Load(const std::string& name,
+                                              const TextureCubeCreateParamsPaths& params);
+  // [[nodiscard]] std::shared_ptr<Texture> Load(const std::string& name,
+  //                                             const TextureCubeCreateParams& params);
+  [[nodiscard]] std::shared_ptr<Texture> Load(const Texture2DCreateParams& params);
+  [[nodiscard]] std::shared_ptr<Texture> Load(const std::string& name,
+                                              const Texture2DCreateParamsEmpty& params);
   void RemoveTexture2D(const std::string& key);
   void RemoveUnusedTextures();
 
@@ -28,5 +32,5 @@ class TextureManager {
   uint32_t next_tex_array_handle_{1};
 
   std::unordered_map<uint32_t, std::shared_ptr<Texture2dArray>> texture_2d_array_map_;
-  std::unordered_map<std::string, std::shared_ptr<Texture2D>> texture_2d_map_;
+  std::unordered_map<std::string, std::shared_ptr<Texture>> texture_map_;
 };

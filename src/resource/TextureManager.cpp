@@ -44,36 +44,62 @@ const Texture2dArray& TextureManager::GetTexture2dArray(TextureHandle handle) {
 
 void TextureManager::Remove2dArray(uint32_t handle) { texture_2d_array_map_.erase(handle); }
 
-std::shared_ptr<Texture2D> TextureManager::Load(const std::string& name,
-                                                const Texture2DCreateParamsEmpty& params) {
+// TODO: templatize
+// std::shared_ptr<Texture> TextureManager::Load(const std::string& name,
+//                                               const TextureCubeCreateParams& params) {
+//   EASSERT_MSG(name != "", "Name cannot be empty");
+//   auto it = texture_map_.find(name);
+//   if (it != texture_map_.end()) {
+//     return it->second;
+//   }
+//   auto tex = std::make_shared<Texture>(params);
+//   texture_map_.emplace(name, tex);
+//   return tex;
+// }
+
+std::shared_ptr<Texture> TextureManager::Load(const std::string& name,
+                                              const TextureCubeCreateParamsPaths& params) {
   EASSERT_MSG(name != "", "Name cannot be empty");
-  auto it = texture_2d_map_.find(name);
-  if (it != texture_2d_map_.end()) {
+  auto it = texture_map_.find(name);
+  if (it != texture_map_.end()) {
     return it->second;
   }
-  auto tex = std::make_shared<Texture2D>(params);
-  texture_2d_map_.emplace(name, tex);
+  auto tex = std::make_shared<Texture>(params);
+  texture_map_.emplace(name, tex);
   return tex;
 }
 
-std::shared_ptr<Texture2D> TextureManager::Load(const Texture2DCreateParams& params) {
-  auto it = texture_2d_map_.find(params.filepath);
-  if (it != texture_2d_map_.end()) {
+// TODO: templatize
+std::shared_ptr<Texture> TextureManager::Load(const std::string& name,
+                                              const Texture2DCreateParamsEmpty& params) {
+  EASSERT_MSG(name != "", "Name cannot be empty");
+  auto it = texture_map_.find(name);
+  if (it != texture_map_.end()) {
     return it->second;
   }
-  auto tex = std::make_shared<Texture2D>(params);
-  texture_2d_map_.emplace(params.filepath, tex);
+  auto tex = std::make_shared<Texture>(params);
+  texture_map_.emplace(name, tex);
   return tex;
 }
 
-void TextureManager::RemoveTexture2D(const std::string& key) { texture_2d_map_.erase(key); }
+std::shared_ptr<Texture> TextureManager::Load(const Texture2DCreateParams& params) {
+  auto it = texture_map_.find(params.filepath);
+  if (it != texture_map_.end()) {
+    return it->second;
+  }
+  auto tex = std::make_shared<Texture>(params);
+  texture_map_.emplace(params.filepath, tex);
+  return tex;
+}
+
+void TextureManager::RemoveTexture2D(const std::string& key) { texture_map_.erase(key); }
 
 void TextureManager::RemoveUnusedTextures() {
   std::vector<std::string> to_delete;
-  for (auto& [name, mat] : texture_2d_map_) {
+  for (auto& [name, mat] : texture_map_) {
     if (mat.use_count() == 1) to_delete.emplace_back(name);
   }
   for (const auto& name : to_delete) {
-    texture_2d_map_.erase(name);
+    texture_map_.erase(name);
   }
 }

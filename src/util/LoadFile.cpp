@@ -27,10 +27,11 @@ std::optional<std::string> LoadFromFile(const std::string& path) {
   return s_stream.str();
 }
 
-void LoadImage(Image& image, std::string_view path, bool flip) {
+void LoadImage(Image& image, std::string_view path, int required_channels, bool flip) {
   stbi_set_flip_vertically_on_load(flip);
   if (!path.empty()) {
-    image.pixels = stbi_load(path.data(), &image.width, &image.height, &image.channels, 4);
+    image.pixels =
+        stbi_load(path.data(), &image.width, &image.height, &image.channels, required_channels);
     if (!image.pixels) {
       spdlog::error("Failed to load image at path {}", path);
     }

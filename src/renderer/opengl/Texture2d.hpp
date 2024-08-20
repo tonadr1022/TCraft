@@ -21,16 +21,25 @@ struct Texture2DCreateParamsEmpty {
   bool bindless{true};
   bool generate_mipmaps{false};
 };
+struct TextureCubeCreateParams {
+  const std::string& path;
+};
 
-class Texture2D {
+struct TextureCubeCreateParamsPaths {
+  std::array<std::string, 6> paths;
+};
+
+class Texture {
  public:
-  explicit Texture2D(const Texture2DCreateParamsEmpty& params);
-  explicit Texture2D(const Texture2DCreateParams& params);
-  Texture2D(const Texture2D& other) = delete;
-  Texture2D operator=(const Texture2D& other) = delete;
-  Texture2D(Texture2D&& other) noexcept;
-  Texture2D& operator=(Texture2D&& other) noexcept;
-  ~Texture2D();
+  explicit Texture(const Texture2DCreateParamsEmpty& params);
+  explicit Texture(const Texture2DCreateParams& params);
+  // explicit Texture(const TextureCubeCreateParams& params);
+  explicit Texture(const TextureCubeCreateParamsPaths& params);
+  Texture(const Texture& other) = delete;
+  Texture operator=(const Texture& other) = delete;
+  Texture(Texture&& other) noexcept;
+  Texture& operator=(Texture&& other) noexcept;
+  ~Texture();
   [[nodiscard]] uint32_t Id() const { return id_; }
   [[nodiscard]] glm::ivec2 Dims() const { return dims_; }
   [[nodiscard]] uint64_t BindlessHandle() const { return bindless_handle_; }

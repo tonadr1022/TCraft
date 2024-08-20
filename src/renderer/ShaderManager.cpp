@@ -2,6 +2,26 @@
 
 #include "util/LoadFile.hpp"
 
+ShaderManager *ShaderManager::instance_ = nullptr;
+
+ShaderManager &ShaderManager::Get() { return *instance_; }
+
+void ShaderManager::Init() {
+  EASSERT_MSG(instance_ == nullptr, "Can't make two instances");
+  instance_ = new ShaderManager;
+}
+
+void ShaderManager::Shutdown() {
+  ZoneScoped;
+  EASSERT_MSG(instance_ != nullptr, "Can't shutdown before initializing");
+  delete instance_;
+}
+
+ShaderManager::ShaderManager() {
+  EASSERT_MSG(instance_ == nullptr, "Cannot create two instances.");
+  instance_ = this;
+}
+
 std::optional<Shader> ShaderManager::GetShader(const std::string &name) {
   auto it = shader_data_.find(name);
   if (it == shader_data_.end()) {

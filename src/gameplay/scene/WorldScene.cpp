@@ -57,6 +57,8 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     ZoneScopedN("Texture load");
     cross_hair_mat_ =
         MaterialManager::Get().LoadTextureMaterial({.filepath = GET_TEXTURE_PATH("crosshair.png")});
+    // sun_skybox_ =
+    //     TextureManager::Get().Load("day", TextureCubeCreateParams{GET_TEXTURE_PATH("day3.png")});
   }
 
   {
@@ -67,7 +69,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     std::vector<void*> all_texture_pixel_data;
     std::vector<Image> images;
     for (const auto& tex_name : block_db_.GetTextureNamesInUse()) {
-      util::LoadImage(image, GET_PATH("resources/textures/" + tex_name + ".png"));
+      util::LoadImage(image, GET_PATH("resources/textures/" + tex_name + ".png"), 4);
       // TODO: handle other sizes/animations
       if (image.width != 32 || image.height != 32) continue;
       tex_name_to_idx[tex_name] = tex_idx++;
@@ -137,7 +139,8 @@ void WorldScene::Render() {
   RenderInfo render_info{.vp_matrix = proj * view,
                          .view_matrix = view,
                          .proj_matrix = proj,
-                         .view_pos = player_.Position()};
+                         .view_pos = player_.Position(),
+                         .view_dir = player_.GetCamera().GetFront()};
 
   auto win_center = window_.GetWindowCenter();
 
@@ -181,8 +184,9 @@ void WorldScene::Render() {
     Renderer::Get().DrawQuad(chunk_state_tex_->Handle(), quad_pos, quad_dims);
   }
 
-  chunk_render_params_.render_chunks_ = loaded_;
-  Renderer::Get().RenderWorld(chunk_render_params_, render_info);
+  chunk_render_params_.render_chunks_on_ = loaded_;
+
+  Renderer::Get().Render(chunk_render_params_, render_info);
 }
 
 WorldScene::~WorldScene() {
