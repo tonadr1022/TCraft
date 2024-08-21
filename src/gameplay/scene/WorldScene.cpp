@@ -13,6 +13,7 @@
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Constants.hpp"
 #include "renderer/Renderer.hpp"
+#include "renderer/ShaderManager.hpp"
 #include "renderer/Shape.hpp"
 #include "renderer/opengl/Texture2d.hpp"
 #include "resource/Image.hpp"
@@ -148,9 +149,8 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
     auto pos = Window::Get().GetMousePosition();
     auto dims = Window::Get().GetWindowSize();
     if (pos.x < dims.x / 2 && dims.y - pos.y < dims.y / 2) {
-      chunk_map_mode_ = static_cast<ChunkManager::ChunkMapMode>(
-          (static_cast<int>(chunk_map_mode_) + 1) %
-          (static_cast<int>(ChunkManager::ChunkMapMode::Count)));
+      chunk_map_mode_ = static_cast<ChunkMapMode>((static_cast<int>(chunk_map_mode_) + 1) %
+                                                  (static_cast<int>(ChunkMapMode::Count)));
     }
   }
   return false;

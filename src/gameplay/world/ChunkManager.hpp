@@ -12,8 +12,6 @@
 #include <glm/gtx/hash.hpp>
 #include <glm/vec3.hpp>
 
-#include "gameplay/world/ChunkData.hpp"
-
 class BlockDB;
 
 using ChunkMap = libcuckoo::cuckoohash_map<glm::ivec3, std::shared_ptr<Chunk>>;
@@ -44,7 +42,6 @@ class ChunkManager {
   void OnImGui();
   void SetCenter(const glm::vec3& world_pos);
 
-  enum class ChunkMapMode { ChunkState, LODLevels, Count };
   void PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::ivec2& out_dims, int y_level,
                                 float opacity, ChunkMapMode mode);
   void UnloadChunksOutOfRange(const glm::ivec3& diff);

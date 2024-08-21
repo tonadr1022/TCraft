@@ -27,3 +27,4 @@ struct ChunkVertex {
   uint32_t data1;
   uint32_t data2;
 };
+enum class ChunkMapMode { ChunkState, LODLevels, Count };

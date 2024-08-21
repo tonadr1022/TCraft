@@ -1,14 +1,10 @@
 #pragma once
 
-#include <SDL_events.h>
-
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 
 #include "gameplay/world/ChunkDef.hpp"
 #include "renderer/Common.hpp"
-#include "renderer/Mesh.hpp"
-#include "renderer/ShaderManager.hpp"
 #include "renderer/opengl/Buffer.hpp"
 #include "renderer/opengl/DynamicBuffer.hpp"
 #include "renderer/opengl/VertexArray.hpp"
@@ -28,14 +24,8 @@ class BlockDB;
 struct Vertex;
 struct ChunkVertex;
 struct TextureMaterialData;
-
-struct RenderInfo {
-  glm::mat4 vp_matrix;
-  glm::mat4 view_matrix;
-  glm::mat4 proj_matrix;
-  glm::vec3 view_pos;
-  glm::vec3 view_dir;
-};
+struct RenderInfo;
+union SDL_Event;
 
 class Renderer {
  public:
@@ -90,8 +80,6 @@ class Renderer {
   void Init();
   void StartFrame(const Window& window);
   [[nodiscard]] bool OnEvent(const SDL_Event& event);
-  // void DrawBlockOutline(const glm::vec3& block_pos, const glm::mat4& view,
-  //                       const glm::mat4& projection);
   void DrawLine(const glm::mat4& model, const glm::vec3& color, uint32_t mesh_handle,
                 bool ignore_depth = false);
 
@@ -102,23 +90,19 @@ class Renderer {
     bool cull_frustum{true};
     bool chunk_render_use_texture{true};
     bool chunk_use_ao{true};
+    bool draw_lines{true};
+    bool draw_skybox{true};
+    bool draw_chunks{true};
+    bool draw_regular_meshes{true};
+    bool draw_quads{true};
   };
   Settings settings;
-
-  // void DrawOutline(const glm::mat4& model, const glm::mat4& model_small, uint32_t mesh_handle);
-
-  // struct OutlineDrawCmd {
-  //   glm::mat4 model;
-  //   glm::mat4 model_small;
-  //   uint32_t mesh_handle;
-  // };
 
   // The passed callback function should bind a shader and set any uniforms necessary, meant for a
   // procedural skybox rather than a static image.
   void SetSkyboxShaderFunc(const std::function<void()>& func);
 
  private:
-  friend class Application;
   static Renderer* instance_;
   explicit Renderer(Window& window);
   Window& window_;
@@ -264,11 +248,6 @@ class Renderer {
   Buffer cube_ebo_;
 
   std::function<void()> draw_skyox_func_;
-  bool draw_lines_{true};
-  bool draw_skybox_{true};
-  bool draw_chunks_{true};
-  bool draw_regular_meshes_{true};
-  bool draw_quads_{true};
 
   void LoadShaders();
 

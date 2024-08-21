@@ -26,7 +26,6 @@ constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
 
 Application::Application(int width, int height, const char* title) : scene_manager_(window_) {
   SettingsManager::Init();
-  Renderer::Init(window_);
   TextureManager::Init();
   MaterialManager::Init();
   ShaderManager::Init();
@@ -34,9 +33,8 @@ Application::Application(int width, int height, const char* title) : scene_manag
 
   auto app_settings_json = SettingsManager::Get().LoadSetting("application");
   imgui_enabled_ = app_settings_json.value("imgui_enabled", true);
-
   window_.Init(width, height, title, [this](SDL_Event& event) { OnEvent(event); });
-  Renderer::Get().Init();
+  Renderer::Init(window_);
 
   // Add event listeners
   event_dispatcher_.AddListener(
@@ -84,6 +82,7 @@ void Application::Run() {
   TextureManager::Shutdown();
   Renderer::Shutdown();
   window_.Shutdown();
+  // TODO: cleanup
   SettingsManager::Get().Shutdown(SettingsPath);
   SettingsManager::Shutdown();
 }

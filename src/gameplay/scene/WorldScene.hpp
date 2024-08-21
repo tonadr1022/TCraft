@@ -3,9 +3,7 @@
 #include "application/Scene.hpp"
 #include "gameplay/GamePlayer.hpp"
 #include "gameplay/world/BlockDB.hpp"
-#include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Mesh.hpp"
-#include "renderer/Renderer.hpp"
 
 class TextureMaterial;
 class Texture;
@@ -30,7 +28,6 @@ class WorldScene : public Scene {
   bool render_chunks_{false};
   uint32_t seed_{0};
   std::string directory_path_;
-  RenderInfo curr_render_info_;
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
   std::shared_ptr<TextureMaterial> chunk_state_tex_;
@@ -43,7 +40,7 @@ class WorldScene : public Scene {
   bool show_chunk_map_{true};
   double time_{0};
   int chunk_map_display_y_level_{0};
-  ChunkManager::ChunkMapMode chunk_map_mode_{ChunkManager::ChunkMapMode::ChunkState};
+  ChunkMapMode chunk_map_mode_{ChunkMapMode::ChunkState};
 
   Mesh cube_mesh_;
   uint32_t chunk_tex_array_handle_;

@@ -539,7 +539,9 @@ ChunkManager::~ChunkManager() {
       chunk_map_.find_fn(
           p, [this](const std::shared_ptr<Chunk>& chunk) { FreeChunkMesh(chunk->mesh_handle); });
     }
+    lod_chunk_handle_map_.find_fn(pos, [this](uint32_t& handle) { FreeChunkMesh(handle); });
   });
+
   nlohmann::json j = {{"load_distance", load_distance_},
                       {"lod_1_load_distance", lod_1_load_distance_},
                       {"frequency", frequency_}};

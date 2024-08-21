@@ -1,4 +1,5 @@
 {
+  "id": 2,
   "name": "Diamond Ore",
   "model": "block/diamond_ore",
   "properties": {}

@@ -1,4 +1,5 @@
 {
+  "id": 3,
   "name": "Dirt",
   "model": "block/dirt",
   "properties": {}

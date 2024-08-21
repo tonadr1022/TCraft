@@ -1,6 +1,7 @@
 #include "BlockDB.hpp"
 
 #include <filesystem>
+#include <iostream>
 
 #include "application/SettingsManager.hpp"
 #include "resource/Image.hpp"
@@ -109,8 +110,8 @@ const std::unordered_set<std::string>& BlockDB::GetTextureNamesInUse() const {
 }
 
 const BlockData* BlockDB::GetBlockData(const std::string& name) const {
-  auto it = block_name_to_data_idx_.find(name);
-  if (it == block_name_to_data_idx_.end()) return nullptr;
+  auto it = block_name_to_id_.find(name);
+  if (it == block_name_to_id_.end()) return nullptr;
   return &block_data_arr_[it->second];
 }
 
@@ -123,10 +124,11 @@ BlockDB::BlockDB() {
         util::LoadJsonFile(GET_PATH("resources/data/block/default_block.json"));
     block_defaults_.name = default_block_data["name"].get<std::string>();
     block_defaults_.model_name = default_block_data["model"].get<std::string>();
-    block_defaults_.tex_name = default_block_data["tex_name"].get<std::string>();
     auto& properties = default_block_data["properties"];
     block_defaults_.move_slow_multiplier = properties["move_slow_multiplier"].get<float>();
     block_defaults_.emits_light = properties["emits_light"].get<bool>();
+    block_defaults_.tex_name = "block/default";
+    block_defaults_.id = default_block_data["id"].get<uint32_t>();
   }
 
   LoadBlockData();
@@ -154,7 +156,6 @@ void BlockDB::LoadBlockData() {
   // ensure that multiple IDs cannot exist
   std::unordered_set<uint32_t> processed;
 
-  uint32_t id = 1;
   // Ids are not guaranteed to be in order in the file-system, so load them into a map and then
   // populate the arrays after
   std::unordered_map<uint32_t, BlockData> block_id_to_data;
@@ -165,7 +166,7 @@ void BlockDB::LoadBlockData() {
     data.name = file.path().filename().stem();
     data.formatted_name = block_data.value("name", block_defaults_.name);
     data.full_file_path = file.path();
-    data.id = id++;
+    data.id = block_data["id"].get<uint32_t>();
     if (block_data.contains("properties")) {
       auto properties = block_data["properties"];
       data.move_slow_multiplier =
@@ -173,8 +174,10 @@ void BlockDB::LoadBlockData() {
       data.emits_light = properties.value("emits_light", block_defaults_.emits_light);
     }
     std::string model_name = block_data.value("model", block_defaults_.model_name);
+
     if (processed.contains(data.id)) {
-      spdlog::error("Data with id {} already processed.", data.id);
+      spdlog::error("Data with id {} of name {} already exists.", data.id,
+                    block_id_to_data[data.id].formatted_name);
       continue;
     }
     processed.insert(data.id);
@@ -185,34 +188,50 @@ void BlockDB::LoadBlockData() {
 
   block_data_arr_.clear();
   block_model_names_.clear();
+  // both are array such that the ids all fall in range, otherwise the id is invalid if not in range
+  block_data_arr_.resize(processed.size() + 1);
+  block_model_names_.resize(processed.size() + 1);
   // reserve air
-  block_data_arr_.emplace_back(
-      BlockData{.id = 0,
-                .full_file_path = "",
-                .name = "air",
-                .formatted_name = "Air",
-                .move_slow_multiplier = block_defaults_.move_slow_multiplier,
-                .emits_light = false});
-  block_name_to_data_idx_.emplace(block_data_arr_[0].name, 0);
-  block_model_names_.emplace_back("air");
+  block_data_arr_[0] = {.id = 0,
+                        .full_file_path = "",
+                        .name = "air",
+                        .formatted_name = "Air",
+                        .move_slow_multiplier = block_defaults_.move_slow_multiplier,
+                        .emits_light = false};
+  block_name_to_id_.emplace(block_data_arr_[0].name, 0);
+  block_model_names_[0] = "air";
 
-  for (uint32_t i = 1; i < id; i++) {
-    block_data_arr_.emplace_back(block_id_to_data[i]);
-    block_model_names_.emplace_back(block_id_to_model_name[i]);
-    block_name_to_data_idx_.emplace(block_id_to_data[i].name, i);
+  for (size_t i = 1; i < block_data_arr_.size(); i++) {
+    if (!block_id_to_data.contains(i) || !block_id_to_model_name.contains(i)) {
+      spdlog::info("Error: ID {} not found, invalid ID state", i);
+      std::vector<uint32_t> ids(processed.begin(), processed.end());
+      std::sort(ids.begin(), ids.end());
+      int c = 0;
+      for (int id : ids) {
+        std::cout << id << ' ';
+        if (c++ == 10) {
+          std::cout << '\n';
+          c = 0;
+        }
+      }
+      std::cout << '\n';
+      continue;
+    }
+
+    block_data_arr_[i] = block_id_to_data.at(i);
+    block_model_names_[i] = block_id_to_model_name.at(i);
+    block_name_to_id_.emplace(block_data_arr_[i].name, i);
   }
 }
 
 void BlockDB::WriteBlockData(const BlockData& block_data, const std::string& model_name) const {
   EASSERT_MSG(block_data.full_file_path != "", "Invalid file path");
-  json block_data_json = json::object();
-  block_data_json["model"] = model_name;
-  block_data_json["name"] = block_data.name;
-  block_data_json["formatted_name"] = block_data.formatted_name;
-  auto properties = json::object();
-  properties["move_slow_multiplier"] = block_data.move_slow_multiplier;
-  properties["emits_light"] = block_data.emits_light;
-  block_data_json["properties"] = properties;
+  json properties = {
+      {"move_slow_multiplier", block_data.move_slow_multiplier},
+      {"emits_light", block_data.emits_light},
+  };
+  json block_data_json = {
+      {"model", model_name}, {"name", block_data.formatted_name}, {"properties", properties}};
   util::json::WriteJson(block_data_json, block_data.full_file_path);
 }
 

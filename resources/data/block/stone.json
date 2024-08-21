@@ -1,4 +1,5 @@
 {
+  "id": 7,
   "name": "Stone",
   "model": "block/stone",
   "properties": {}

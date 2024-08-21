@@ -86,6 +86,7 @@ class BlockDB {
   std::optional<BlockModelData> LoadBlockModelData(const std::string& model_name);
 
   struct BlockDataDefaults {
+    uint32_t id;
     std::string name;
     std::string model_name;
     std::string tex_name;
@@ -98,5 +99,5 @@ class BlockDB {
 
   std::unordered_set<std::string> block_tex_names_in_use_;
   std::unordered_map<std::string, BlockModelData> model_name_to_model_data_;
-  std::unordered_map<std::string, uint32_t> block_name_to_data_idx_;
+  std::unordered_map<std::string, uint32_t> block_name_to_id_;
 };

@@ -44,7 +44,7 @@ void EditBlockImGui(BlockData& data, std::string& curr_model_name,
     for (const std::string& model_name : all_block_model_names) {
       if (ImGui::Selectable(model_name.data())) {
         curr_model_name = model_name;
-        on_model_change();
+        if (on_model_change) on_model_change();
       }
     }
     ImGui::EndCombo();
@@ -126,12 +126,13 @@ void BlockEditorScene::Reload() {
   std::vector<ChunkVertex> vertices;
   std::vector<uint32_t> indices;
   int num_blocks = block_db_.GetBlockData().size();
+  blocks_.emplace_back(SingleBlock{});
   for (int i = 1; i < num_blocks; i++) {
     vertices.clear();
     indices.clear();
     ChunkMesher::GenerateBlock(vertices, indices, block_db_.GetMeshData()[i].texture_indices);
     blocks_.emplace_back(SingleBlock{
-        .pos = {(-num_blocks + i), 0, 0},
+        .pos = {(-num_blocks + i * 1.2), 0, 0},
         .mesh_handle = Renderer::Get().AllocateChunk(vertices, indices),
         .mesh_data = {},
     });
@@ -145,22 +146,35 @@ void BlockEditorScene::Reload() {
 
 void BlockEditorScene::SetModelTexIndices(std::array<uint32_t, 6>& indices,
                                           const std::string& model_name) {
+  std::optional<BlockModelData> model_data{std::nullopt};
   ZoneScoped;
-  const BlockModelData& model_data = block_db_.model_name_to_model_data_[model_name];
-  if (const BlockModelDataUnique* unique_data = std::get_if<BlockModelDataUnique>(&model_data)) {
+  auto it = block_db_.model_name_to_model_data_.find(model_name);
+  if (it == block_db_.model_name_to_model_data_.end()) {
+    model_data = block_db_.LoadBlockModelData(model_name);
+    if (!model_data.has_value()) {
+      spdlog::error("Cannot load model {}", model_name);
+      return;
+    }
+  } else {
+    model_data = it->second;
+  }
+
+  if (const BlockModelDataUnique* unique_data =
+          std::get_if<BlockModelDataUnique>(&model_data.value())) {
     indices = {
         tex_name_to_idx_[unique_data->tex_pos_x], tex_name_to_idx_[unique_data->tex_neg_x],
         tex_name_to_idx_[unique_data->tex_pos_y], tex_name_to_idx_[unique_data->tex_neg_y],
         tex_name_to_idx_[unique_data->tex_pos_z], tex_name_to_idx_[unique_data->tex_neg_z],
     };
   } else if (const BlockModelDataTopBot* top_bot_data =
-                 std::get_if<BlockModelDataTopBot>(&model_data)) {
+                 std::get_if<BlockModelDataTopBot>(&model_data.value())) {
     indices = {
         tex_name_to_idx_[top_bot_data->tex_side], tex_name_to_idx_[top_bot_data->tex_side],
         tex_name_to_idx_[top_bot_data->tex_top],  tex_name_to_idx_[top_bot_data->tex_bottom],
         tex_name_to_idx_[top_bot_data->tex_side], tex_name_to_idx_[top_bot_data->tex_side],
     };
-  } else if (const BlockModelDataAll* all_data = std::get_if<BlockModelDataAll>(&model_data)) {
+  } else if (const BlockModelDataAll* all_data =
+                 std::get_if<BlockModelDataAll>(&model_data.value())) {
     indices.fill(tex_name_to_idx_[all_data->tex_all]);
   }
 }
@@ -270,9 +284,10 @@ void BlockEditorScene::Render() {
       Renderer::Get().SubmitChunkDrawCommand(model, edit_model_block_.mesh_handle);
     } else if (edit_mode_ == EditMode::EditBlock) {
       for (const auto& block : blocks_) {
-        EASSERT_MSG(block.mesh_handle != 0, "model not allocated");
-        Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos),
-                                               block.mesh_handle);
+        if (block.mesh_handle) {
+          Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos),
+                                                 block.mesh_handle);
+        }
       }
     } else if (edit_mode_ == EditMode::AddBlock) {
       EASSERT_MSG(add_block_block_.mesh_handle != 0, "model not allocated");
@@ -504,6 +519,9 @@ void BlockEditorScene::OnImGui() {
     }
     if (ImGui::BeginTabItem("Edit Block")) {
       ZoneScopedN("Edit Block tab");
+      if (edit_mode_ != EditMode::EditBlock) {
+        player_.GetCamera().LookAt(glm::vec3{0.5} + blocks_[edit_block_idx_].pos);
+      }
       edit_mode_ = EditMode::EditBlock;
       auto& block_data_arr = block_db_.block_data_arr_;
       auto& block_data_model_names = block_db_.block_model_names_;
@@ -516,8 +534,7 @@ void BlockEditorScene::OnImGui() {
           if (ImGui::Selectable(block_data.name.data())) {
             original_edit_block_data_ = block_data;
             edit_block_idx_ = i;
-            player_.SetPosition(glm::vec3{0.f, 0.5f, 5.0f} + blocks_[i].pos);
-            player_.GetCamera().LookAt(blocks_[i].pos);
+            player_.GetCamera().LookAt(glm::vec3{0.5} + blocks_[i].pos);
           }
         }
         ImGui::EndCombo();

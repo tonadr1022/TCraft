@@ -16,6 +16,7 @@
 #include "renderer/Frustum.hpp"
 #include "renderer/Material.hpp"
 #include "renderer/Mesh.hpp"
+#include "renderer/RenderInfo.hpp"
 #include "renderer/Shape.hpp"
 #include "renderer/opengl/Debug.hpp"
 #include "renderer/opengl/Texture2dArray.hpp"
@@ -52,6 +53,7 @@ void Renderer::ShutdownInternal() {
 void Renderer::Init(Window& window) {
   EASSERT_MSG(instance_ == nullptr, "Can't make two instances");
   instance_ = new Renderer(window);
+  instance_->Init();
 }
 
 void Renderer::Shutdown() {
@@ -502,16 +504,16 @@ void Renderer::Render(const RenderInfo& render_info) {
   glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 
   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  if (draw_chunks_ && chunk_tex_array_handle != 0) {
+  if (settings.draw_chunks && chunk_tex_array_handle != 0) {
     DrawStaticChunks(render_info);
     DrawNonStaticChunks(render_info);
   }
-  if (draw_regular_meshes_) DrawRegularMeshes(render_info);
-  if (draw_lines_) DrawLines(render_info);
+  if (settings.draw_regular_meshes) DrawRegularMeshes(render_info);
+  if (settings.draw_lines) DrawLines(render_info);
 
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-  if (draw_skybox_ && draw_skyox_func_) {
+  if (settings.draw_skybox && draw_skyox_func_) {
     glDepthFunc(GL_LEQUAL);
     skybox_vao_.Bind();
     draw_skyox_func_();
@@ -519,7 +521,7 @@ void Renderer::Render(const RenderInfo& render_info) {
     glDepthFunc(GL_LESS);
   }
 
-  if (draw_chunks_) DrawQuads();
+  if (settings.draw_quads) DrawQuads();
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glClearColor(1.0f, 1.0f, 1.0f, 1.0f);

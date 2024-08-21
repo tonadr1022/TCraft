@@ -2,6 +2,8 @@
 
 #include <SDL_events.h>
 
+#include "renderer/RenderInfo.hpp"
+
 class SceneManager;
 class Window;
 
@@ -17,4 +19,5 @@ class Scene {
  protected:
   SceneManager& scene_manager_;
   Window& window_;
+  RenderInfo curr_render_info_;
 };
