@@ -1,6 +1,5 @@
 #include "Renderer.hpp"
 
-#include <SDL_timer.h>
 #include <imgui.h>
 
 #include <cstdint>
@@ -104,6 +103,8 @@ void Renderer::Init() {
   glDebugMessageCallback(MessageCallback, nullptr);
   glEnable(GL_CULL_FACE);
   glEnable(GL_DEPTH_TEST);
+  auto dims = Window::Get().GetWindowSize();
+  glViewport(0, 0, dims.x, dims.y);
 
   LoadShaders();
   wireframe_enabled_ = settings.value("wireframe_enabled", false);
@@ -446,7 +447,7 @@ void Renderer::DrawNonStaticChunks(const ChunkRenderParams& render_params, const
   chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
   chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
 
-  ShaderManager::Get().GetShader(render_params.shader_name)->Bind();
+  ShaderManager::Get().GetShader("chunk_batch")->Bind();
   const auto& chunk_tex_arr =
       TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
   chunk_tex_arr.Bind(0);
@@ -490,9 +491,6 @@ void Renderer::Render(const ChunkRenderParams& render_params, const RenderInfo& 
   uniform_ubo_.ResetOffset();
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
   uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
-  // TODO: only on event
-  auto dims = Window::Get().GetWindowSize();
-  glViewport(0, 0, dims.x, dims.y);
 
   glBindFramebuffer(GL_FRAMEBUFFER, fbo1_);
   glEnable(GL_STENCIL_TEST);
@@ -502,35 +500,24 @@ void Renderer::Render(const ChunkRenderParams& render_params, const RenderInfo& 
   glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 
   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  DrawStaticChunks(render_params, render_info);
-  DrawNonStaticChunks(render_params, render_info);
-  DrawRegularMeshes(render_params, render_info);
-  DrawLines(render_params, render_info);
-
-  static const std::array<std::string, 6> Sky1Strings = {
-      GET_TEXTURE_PATH("skybox1/px.png"), GET_TEXTURE_PATH("skybox1/nx.png"),
-      GET_TEXTURE_PATH("skybox1/py.png"), GET_TEXTURE_PATH("skybox1/ny.png"),
-      GET_TEXTURE_PATH("skybox1/pz.png"), GET_TEXTURE_PATH("skybox1/nz.png"),
-  };
+  if (draw_chunks_) {
+    DrawStaticChunks(render_params, render_info);
+    DrawNonStaticChunks(render_params, render_info);
+  }
+  if (draw_regular_meshes_) DrawRegularMeshes(render_params, render_info);
+  if (draw_lines_) DrawLines(render_params, render_info);
 
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  glDepthFunc(GL_LEQUAL);
-  skybox_vao_.Bind();
-  // TODO: rename to sky and make more parameters, and split off into separate form main render call
-  auto skybox_shader = ShaderManager::Get().GetShader("skybox").value();
-  skybox_shader.Bind();
-  skybox_shader.SetMat4("vp_matrix",
-                        render_info.proj_matrix * glm::mat4(glm::mat3(render_info.view_matrix)));
 
-  double curr_time = SDL_GetPerformanceCounter() * .000000001;
-  glm::vec3 sun_dir = glm::normalize(glm::vec3{glm::cos(curr_time), glm::sin(curr_time), 0});
-  skybox_shader.SetVec3("u_sun_direction", sun_dir);
-  skybox_shader.SetFloat("u_time", curr_time * 0.5);
+  if (draw_skybox_ && draw_skyox_func_) {
+    glDepthFunc(GL_LEQUAL);
+    skybox_vao_.Bind();
+    draw_skyox_func_();
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glDepthFunc(GL_LESS);
+  }
 
-  glDrawArrays(GL_TRIANGLES, 0, 36);
-  glDepthFunc(GL_LESS);
-
-  DrawQuads();
+  if (draw_chunks_) DrawQuads();
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -567,6 +554,8 @@ void Renderer::SetDrawIndirectBufferData(
   draw_indirect_buffer.SubData(sizeof(DrawElementsIndirectCommand) * frame_dei_cmds.size(),
                                frame_dei_cmds.data());
 }
+
+void Renderer::SetSkyboxShaderFunc(const std::function<void()>& func) { draw_skyox_func_ = func; }
 
 void Renderer::SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle) {
   ZoneScoped;

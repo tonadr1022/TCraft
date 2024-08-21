@@ -1,5 +1,6 @@
 #include "WorldScene.hpp"
 
+#include <SDL_timer.h>
 #include <imgui.h>
 
 #include <nlohmann/json.hpp>
@@ -101,6 +102,18 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
   std::vector cube_indices(CubeIndices.begin(), CubeIndices.end());
   cube_mesh_.Allocate(cube_vertices, cube_indices);
 
+  Renderer::Get().SetSkyboxShaderFunc([this]() {
+    auto skybox_shader = ShaderManager::Get().GetShader("skybox").value();
+    skybox_shader.Bind();
+    skybox_shader.SetMat4("vp_matrix", curr_render_info_.proj_matrix *
+                                           glm::mat4(glm::mat3(curr_render_info_.view_matrix)));
+
+    double curr_time = SDL_GetPerformanceCounter() * .000000001;
+    glm::vec3 sun_dir = glm::normalize(glm::vec3{glm::cos(curr_time), glm::sin(curr_time), 0});
+    skybox_shader.SetVec3("u_sun_direction", sun_dir);
+    skybox_shader.SetFloat("u_time", curr_time * 0.5);
+  });
+
   chunk_manager_->Init(player_.Position());
 }
 
@@ -146,12 +159,11 @@ void WorldScene::Render() {
   ZoneScoped;
   glm::mat4 proj = player_.GetCamera().GetProjection(window_.GetAspectRatio());
   glm::mat4 view = player_.GetCamera().GetView();
-  RenderInfo render_info{.vp_matrix = proj * view,
-                         .view_matrix = view,
-                         .proj_matrix = proj,
-                         .view_pos = player_.Position(),
-                         .view_dir = player_.GetCamera().GetFront()};
-
+  curr_render_info_ = {.vp_matrix = proj * view,
+                       .view_matrix = view,
+                       .proj_matrix = proj,
+                       .view_pos = player_.Position(),
+                       .view_dir = player_.GetCamera().GetFront()};
   auto win_center = window_.GetWindowCenter();
 
   if (loaded_) {
@@ -195,9 +207,8 @@ void WorldScene::Render() {
     Renderer::Get().DrawQuad(chunk_state_tex_->Handle(), quad_pos, quad_dims);
   }
 
-  chunk_render_params_.render_chunks_on_ = loaded_;
-
-  Renderer::Get().Render(chunk_render_params_, render_info);
+  // chunk_render_params_.render_chunks_on_ = loaded_;
+  Renderer::Get().Render(chunk_render_params_, curr_render_info_);
 }
 
 WorldScene::~WorldScene() {

@@ -6,6 +6,7 @@
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/ChunkRenderParams.hpp"
 #include "renderer/Mesh.hpp"
+#include "renderer/Renderer.hpp"
 
 class TextureMaterial;
 class Texture;
@@ -31,6 +32,7 @@ class WorldScene : public Scene {
   uint32_t seed_{0};
   std::string directory_path_;
   ChunkRenderParams chunk_render_params_;
+  RenderInfo curr_render_info_;
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
   std::shared_ptr<TextureMaterial> chunk_state_tex_;

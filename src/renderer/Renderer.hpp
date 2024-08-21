@@ -113,6 +113,10 @@ class Renderer {
   //   uint32_t mesh_handle;
   // };
 
+  // The passed callback function should bind a shader and set any uniforms necessary, meant for a
+  // procedural skybox rather than a static image.
+  void SetSkyboxShaderFunc(const std::function<void()>& func);
+
  private:
   friend class Application;
   static Renderer* instance_;
@@ -257,6 +261,23 @@ class Renderer {
   Buffer cube_vbo_;
   Buffer cube_ebo_;
 
+  std::function<void()> draw_skyox_func_;
+  bool draw_lines_{true};
+  bool draw_skybox_{true};
+  bool draw_chunks_{true};
+  bool draw_regular_meshes_{true};
+  bool draw_quads_{true};
+
+  void LoadShaders();
+
+  void SetDrawIndirectBufferData(
+      Buffer& draw_indirect_buffer, std::vector<uint32_t>& frame_draw_cmd_mesh_ids,
+      std::vector<DrawElementsIndirectCommand>& frame_dei_cmds,
+      std::unordered_map<uint32_t, DrawElementsIndirectCommand>& dei_cmds);
+  void ShutdownInternal();
+  void HandleResize(int new_width, int new_height);
+  void InitFrameBuffers();
+
   struct Stats {
     uint32_t textured_quad_draw_calls{0};
     uint32_t color_quad_draw_calls{0};
@@ -268,14 +289,4 @@ class Renderer {
     uint32_t total_reg_mesh_indices{0};
   };
   Stats stats_;
-
-  void LoadShaders();
-
-  void SetDrawIndirectBufferData(
-      Buffer& draw_indirect_buffer, std::vector<uint32_t>& frame_draw_cmd_mesh_ids,
-      std::vector<DrawElementsIndirectCommand>& frame_dei_cmds,
-      std::unordered_map<uint32_t, DrawElementsIndirectCommand>& dei_cmds);
-  void ShutdownInternal();
-  void HandleResize(int new_width, int new_height);
-  void InitFrameBuffers();
 };
