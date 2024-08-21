@@ -208,13 +208,10 @@ void BlockDB::WriteBlockData(const BlockData& block_data, const std::string& mod
   json block_data_json = json::object();
   block_data_json["model"] = model_name;
   block_data_json["name"] = block_data.name;
+  block_data_json["formatted_name"] = block_data.formatted_name;
   auto properties = json::object();
-  if (block_data.move_slow_multiplier != block_defaults_.move_slow_multiplier) {
-    properties["move_slow_multiplier"] = block_data.move_slow_multiplier;
-  }
-  if (block_data.emits_light != block_defaults_.emits_light) {
-    properties["emits_light"] = block_data.emits_light;
-  }
+  properties["move_slow_multiplier"] = block_data.move_slow_multiplier;
+  properties["emits_light"] = block_data.emits_light;
   block_data_json["properties"] = properties;
   util::json::WriteJson(block_data_json, block_data.full_file_path);
 }
@@ -366,6 +363,7 @@ std::vector<std::string> BlockDB::GetAllBlockModelNames() {
 
 bool BlockData::operator==(const BlockData& other) const {
   return id == other.id && full_file_path == other.full_file_path && name == other.name &&
+         formatted_name == other.formatted_name &&
          move_slow_multiplier == other.move_slow_multiplier && emits_light == other.emits_light;
 }
 

@@ -38,8 +38,10 @@ class BlockEditorScene : public Scene {
   void Reload();
   void HandleAddModelTextureChange(BlockModelType type);
   void HandleEditModelChange();
+  void SetModelTexIndices(std::array<uint32_t, 6>& indices, const std::string& model_name);
   void HandleModelChange(BlockModelType type);
   void ResetAddModelData();
+  void SetAddBlockModelData();
   bool first_edit_{true};
   bool add_model_editor_open_{false};
 
@@ -50,6 +52,7 @@ class BlockEditorScene : public Scene {
   BlockModelDataUnique add_model_data_unique_;
 
   SingleBlock edit_model_block_;
+  SingleBlock add_block_block_;
   BlockModelType edit_model_type_{BlockModelType::All};
   BlockModelDataAll edit_model_data_all_;
   BlockModelDataTopBot edit_model_data_top_bot_;
@@ -61,7 +64,6 @@ class BlockEditorScene : public Scene {
   std::vector<SingleBlock> blocks_;
 
   std::vector<BlockData> existing_block_data_;
-  BlockData add_block_data_;
   std::vector<std::string> all_block_model_names_;
   std::vector<std::string> all_block_texture_names_;
   std::unordered_set<std::string> all_block_model_names_set_;

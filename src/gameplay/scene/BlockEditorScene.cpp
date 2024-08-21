@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
+#include <csignal>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
@@ -26,28 +27,50 @@ struct BlockEditorState {
   BlockModelDataTopBot original_edit_model_top_bot;
   BlockModelDataUnique original_edit_model_unique;
   std::optional<BlockModelData> model_data;
+  std::string add_model_name;
+  std::string add_block_model_name = "default";
+  BlockData add_block_data{};
+  BlockData default_block_data{};
 };
 
+void EditBlockImGui(BlockData& data, std::string& curr_model_name,
+                    std::vector<std::string>& all_block_model_names,
+                    const std::function<void()>& on_model_change = {}) {
+  ImGui::PushID(&data);
+  ImGui::InputText("Name (filepath friendly)", &data.name);
+  ImGui::InputText("Formatted Name", &data.formatted_name);
+  ImGui::Checkbox("Emits Light", &data.emits_light);
+  if (ImGui::BeginCombo("##Model", ("Model: " + curr_model_name).c_str())) {
+    for (const std::string& model_name : all_block_model_names) {
+      if (ImGui::Selectable(model_name.data())) {
+        curr_model_name = model_name;
+        on_model_change();
+      }
+    }
+    ImGui::EndCombo();
+  }
+  ImGui::PopID();
+}
+
 }  // namespace detail
+
+void BlockEditorScene::SetAddBlockModelData() {
+  SetModelTexIndices(add_block_block_.mesh_data.texture_indices,
+                     "block/" + state_->add_block_model_name);
+  std::vector<ChunkVertex> vertices;
+  std::vector<uint32_t> indices;
+  ChunkMesher::GenerateBlock(vertices, indices, add_block_block_.mesh_data.texture_indices);
+  Renderer::Get().FreeChunkMesh(add_block_block_.mesh_handle);
+  add_block_block_.mesh_handle = Renderer::Get().AllocateChunk(vertices, indices);
+}
 
 void BlockEditorScene::Reload() {
   ZoneScoped;
   state_ = std::make_unique<detail::BlockEditorState>();
   {
     ZoneScopedN("UI");
-    // TODO: make this more streamlined across scenes
-    // cross_hair_tex_ = TextureManager::Get().Load({.filepath =
-    // GET_TEXTURE_PATH("crosshair.png")});
     cross_hair_mat_ =
         MaterialManager::Get().LoadTextureMaterial({.filepath = GET_TEXTURE_PATH("crosshair.png")});
-    // crosshair_mat_handle_ =
-    //     Renderer::Get().AllocateTextureMaterial(cross_hair_tex_->BindlessHandle());
-
-    // for (int j = 0; j < 10; j++) {
-    //   for (int i = 0; i < 10; i++) {
-    //     Renderer::Get().AddStaticQuad(crosshair_mat_handle_, {i * 10, j * 10}, {50, 50});
-    //   }
-    // }
   }
 
   all_block_model_names_ = BlockDB::GetAllBlockModelNames();
@@ -107,7 +130,6 @@ void BlockEditorScene::Reload() {
     vertices.clear();
     indices.clear();
     ChunkMesher::GenerateBlock(vertices, indices, block_db_.GetMeshData()[i].texture_indices);
-
     blocks_.emplace_back(SingleBlock{
         .pos = {(-num_blocks + i), 0, 0},
         .mesh_handle = Renderer::Get().AllocateChunk(vertices, indices),
@@ -116,6 +138,31 @@ void BlockEditorScene::Reload() {
   }
   original_edit_block_data_ = block_db_.block_data_arr_[1];
   original_edit_block_model_name_ = block_db_.block_model_names_[1];
+  state_->add_block_data = block_db_.block_data_arr_[1];
+  state_->add_block_model_name = "default";
+  SetAddBlockModelData();
+}
+
+void BlockEditorScene::SetModelTexIndices(std::array<uint32_t, 6>& indices,
+                                          const std::string& model_name) {
+  ZoneScoped;
+  const BlockModelData& model_data = block_db_.model_name_to_model_data_[model_name];
+  if (const BlockModelDataUnique* unique_data = std::get_if<BlockModelDataUnique>(&model_data)) {
+    indices = {
+        tex_name_to_idx_[unique_data->tex_pos_x], tex_name_to_idx_[unique_data->tex_neg_x],
+        tex_name_to_idx_[unique_data->tex_pos_y], tex_name_to_idx_[unique_data->tex_neg_y],
+        tex_name_to_idx_[unique_data->tex_pos_z], tex_name_to_idx_[unique_data->tex_neg_z],
+    };
+  } else if (const BlockModelDataTopBot* top_bot_data =
+                 std::get_if<BlockModelDataTopBot>(&model_data)) {
+    indices = {
+        tex_name_to_idx_[top_bot_data->tex_side], tex_name_to_idx_[top_bot_data->tex_side],
+        tex_name_to_idx_[top_bot_data->tex_top],  tex_name_to_idx_[top_bot_data->tex_bottom],
+        tex_name_to_idx_[top_bot_data->tex_side], tex_name_to_idx_[top_bot_data->tex_side],
+    };
+  } else if (const BlockModelDataAll* all_data = std::get_if<BlockModelDataAll>(&model_data)) {
+    indices.fill(tex_name_to_idx_[all_data->tex_all]);
+  }
 }
 
 void BlockEditorScene::HandleEditModelChange() {
@@ -227,6 +274,9 @@ void BlockEditorScene::Render() {
         Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4{1}, block.pos),
                                                block.mesh_handle);
       }
+    } else if (edit_mode_ == EditMode::AddBlock) {
+      EASSERT_MSG(add_block_block_.mesh_handle != 0, "model not allocated");
+      Renderer::Get().SubmitChunkDrawCommand(model, add_block_block_.mesh_handle);
     }
   }
   glm::mat4 proj = player_.GetCamera().GetProjection(window_.GetAspectRatio());
@@ -300,8 +350,7 @@ void BlockEditorScene::OnImGui() {
     if (ImGui::BeginTabItem("Add Model")) {
       ZoneScopedN("Add Model tab");
       edit_mode_ = EditMode::AddModel;
-      static std::string model_name;
-      ImGui::InputText("Name", &model_name);
+      ImGui::InputText("Name", &state_->add_model_name);
 
       ImGui::Text("Textures");
 
@@ -318,15 +367,16 @@ void BlockEditorScene::OnImGui() {
 
       if (ImGui::Button("Reset")) {
         ResetAddModelData();
-        model_name = "";
+        state_->add_model_name = "";
         add_model_editor_open_ = false;
         add_model_type_ = BlockModelType::All;
       }
       ImGui::SameLine();
-      bool model_name_exists = all_block_model_names_set_.contains(model_name);
+      bool model_name_exists = all_block_model_names_set_.contains(state_->add_model_name);
       ImGui::BeginDisabled(model_name_exists);
       if (ImGui::Button("Save")) {
-        std::string path = GET_PATH("resources/data/model/block/" + model_name + ".json");
+        std::string path =
+            GET_PATH("resources/data/model/block/" + state_->add_model_name + ".json");
         if (add_model_type_ == BlockModelType::All) {
           BlockDB::WriteBlockModelTypeAll(add_model_data_all_, path);
         } else if (add_model_type_ == BlockModelType::TopBottom) {
@@ -473,18 +523,8 @@ void BlockEditorScene::OnImGui() {
         ImGui::EndCombo();
       }
 
-      ImGui::InputText("Name", &block_data_arr[edit_block_idx_].name);
-      ImGui::Checkbox("Emits Light", &block_data_arr[edit_block_idx_].emits_light);
-      if (ImGui::BeginCombo("##Model",
-                            ("Model: " + block_data_model_names[edit_block_idx_]).c_str())) {
-        for (const auto& model : all_block_model_names_) {
-          if (model == block_data_model_names[edit_block_idx_]) continue;
-          if (ImGui::Selectable(model.data())) {
-            block_data_model_names[edit_block_idx_] = model;
-          }
-        }
-        ImGui::EndCombo();
-      }
+      detail::EditBlockImGui(block_data_arr[edit_block_idx_],
+                             block_data_model_names[edit_block_idx_], all_block_model_names_);
 
       bool changes_exist = original_edit_block_data_ != block_data_arr[edit_block_idx_];
       ImGui::BeginDisabled(!changes_exist);
@@ -506,6 +546,25 @@ void BlockEditorScene::OnImGui() {
     }
 
     if (ImGui::BeginTabItem("Add Block")) {
+      edit_mode_ = EditMode::AddBlock;
+      detail::EditBlockImGui(state_->add_block_data, state_->add_block_model_name,
+                             all_block_model_names_, [this]() { SetAddBlockModelData(); });
+      bool changes_exist = state_->add_block_data != state_->default_block_data ||
+                           state_->add_block_model_name != "default";
+      ImGui::BeginDisabled(!changes_exist);
+      if (ImGui::Button("Save")) {
+        state_->add_block_data.full_file_path =
+            GET_PATH("resources/data/block/") + state_->add_block_data.name + ".json";
+        block_db_.WriteBlockData(state_->add_block_data, state_->add_block_model_name);
+      }
+      ImGui::EndDisabled();
+
+      ImGui::BeginDisabled(changes_exist);
+      if (ImGui::Button("Cancel")) {
+        state_->add_block_data = {};
+      }
+      ImGui::EndDisabled();
+
       ImGui::EndTabItem();
     }
     ImGui::EndTabBar();
