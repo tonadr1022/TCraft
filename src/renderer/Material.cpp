@@ -6,10 +6,8 @@
 
 TextureMaterial::~TextureMaterial() {
   if (handle_) {
-    spdlog::info("freeing texture material {}", handle_);
     Renderer::Get().FreeMaterial(handle_);
   }
-  handle_ = 0;
 }
 
 TextureMaterial::TextureMaterial() = default;

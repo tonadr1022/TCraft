@@ -128,7 +128,6 @@ Texture::Texture(const Texture2DCreateParams& params) {
 Texture::~Texture() {
   ZoneScoped;
   if (resident_) {
-    spdlog::info("delete tex2d make not resident");
     MakeNonResident();
   }
   if (id_) {

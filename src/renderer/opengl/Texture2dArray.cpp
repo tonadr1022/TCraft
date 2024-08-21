@@ -19,7 +19,6 @@ Texture2dArray& Texture2dArray::operator=(Texture2dArray&& other) noexcept {
 
 Texture2dArray::~Texture2dArray() {
   ZoneScoped;
-  // spdlog::info("delete tex array");
   if (id_) {
     glDeleteTextures(1, &id_);
   }

@@ -132,10 +132,14 @@ void Renderer::Init() {
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 80, sizeof(ChunkVertex), sizeof(ChunkVertex) * 100'000);
-  chunk_ebo_.Init(sizeof(uint32_t) * 80'000'0, sizeof(uint32_t));
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 8000000, sizeof(ChunkVertex),
+                  sizeof(ChunkVertex) * 100'000);
+  chunk_ebo_.Init(sizeof(uint32_t) * 80'000'00, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
+  chunk_uniform_ssbo_.Init(sizeof(DrawCmdUniformModelOnly) * 100000, GL_DYNAMIC_STORAGE_BIT);
+  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxDrawCmds / 10,
+                                   GL_DYNAMIC_STORAGE_BIT);
 
   reg_mesh_vao_.Init();
   reg_mesh_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
@@ -145,7 +149,8 @@ void Renderer::Init() {
   reg_mesh_ebo_.Init(sizeof(uint32_t) * 1'00'000, sizeof(uint32_t));
   reg_mesh_vao_.AttachVertexBuffer(reg_mesh_vbo_.Id(), 0, 0, sizeof(Vertex));
   reg_mesh_vao_.AttachElementBuffer(reg_mesh_ebo_.Id());
-  reg_mesh_uniform_ssbo_.Init(sizeof(MaterialUniforms) * MaxDrawCmds / 10, GL_DYNAMIC_STORAGE_BIT);
+  reg_mesh_uniform_ssbo_.Init(sizeof(UniformsModelMaterial) * MaxDrawCmds / 10,
+                              GL_DYNAMIC_STORAGE_BIT);
   reg_mesh_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxDrawCmds / 10,
                                       GL_DYNAMIC_STORAGE_BIT);
 
@@ -170,8 +175,8 @@ void Renderer::Init() {
   full_screen_quad_vao_.AttachElementBuffer(full_screen_quad_ebo_.Id());
 
   // TODO: track quad count and figure out better numbers, or make resizable if draw too many
-  textured_quad_uniform_ssbo_.Init(sizeof(MaterialUniforms) * 1000, GL_DYNAMIC_STORAGE_BIT);
-  color_uniform_ssbo_.Init(sizeof(ColorUniforms) * 10000, GL_DYNAMIC_STORAGE_BIT);
+  textured_quad_uniform_ssbo_.Init(sizeof(UniformsModelMaterial) * 1000, GL_DYNAMIC_STORAGE_BIT);
+  color_uniform_ssbo_.Init(sizeof(UniformsModelColor) * 10000, GL_DYNAMIC_STORAGE_BIT);
 
   cube_vao_.Init();
   cube_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
@@ -217,12 +222,13 @@ void Renderer::DrawQuads() {
     textured_quad_uniform_ssbo_.ResetOffset();
     if (static_textured_quad_uniforms_.size()) {
       textured_quad_uniform_ssbo_.SubData(
-          sizeof(MaterialUniforms) * static_textured_quad_uniforms_.size(),
+          sizeof(UniformsModelMaterial) * static_textured_quad_uniforms_.size(),
           static_textured_quad_uniforms_.data());
     }
     if (quad_textured_uniforms_.size()) {
-      textured_quad_uniform_ssbo_.SubData(sizeof(MaterialUniforms) * quad_textured_uniforms_.size(),
-                                          quad_textured_uniforms_.data());
+      textured_quad_uniform_ssbo_.SubData(
+          sizeof(UniformsModelMaterial) * quad_textured_uniforms_.size(),
+          quad_textured_uniforms_.data());
     }
     textured_quad_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     tex_materials_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
@@ -233,7 +239,7 @@ void Renderer::DrawQuads() {
   if (stats_.color_quad_draw_calls > 0) {
     ShaderManager::Get().GetShader("color")->Bind();
     color_uniform_ssbo_.ResetOffset();
-    color_uniform_ssbo_.SubData(sizeof(ColorUniforms) * quad_color_uniforms_.size(),
+    color_uniform_ssbo_.SubData(sizeof(UniformsModelColor) * quad_color_uniforms_.size(),
                                 quad_color_uniforms_.data());
     color_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr,
@@ -251,10 +257,10 @@ void Renderer::DrawLines(const RenderInfo&) {
   shader->Bind();
   reg_mesh_vao_.Bind();
   auto draw_lines_batch =
-      [this](std::pair<std::vector<ColorUniforms>, std::vector<uint32_t>>& uniforms_mesh_ids) {
+      [this](std::pair<std::vector<UniformsModelColor>, std::vector<uint32_t>>& uniforms_mesh_ids) {
         if (uniforms_mesh_ids.first.empty()) return;
         color_uniform_ssbo_.ResetOffset();
-        color_uniform_ssbo_.SubData(sizeof(ColorUniforms) * uniforms_mesh_ids.first.size(),
+        color_uniform_ssbo_.SubData(sizeof(UniformsModelColor) * uniforms_mesh_ids.first.size(),
                                     uniforms_mesh_ids.first.data());
         color_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
         // TODO: make only one frame dei cmds vector
@@ -316,8 +322,8 @@ void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
           static_chunk_vbo_.NumActiveAllocs() * sizeof(DrawElementsIndirectCommand),
           GL_DYNAMIC_STORAGE_BIT);
       static_chunk_uniform_ssbo_.Init(
-          static_chunk_vbo_.Allocs().size() * sizeof(StaticChunkDrawCmdUniform),
-          GL_DYNAMIC_STORAGE_BIT, nullptr);
+          static_chunk_vbo_.Allocs().size() * sizeof(DrawCmdUniformPosOnly), GL_DYNAMIC_STORAGE_BIT,
+          nullptr);
     }
     // No blending for opaque. TODO: transparent chunks
     glBlendFunc(GL_ONE, GL_ZERO);
@@ -377,7 +383,7 @@ void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
           lod_static_chunk_vbo_.NumActiveAllocs() * sizeof(DrawElementsIndirectCommand),
           GL_DYNAMIC_STORAGE_BIT);
       lod_static_chunk_uniform_ssbo_.Init(
-          lod_static_chunk_vbo_.Allocs().size() * sizeof(StaticChunkDrawCmdUniform),
+          lod_static_chunk_vbo_.Allocs().size() * sizeof(DrawCmdUniformPosOnly),
           GL_DYNAMIC_STORAGE_BIT | GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT,
           nullptr);
     }
@@ -422,7 +428,7 @@ void Renderer::DrawNonStaticChunks(const RenderInfo&) {
   if (chunk_frame_uniforms_mesh_ids_.first.empty()) return;
   chunk_uniform_ssbo_.ResetOffset();
   chunk_uniform_ssbo_.SubData(
-      sizeof(ChunkDrawCmdUniform) * chunk_frame_uniforms_mesh_ids_.first.size(),
+      sizeof(DrawCmdUniformModelOnly) * chunk_frame_uniforms_mesh_ids_.first.size(),
       chunk_frame_uniforms_mesh_ids_.first.data());
   chunk_frame_dei_cmds_.clear();
   chunk_frame_dei_cmds_.reserve(chunk_frame_uniforms_mesh_ids_.first.size());
@@ -444,7 +450,7 @@ void Renderer::DrawNonStaticChunks(const RenderInfo&) {
   chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
   chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
 
-  ShaderManager::Get().GetShader("chunk_batch")->Bind();
+  ShaderManager::Get().GetShader("chunk_batch_block")->Bind();
   const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle);
   chunk_tex_arr.Bind(0);
   chunk_vao_.Bind();
@@ -457,7 +463,7 @@ void Renderer::DrawRegularMeshes(const RenderInfo&) {
   ZoneScopedN("Reg Mesh render");
   reg_mesh_uniform_ssbo_.ResetOffset();
   reg_mesh_uniform_ssbo_.SubData(
-      sizeof(MaterialUniforms) * reg_mesh_frame_uniforms_mesh_ids_.first.size(),
+      sizeof(UniformsModelMaterial) * reg_mesh_frame_uniforms_mesh_ids_.first.size(),
       reg_mesh_frame_uniforms_mesh_ids_.first.data());
   reg_mesh_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
   // TODO: make only one frame dei cmds vector
@@ -720,7 +726,7 @@ uint32_t Renderer::AllocateMaterial(TextureMaterialData& material) {
   return handle;
 }
 
-void Renderer::FreeMaterial(uint32_t material_handle) {
+void Renderer::FreeMaterial(uint32_t& material_handle) {
   ZoneScoped;
   auto it = material_allocs_.find(material_handle);
   if (it == material_allocs_.end()) {
@@ -728,6 +734,7 @@ void Renderer::FreeMaterial(uint32_t material_handle) {
   }
   tex_materials_buffer_.Free(material_handle);
   material_allocs_.erase(it);
+  material_handle = 0;
 }
 
 void Renderer::FreeRegMesh(uint32_t handle) {

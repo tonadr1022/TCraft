@@ -85,7 +85,7 @@ class Renderer {
   void FreeRegMesh(uint32_t handle);
   [[nodiscard]] uint32_t AllocateMaterial(TextureMaterialData& material);
   [[nodiscard]] uint32_t AllocateTextureMaterial(uint32_t texture_handle);
-  void FreeMaterial(uint32_t material_handle);
+  void FreeMaterial(uint32_t& material_handle);
 
   void Init();
   void StartFrame(const Window& window);
@@ -136,21 +136,21 @@ class Renderer {
   // std::vector<OutlineDrawCmd> outline_draw_cmds_;
 
   // TODO: try without alignas
-  struct StaticChunkDrawCmdUniform {
+  struct DrawCmdUniformPosOnly {
     glm::vec4 pos;
   };
 
-  struct ChunkDrawCmdUniform {
+  struct DrawCmdUniformModelOnly {
     glm::mat4 model;
   };
 
   // TODO: try without alignas
-  struct alignas(16) MaterialUniforms {
+  struct alignas(16) UniformsModelMaterial {
     glm::mat4 model;
     uint64_t material_index;
   };
 
-  struct alignas(16) ColorUniforms {
+  struct alignas(16) UniformsModelColor {
     glm::mat4 model;
     glm::vec3 color;
   };
@@ -216,7 +216,8 @@ class Renderer {
 
   std::unordered_map<uint32_t, MeshAlloc> chunk_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> chunk_dei_cmds_;
-  std::pair<std::vector<ChunkDrawCmdUniform>, std::vector<uint32_t>> chunk_frame_uniforms_mesh_ids_;
+  std::pair<std::vector<DrawCmdUniformModelOnly>, std::vector<uint32_t>>
+      chunk_frame_uniforms_mesh_ids_;
   // std::vector<uint32_t> chunk_frame_draw_cmd_mesh_ids_;
   // std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
@@ -230,7 +231,8 @@ class Renderer {
   Buffer reg_mesh_draw_indirect_buffer_;
   std::unordered_map<uint32_t, MeshAlloc> reg_mesh_allocs_;
   std::unordered_map<uint32_t, DrawElementsIndirectCommand> reg_mesh_dei_cmds_;
-  std::pair<std::vector<MaterialUniforms>, std::vector<uint32_t>> reg_mesh_frame_uniforms_mesh_ids_;
+  std::pair<std::vector<UniformsModelMaterial>, std::vector<uint32_t>>
+      reg_mesh_frame_uniforms_mesh_ids_;
   std::vector<DrawElementsIndirectCommand> frame_dei_cmd_vec_;
 
   DynamicBuffer<> tex_materials_buffer_;
@@ -248,13 +250,13 @@ class Renderer {
   Buffer skybox_vbo_;
 
   Buffer textured_quad_uniform_ssbo_;
-  std::vector<MaterialUniforms> quad_textured_uniforms_;
-  std::vector<MaterialUniforms> static_textured_quad_uniforms_;
+  std::vector<UniformsModelMaterial> quad_textured_uniforms_;
+  std::vector<UniformsModelMaterial> static_textured_quad_uniforms_;
 
   Buffer color_uniform_ssbo_;
-  std::vector<ColorUniforms> quad_color_uniforms_;
-  std::pair<std::vector<ColorUniforms>, std::vector<uint32_t>> lines_frame_uniforms_mesh_ids_;
-  std::pair<std::vector<ColorUniforms>, std::vector<uint32_t>>
+  std::vector<UniformsModelColor> quad_color_uniforms_;
+  std::pair<std::vector<UniformsModelColor>, std::vector<uint32_t>> lines_frame_uniforms_mesh_ids_;
+  std::pair<std::vector<UniformsModelColor>, std::vector<uint32_t>>
       lines_no_depth_frame_uniforms_mesh_ids_;
 
   VertexArray cube_vao_;
