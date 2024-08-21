@@ -33,6 +33,8 @@ void SceneManager::LoadScene(const std::string& name) {
 
   MaterialManager::Get().RemoveUnused();
   TextureManager::Get().RemoveUnusedTextures();
+  // TODO: make a reset function instead?
+  Renderer::Get().SetSkyboxShaderFunc({});
 }
 
 Scene& SceneManager::GetActiveScene() {

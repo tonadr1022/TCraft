@@ -5,6 +5,9 @@
 #include "gameplay/world/BlockDB.hpp"
 
 class TextureMaterial;
+namespace detail {
+struct BlockEditorState;
+}
 
 class BlockEditorScene : public Scene {
  public:
@@ -37,6 +40,7 @@ class BlockEditorScene : public Scene {
   void HandleEditModelChange();
   void HandleModelChange(BlockModelType type);
   void ResetAddModelData();
+  bool first_edit_{true};
   bool add_model_editor_open_{false};
 
   std::array<SingleBlock, 3> add_model_blocks_;
@@ -74,4 +78,5 @@ class BlockEditorScene : public Scene {
   uint32_t chunk_tex_array_handle_{0};
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
+  std::unique_ptr<detail::BlockEditorState> state_{nullptr};
 };

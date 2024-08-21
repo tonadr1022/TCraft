@@ -544,7 +544,7 @@ void Renderer::SetDrawIndirectBufferData(
   }
   DrawElementsIndirectCommand cmd;
   for (uint32_t i = 0; i < frame_draw_cmd_mesh_ids.size(); i++) {
-    const auto& draw_cmd_info = dei_cmds[frame_draw_cmd_mesh_ids[i]];
+    const DrawElementsIndirectCommand& draw_cmd_info = dei_cmds[frame_draw_cmd_mesh_ids[i]];
     cmd.base_instance = i;
     cmd.base_vertex = draw_cmd_info.base_vertex;
     cmd.instance_count = 1;

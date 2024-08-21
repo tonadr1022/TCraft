@@ -18,8 +18,21 @@
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
+namespace detail {
+
+struct BlockEditorState {
+  bool first_edit{true};
+  BlockModelDataAll original_edit_model_data_all;
+  BlockModelDataTopBot original_edit_model_top_bot;
+  BlockModelDataUnique original_edit_model_unique;
+  std::optional<BlockModelData> model_data;
+};
+
+}  // namespace detail
+
 void BlockEditorScene::Reload() {
   ZoneScoped;
+  state_ = std::make_unique<detail::BlockEditorState>();
   {
     ZoneScopedN("UI");
     // TODO: make this more streamlined across scenes
@@ -337,11 +350,7 @@ void BlockEditorScene::OnImGui() {
         ZoneScopedN("Edit Model tab");
         edit_mode_ = EditMode::EditModel;
         static std::string edit_model_name = all_block_model_names_[0];
-        static auto model_data = BlockDB::LoadBlockModelDataFromName("block/" + edit_model_name);
-        static BlockModelDataAll original_edit_model_data_all;
-        static BlockModelDataTopBot original_edit_model_top_bot;
-        static BlockModelDataUnique original_edit_model_unique;
-        static bool first_edit = true;
+        state_->model_data = BlockDB::LoadBlockModelDataFromName("block/" + edit_model_name);
 
         auto set_data = [this](std::optional<BlockModelData>& model_data) {
           if (BlockModelDataAll* data = std::get_if<BlockModelDataAll>(&model_data.value())) {
@@ -383,28 +392,28 @@ void BlockEditorScene::OnImGui() {
             edit_model_data_unique_.tex_pos_z = data->tex_pos_z;
             edit_model_data_unique_.tex_neg_z = data->tex_neg_z;
           }
-          original_edit_model_data_all = edit_model_data_all_;
-          original_edit_model_unique = edit_model_data_unique_;
-          original_edit_model_top_bot = edit_model_data_top_bot_;
+          state_->original_edit_model_data_all = edit_model_data_all_;
+          state_->original_edit_model_unique = edit_model_data_unique_;
+          state_->original_edit_model_top_bot = edit_model_data_top_bot_;
         };
 
-        if (first_edit) {
-          set_data(model_data);
+        if (state_->first_edit) {
+          set_data(state_->model_data);
           HandleEditModelChange();
-          first_edit = false;
+          state_->first_edit = false;
         }
 
         if (ImGui::BeginCombo("Model##edit_model_select", edit_model_name.c_str())) {
           for (const auto& model_name : all_block_model_names_) {
             if (model_name == edit_model_name) continue;
             if (ImGui::Selectable(model_name.data())) {
-              model_data = BlockDB::LoadBlockModelDataFromName("block/" + model_name);
-              if (!model_data.has_value()) {
+              state_->model_data = BlockDB::LoadBlockModelDataFromName("block/" + model_name);
+              if (!state_->model_data.has_value()) {
                 spdlog::error("Unable to load model data: {}", model_name);
                 break;
               }
               edit_model_name = model_name;
-              set_data(model_data);
+              set_data(state_->model_data);
               HandleEditModelChange();
             }
           }
@@ -425,9 +434,9 @@ void BlockEditorScene::OnImGui() {
         TexSelectMenu(edit_mode_);
 
         if (ImGui::Button("Reset")) {
-          edit_model_data_all_ = original_edit_model_data_all;
-          edit_model_data_top_bot_ = original_edit_model_top_bot;
-          edit_model_data_unique_ = original_edit_model_unique;
+          edit_model_data_all_ = state_->original_edit_model_data_all;
+          edit_model_data_top_bot_ = state_->original_edit_model_top_bot;
+          edit_model_data_unique_ = state_->original_edit_model_unique;
         }
         ImGui::SameLine();
         if (ImGui::Button("Save")) {
