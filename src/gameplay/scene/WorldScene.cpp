@@ -78,7 +78,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
       all_texture_pixel_data.emplace_back(image.pixels);
       images.emplace_back(image);
     }
-    chunk_render_params_.chunk_tex_array_handle =
+    chunk_tex_array_handle_ =
         TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
                                              .dims = glm::ivec2{32, 32},
                                              .generate_mipmaps = true,
@@ -87,6 +87,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
                                              .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
                                              .filter_mode_max = GL_NEAREST,
                                              .texture_wrap = GL_REPEAT});
+    Renderer::Get().chunk_tex_array_handle = chunk_tex_array_handle_;
 
     block_db_.LoadMeshData(tex_name_to_idx, images);
     for (auto* const p : all_texture_pixel_data) {
@@ -208,7 +209,7 @@ void WorldScene::Render() {
   }
 
   // chunk_render_params_.render_chunks_on_ = loaded_;
-  Renderer::Get().Render(chunk_render_params_, curr_render_info_);
+  Renderer::Get().Render(curr_render_info_);
 }
 
 WorldScene::~WorldScene() {
@@ -222,6 +223,8 @@ WorldScene::~WorldScene() {
       {"camera",
        {{"pitch", player_.GetCamera().GetPitch()}, {"yaw", player_.GetCamera().GetYaw()}}}};
   util::json::WriteJson(j, directory_path_ + "/data.json");
+  TextureManager::Get().Remove2dArray(chunk_tex_array_handle_);
+  Renderer::Get().chunk_tex_array_handle = 0;
 }
 
 void WorldScene::OnImGui() {

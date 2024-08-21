@@ -114,8 +114,8 @@ void Renderer::Init() {
   static_chunk_vao_.Init();
   static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
-  static_chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
-  static_chunk_ebo_.Init(UINT32_MAX / 2, sizeof(uint32_t));
+  static_chunk_vbo_.Init(sizeof(ChunkVertex) * 40'000'000, sizeof(ChunkVertex));
+  static_chunk_ebo_.Init(UINT32_MAX / 4, sizeof(uint32_t));
   static_chunk_vao_.AttachVertexBuffer(static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   static_chunk_vao_.AttachElementBuffer(static_chunk_ebo_.Id());
   static_chunk_draw_count_buffer_.Init(sizeof(GLuint), 0, nullptr);
@@ -123,8 +123,8 @@ void Renderer::Init() {
   lod_static_chunk_vao_.Init();
   lod_static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
-  lod_static_chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
-  lod_static_chunk_ebo_.Init(UINT32_MAX / 2, sizeof(uint32_t));
+  lod_static_chunk_vbo_.Init(sizeof(ChunkVertex) * 40'000'000, sizeof(ChunkVertex));
+  lod_static_chunk_ebo_.Init(UINT32_MAX / 4, sizeof(uint32_t));
   lod_static_chunk_vao_.AttachVertexBuffer(lod_static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   lod_static_chunk_vao_.AttachElementBuffer(lod_static_chunk_ebo_.Id());
   lod_static_chunk_draw_count_buffer_.Init(sizeof(GLuint), 0, nullptr);
@@ -132,7 +132,7 @@ void Renderer::Init() {
   chunk_vao_.Init();
   chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
-  chunk_vbo_.Init(sizeof(ChunkVertex) * 80, sizeof(ChunkVertex), sizeof(ChunkVertex) * 100'000'000);
+  chunk_vbo_.Init(sizeof(ChunkVertex) * 80, sizeof(ChunkVertex), sizeof(ChunkVertex) * 100'000);
   chunk_ebo_.Init(sizeof(uint32_t) * 80'000'0, sizeof(uint32_t));
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
@@ -141,8 +141,8 @@ void Renderer::Init() {
   reg_mesh_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
   reg_mesh_vao_.EnableAttribute<float>(1, 2, offsetof(Vertex, tex_coords));
   // TODO: fine tune or make resizeable
-  reg_mesh_vbo_.Init(sizeof(Vertex) * 100'0000, sizeof(Vertex));
-  reg_mesh_ebo_.Init(sizeof(uint32_t) * 1'000'000, sizeof(uint32_t));
+  reg_mesh_vbo_.Init(sizeof(Vertex) * 100'000, sizeof(Vertex));
+  reg_mesh_ebo_.Init(sizeof(uint32_t) * 1'00'000, sizeof(uint32_t));
   reg_mesh_vao_.AttachVertexBuffer(reg_mesh_vbo_.Id(), 0, 0, sizeof(Vertex));
   reg_mesh_vao_.AttachElementBuffer(reg_mesh_ebo_.Id());
   reg_mesh_uniform_ssbo_.Init(sizeof(MaterialUniforms) * MaxDrawCmds / 10, GL_DYNAMIC_STORAGE_BIT);
@@ -243,7 +243,7 @@ void Renderer::DrawQuads() {
   glDepthFunc(GL_LESS);
 }
 
-void Renderer::DrawLines(const ChunkRenderParams&, const RenderInfo&) {
+void Renderer::DrawLines(const RenderInfo&) {
   if (lines_frame_uniforms_mesh_ids_.first.empty() &&
       lines_no_depth_frame_uniforms_mesh_ids_.first.empty())
     return;
@@ -273,8 +273,7 @@ void Renderer::DrawLines(const ChunkRenderParams&, const RenderInfo&) {
   }
 }
 
-void Renderer::DrawStaticChunks(const ChunkRenderParams& render_params,
-                                const RenderInfo& render_info) {
+void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
   ZoneScoped;
   bool frustum_shader_set = false;
   auto set_frustum_shader_data = [this, &frustum_shader_set, &render_info](Shader& cull_shader) {
@@ -355,8 +354,7 @@ void Renderer::DrawStaticChunks(const ChunkRenderParams& render_params,
     chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
     chunk_shader->SetBool("u_UseAO", settings.chunk_use_ao);
 
-    const auto& chunk_tex_arr =
-        TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
+    const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle);
     chunk_tex_arr.Bind(0);
     static_chunk_vao_.Bind();
     static_chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
@@ -406,8 +404,7 @@ void Renderer::DrawStaticChunks(const ChunkRenderParams& render_params,
     chunk_shader->Bind();
     chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
 
-    const auto& chunk_tex_arr =
-        TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
+    const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle);
     chunk_tex_arr.Bind(0);
     lod_static_chunk_vao_.Bind();
     lod_static_chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
@@ -420,7 +417,7 @@ void Renderer::DrawStaticChunks(const ChunkRenderParams& render_params,
   }
 }
 
-void Renderer::DrawNonStaticChunks(const ChunkRenderParams& render_params, const RenderInfo&) {
+void Renderer::DrawNonStaticChunks(const RenderInfo&) {
   ZoneScoped;
   if (chunk_frame_uniforms_mesh_ids_.first.empty()) return;
   chunk_uniform_ssbo_.ResetOffset();
@@ -448,15 +445,14 @@ void Renderer::DrawNonStaticChunks(const ChunkRenderParams& render_params, const
   chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
 
   ShaderManager::Get().GetShader("chunk_batch")->Bind();
-  const auto& chunk_tex_arr =
-      TextureManager::Get().GetTexture2dArray(render_params.chunk_tex_array_handle);
+  const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle);
   chunk_tex_arr.Bind(0);
   chunk_vao_.Bind();
   glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, chunk_frame_dei_cmds_.size(),
                               0);
 }
 
-void Renderer::DrawRegularMeshes(const ChunkRenderParams&, const RenderInfo&) {
+void Renderer::DrawRegularMeshes(const RenderInfo&) {
   if (reg_mesh_frame_uniforms_mesh_ids_.first.empty()) return;
   ZoneScopedN("Reg Mesh render");
   reg_mesh_uniform_ssbo_.ResetOffset();
@@ -484,7 +480,7 @@ void Renderer::DrawLine(const glm::mat4& model, const glm::vec3& color, uint32_t
   uniforms_ids.second.emplace_back(mesh_handle);
 }
 
-void Renderer::Render(const ChunkRenderParams& render_params, const RenderInfo& render_info) {
+void Renderer::Render(const RenderInfo& render_info) {
   ZoneScoped;
   UBOUniforms uniform_data;
   uniform_data.vp_matrix = render_info.vp_matrix;
@@ -500,12 +496,12 @@ void Renderer::Render(const ChunkRenderParams& render_params, const RenderInfo& 
   glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 
   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  if (draw_chunks_) {
-    DrawStaticChunks(render_params, render_info);
-    DrawNonStaticChunks(render_params, render_info);
+  if (draw_chunks_ && chunk_tex_array_handle != 0) {
+    DrawStaticChunks(render_info);
+    DrawNonStaticChunks(render_info);
   }
-  if (draw_regular_meshes_) DrawRegularMeshes(render_params, render_info);
-  if (draw_lines_) DrawLines(render_params, render_info);
+  if (draw_regular_meshes_) DrawRegularMeshes(render_info);
+  if (draw_lines_) DrawLines(render_info);
 
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 

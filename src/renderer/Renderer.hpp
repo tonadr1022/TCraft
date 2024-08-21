@@ -6,7 +6,6 @@
 #include <glm/vec2.hpp>
 
 #include "gameplay/world/ChunkDef.hpp"
-#include "renderer/ChunkRenderParams.hpp"
 #include "renderer/Common.hpp"
 #include "renderer/Mesh.hpp"
 #include "renderer/ShaderManager.hpp"
@@ -46,12 +45,13 @@ class Renderer {
   static void Shutdown();
   void OnImGui();
 
-  bool render_gui_{true};
+  bool render_gui{true};
   bool render_chunks_{true};
   bool wireframe_enabled_{false};
+  uint32_t chunk_tex_array_handle{};
 
   void SetUBOData(const RenderInfo& render_info);
-  void Render(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+  void Render(const RenderInfo& render_info);
   void BeginRender() const;
   // void Reset();
   void SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle);
@@ -129,10 +129,10 @@ class Renderer {
 
   void DrawQuads();
   void RenderRegMeshes();
-  void DrawStaticChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
-  void DrawNonStaticChunks(const ChunkRenderParams& render_params, const RenderInfo& render_info);
-  void DrawRegularMeshes(const ChunkRenderParams& render_params, const RenderInfo& render_info);
-  void DrawLines(const ChunkRenderParams& render_params, const RenderInfo& render_info);
+  void DrawStaticChunks(const RenderInfo& render_info);
+  void DrawNonStaticChunks(const RenderInfo& render_info);
+  void DrawRegularMeshes(const RenderInfo& render_info);
+  void DrawLines(const RenderInfo& render_info);
   // std::vector<OutlineDrawCmd> outline_draw_cmds_;
 
   // TODO: try without alignas

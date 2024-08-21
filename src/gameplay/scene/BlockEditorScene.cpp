@@ -64,8 +64,7 @@ void BlockEditorScene::Reload() {
       all_texture_pixel_data.emplace_back(image.pixels);
     }
 
-    chunk_render_params_.shader_name = "chunk_batch_block";
-    chunk_render_params_.chunk_tex_array_handle =
+    chunk_tex_array_handle_ =
         TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
                                              .dims = glm::ivec2{32, 32},
                                              .generate_mipmaps = true,
@@ -74,6 +73,7 @@ void BlockEditorScene::Reload() {
                                              .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
                                              .filter_mode_max = GL_NEAREST,
                                              .texture_wrap = GL_REPEAT});
+    Renderer::Get().chunk_tex_array_handle = chunk_tex_array_handle_;
     for (auto* p : all_texture_pixel_data) {
       util::FreeImage(p);
     }
@@ -185,7 +185,8 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
 }
 
 BlockEditorScene::~BlockEditorScene() {
-  TextureManager::Get().Remove2dArray(chunk_render_params_.chunk_tex_array_handle);
+  Renderer::Get().chunk_tex_array_handle = 0;
+  TextureManager::Get().Remove2dArray(chunk_tex_array_handle_);
 };
 
 void BlockEditorScene::Render() {
@@ -217,11 +218,11 @@ void BlockEditorScene::Render() {
   }
   glm::mat4 proj = player_.GetCamera().GetProjection(window_.GetAspectRatio());
   glm::mat4 view = player_.GetCamera().GetView();
-  Renderer::Get().Render(chunk_render_params_, {.vp_matrix = proj * view,
-                                                .view_matrix = view,
-                                                .proj_matrix = proj,
-                                                .view_pos = player_.Position(),
-                                                .view_dir = player_.GetCamera().GetFront()});
+  Renderer::Get().Render({.vp_matrix = proj * view,
+                          .view_matrix = view,
+                          .proj_matrix = proj,
+                          .view_pos = player_.Position(),
+                          .view_dir = player_.GetCamera().GetFront()});
 }
 
 void BlockEditorScene::ResetAddModelData() {
