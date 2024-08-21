@@ -626,6 +626,7 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
           });
   return id;
 }
+
 uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
                                        std::vector<uint32_t>& indices, const glm::ivec3& pos,
                                        LODLevel level) {
@@ -848,6 +849,9 @@ bool Renderer::OnEvent(const SDL_Event& event) {
 void Renderer::LoadShaders() {
   ShaderManager::Get().AddShader("quad", {{GET_SHADER_PATH("quad.vs.glsl"), ShaderType::Vertex},
                                           {GET_SHADER_PATH("quad.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader("block",
+                                 {{GET_SHADER_PATH("block.vs.glsl"), ShaderType::Vertex},
+                                  {GET_SHADER_PATH("block.fs.glsl"), ShaderType::Fragment}});
   ShaderManager::Get().AddShader("skybox",
                                  {{GET_SHADER_PATH("skybox.vs.glsl"), ShaderType::Vertex},
                                   {GET_SHADER_PATH("skybox.fs.glsl"), ShaderType::Fragment}});

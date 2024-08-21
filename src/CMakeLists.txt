@@ -19,6 +19,7 @@ set(SOURCES
     renderer/Mesh.cpp
     renderer/Frustum.cpp
     renderer/Material.cpp
+    renderer/RendererUtil.cpp
     renderer/opengl/Texture2d.cpp
     renderer/opengl/Texture2dArray.cpp
     renderer/opengl/Debug.cpp
@@ -29,6 +30,7 @@ set(SOURCES
 
     gameplay/Player.cpp
     gameplay/GamePlayer.cpp
+    gameplay/InventoryUI.cpp
     gameplay/scene/WorldScene.cpp
     gameplay/scene/BlockEditorScene.cpp
     gameplay/scene/MainMenuScene.cpp

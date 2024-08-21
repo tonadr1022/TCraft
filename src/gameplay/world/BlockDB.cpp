@@ -22,6 +22,7 @@ const std::vector<BlockData>& BlockDB::GetBlockData() const { return block_data_
 
 void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
                            const std::vector<Image>& image_data) {
+  mesh_data_initialized_ = true;
   // reserve 0 index for air
   block_mesh_data_.emplace_back(default_mesh_data_);
 
@@ -78,6 +79,7 @@ void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_t
 }
 
 void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx) {
+  mesh_data_initialized_ = true;
   // reserve 0 index for air
   block_mesh_data_.emplace_back(default_mesh_data_);
 

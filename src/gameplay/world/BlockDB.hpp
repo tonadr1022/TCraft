@@ -73,9 +73,12 @@ class BlockDB {
   [[nodiscard]] static std::vector<std::string> GetAllBlockModelNames();
   [[nodiscard]] static std::vector<std::string> GetAllTextureNames();
 
+  [[nodiscard]] inline bool MeshDataInitialized() const { return mesh_data_initialized_; }
+
  private:
   // only the editor has full access to adding and changing data at runtime
   friend class BlockEditorScene;
+  bool mesh_data_initialized_{false};
 
   std::vector<BlockData> block_data_arr_;
   std::vector<BlockMeshData> block_mesh_data_;

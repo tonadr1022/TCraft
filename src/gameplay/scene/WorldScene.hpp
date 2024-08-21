@@ -8,6 +8,7 @@
 class TextureMaterial;
 class Texture;
 class Window;
+// class InventoryUI;
 
 class WorldScene : public Scene {
  public:
@@ -41,6 +42,7 @@ class WorldScene : public Scene {
   double time_{0};
   int chunk_map_display_y_level_{0};
   ChunkMapMode chunk_map_mode_{ChunkMapMode::ChunkState};
+  // std::unique_ptr<InventoryUI> inv_ui_{nullptr};
 
   Mesh cube_mesh_;
   uint32_t chunk_tex_array_handle_;

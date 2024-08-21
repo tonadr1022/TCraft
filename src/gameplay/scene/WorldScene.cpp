@@ -9,10 +9,12 @@
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/GamePlayer.hpp"
+#include "gameplay/InventoryUI.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Constants.hpp"
 #include "renderer/Renderer.hpp"
+#include "renderer/RendererUtil.hpp"
 #include "renderer/ShaderManager.hpp"
 #include "renderer/Shape.hpp"
 #include "renderer/opengl/Texture2d.hpp"
@@ -94,6 +96,9 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     for (auto* const p : all_texture_pixel_data) {
       util::FreeImage(p);
     }
+    util::renderer::RenderAndWriteIcons(
+        block_db_.GetBlockData(), block_db_.GetMeshData(),
+        TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle_));
   }
 
   std::vector<Vertex> cube_vertices;

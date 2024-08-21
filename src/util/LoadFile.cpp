@@ -52,4 +52,16 @@ nlohmann::json LoadJsonFile(const std::string& path) {
   }
 }
 
+void WriteImage(uint32_t tex, uint32_t num_channels, const std::string& out_path) {
+  stbi_flip_vertically_on_write(true);
+  int w, h;
+  int mip_level = 0;
+  glGetTextureLevelParameteriv(tex, mip_level, GL_TEXTURE_WIDTH, &w);
+  glGetTextureLevelParameteriv(tex, mip_level, GL_TEXTURE_HEIGHT, &h);
+  std::vector<uint8_t> pixels(w * h * num_channels);
+  glGetTextureImage(tex, mip_level, num_channels == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE,
+                    sizeof(uint8_t) * pixels.size(), pixels.data());
+  stbi_write_png(out_path.c_str(), w, h, num_channels, pixels.data(), w * num_channels);
+}
+
 }  // namespace util
