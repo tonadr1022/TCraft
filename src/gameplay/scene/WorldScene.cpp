@@ -103,8 +103,8 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
 
   std::vector<Vertex> cube_vertices;
   for (size_t i = 0; i < CubeVertices.size(); i += 5) {
-    cube_vertices.emplace_back(glm::vec3{CubeVertices[i], CubeVertices[i + 1], CubeVertices[i + 2]},
-                               glm::vec2{CubeVertices[i + 3], CubeVertices[i + 4]});
+    cube_vertices.emplace_back(Vertex{glm::vec3{CubeVertices[i], CubeVertices[i + 1], CubeVertices[i + 2]},
+                               glm::vec2{CubeVertices[i + 3], CubeVertices[i + 4]}});
   }
   std::vector cube_indices(CubeIndices.begin(), CubeIndices.end());
   cube_mesh_.Allocate(cube_vertices, cube_indices);

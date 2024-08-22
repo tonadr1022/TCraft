@@ -371,7 +371,7 @@ void BlockEditorScene::OnImGui() {
 
       for (uint32_t i = 0; i < 3; i++) {
         ImGui::BeginDisabled(static_cast<uint32_t>(add_model_type_) == i);
-        if (ImGui::Button(TexTypeNames[i].data())) {
+        if (ImGui::Button(TexTypeNames[i])) {
           add_model_type_ = static_cast<BlockModelType>(i);
         }
         ImGui::EndDisabled();
@@ -488,7 +488,7 @@ void BlockEditorScene::OnImGui() {
         ImGui::Text("Textures");
         for (uint32_t i = 0; i < 3; i++) {
           ImGui::BeginDisabled(static_cast<uint32_t>(edit_model_type_) == i);
-          if (ImGui::Button(TexTypeNames[i].data())) {
+          if (ImGui::Button(TexTypeNames[i])) {
             edit_model_type_ = static_cast<BlockModelType>(i);
             HandleEditModelChange();
           }

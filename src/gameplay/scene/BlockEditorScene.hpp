@@ -70,8 +70,8 @@ class BlockEditorScene : public Scene {
   std::unordered_map<std::string, uint32_t> tex_name_to_idx_;
   void TexSelectMenu(EditMode mode);
 
-  constexpr const static std::array<std::string, 3> TexTypes = {"all", "top_bottom", "unique"};
-  constexpr const static std::array<std::string, 3> TexTypeNames = {"All", "Top Bottom", "Unique"};
+  constexpr const static std::array<const char*, 3> TexTypes = {"all", "top_bottom", "unique"};
+  constexpr const static std::array<const char*, 3> TexTypeNames = {"All", "Top Bottom", "Unique"};
 
   BlockData original_edit_block_data_;
   std::string original_edit_block_model_name_;

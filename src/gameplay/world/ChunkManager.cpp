@@ -695,8 +695,8 @@ void ChunkManager::SendChunkMeshTaskLOD1(const glm::ivec2& pos) {
     ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
     mesher.GenerateLODGreedy2(arr, vertices, indices);
     std::lock_guard<std::mutex> lock(mutex_);
-    lod_chunk_mesh_finished_queue_.emplace(std::move(vertices), std::move(indices), pos,
-                                           LODLevel::One);
+    lod_chunk_mesh_finished_queue_.emplace(LODChunkMeshTask{std::move(vertices), std::move(indices), pos,
+                                           LODLevel::One});
   });
 }
 
@@ -729,7 +729,8 @@ void ChunkManager::SendChunkMeshTaskNoLOD(const glm::ivec3& pos) {
     }
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      chunk_mesh_finished_queue_.emplace(std::move(vertices), std::move(indices), pos);
+      ChunkMeshTask task{std::move(vertices), std::move(indices), pos};
+      chunk_mesh_finished_queue_.emplace(task);
     }
   });
 }
