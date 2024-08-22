@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include "gameplay/world/BlockDB.hpp"
+#include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
@@ -177,5 +178,41 @@ void Terrain::Load(const BlockDB& block_db) {
     biome.layer_y_sum = layer_y_sum;
 
     biomes.emplace_back(biome);
+  }
+}
+
+void Terrain::Write(const BlockDB& block_db) {
+  for (const auto& biome : biomes) {
+    std::filesystem::path path = GET_PATH("resources/data/terrain/biomes") /
+                                 std::filesystem::path(biome.name + "_test.json");
+    std::vector<nlohmann::json> layers;
+    for (size_t layer_idx = 0; layer_idx < biome.layers.size(); layer_idx++) {
+      const auto& layer = biome.layers[layer_idx];
+      if (layer.block_types.size() == 1) {
+        nlohmann::json layer_obj = {
+            {"name", block_db.GetBlockData()[layer.block_types.front()].name},
+            {"y_count", biome.layer_y_counts[layer_idx]},
+        };
+        layers.emplace_back(layer_obj);
+      } else {
+        std::vector<std::string> names(layer.block_types.size());
+        std::vector<float> freqs(layer.block_types.size());
+        int i = 0;
+        for (const BlockType block_type : layer.block_types) {
+          names[i++] = block_db.GetBlockData()[block_type].name;
+        }
+        for (size_t block_idx = 0; block_idx < layer.block_types.size(); block_idx++) {
+        }
+        nlohmann::json layer_obj = {
+            {"names", names},
+            {"frequencies", layer.block_type_frequencies},
+            {"y_count", biome.layer_y_counts[layer_idx]},
+        };
+        layers.emplace_back(layer_obj);
+      }
+      nlohmann::json out_json = {
+          {"name", biome.name}, {"formatted_name", biome.formatted_name}, {"layers", layers}};
+      util::json::WriteJson(out_json, path);
+    }
   }
 }

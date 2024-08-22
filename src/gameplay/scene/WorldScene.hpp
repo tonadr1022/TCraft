@@ -9,7 +9,6 @@
 class TextureMaterial;
 class Texture;
 class Window;
-// class InventoryUI;
 
 class WorldScene : public Scene {
  public:

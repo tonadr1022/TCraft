@@ -8,7 +8,7 @@ class SceneManager {
   void LoadScene(const std::string& name);
   Scene& GetActiveScene();
   void Shutdown();
-  void LoadWorld(std::string_view path);
+  void LoadWorld(const std::string& path);
   void SetNextSceneOnConstructionError(const std::string& name);
 
  private:

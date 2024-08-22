@@ -619,25 +619,41 @@ void BlockEditorScene::OnImGui() {
 }
 
 void BlockEditorScene::ImGuiTerrainEdit() {
+  ImGui::ShowDemoWindow();
+  ImGui::Text("Biomes");
+  if (ImGui::Button("Save")) {
+    terrain_.Write(block_db_);
+  }
   for (auto& biome : terrain_.biomes) {
-    for (auto& layer : biome.layers) {
-      ImGui::PushID(&layer);
-      if (ImGui::CollapsingHeader("Layer")) {
-        EASSERT(layer.block_types.size() == layer.block_type_frequencies.size());
-        for (size_t layer_idx = 0; layer_idx < layer.block_types.size(); layer_idx++) {
-          ImGui::PushID(layer_idx);
-          ImVec2 uv0, uv1;
-          icon_texture_atlas_.ComputeUVs(layer.block_types[layer_idx], uv0, uv1);
-          constexpr glm::vec2 ImageDims = {50, 50};
-          ImGui::Image(reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
-                       ImVec2(ImageDims.x, ImageDims.y), uv0, uv1);
-          ImGui::SameLine();
-          ImGui::SliderFloat("Frequency", &layer.block_type_frequencies[layer_idx], 0.0001, 1.0);
-          ImGui::PopID();
+    ImGui::PushID(&biome);
+    if (ImGui::CollapsingHeader(biome.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+      for (size_t i = 0; i < biome.layers.size(); i++) {
+        auto& layer = biome.layers[i];
+        ImGui::PushID(&layer);
+        if (ImGui::TreeNodeEx("Layer", ImGuiTreeNodeFlags_DefaultOpen)) {
+          int y_count = biome.layer_y_counts[i];
+          if (ImGui::SliderInt("Y Count", &y_count, 1, 32)) {
+            biome.layer_y_counts[i] = y_count;
+          }
+
+          EASSERT(layer.block_types.size() == layer.block_type_frequencies.size());
+          for (size_t block_id = 0; block_id < layer.block_types.size(); block_id++) {
+            ImGui::PushID(block_id);
+            ImVec2 uv0, uv1;
+            icon_texture_atlas_.ComputeUVs(layer.block_types[block_id], uv0, uv1);
+            constexpr glm::vec2 ImageDims = {50, 50};
+            ImGui::Image(reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
+                         ImVec2(ImageDims.x, ImageDims.y), uv0, uv1);
+            ImGui::SameLine();
+            ImGui::SliderFloat("Frequency", &layer.block_type_frequencies[block_id], 0.0001, 1.0);
+            ImGui::PopID();
+          }
+          ImGui::TreePop();
         }
+        ImGui::PopID();
       }
-      ImGui::PopID();
     }
+    ImGui::PopID();
   }
 }
 

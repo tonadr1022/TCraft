@@ -27,4 +27,5 @@ struct Terrain {
   uint32_t default_id;
 
   void Load(const BlockDB& block_db);
+  void Write(const BlockDB& block_db);
 };

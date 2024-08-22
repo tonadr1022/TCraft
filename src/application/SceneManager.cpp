@@ -49,7 +49,7 @@ void SceneManager::Shutdown() {
   TextureManager::Get().RemoveUnusedTextures();
 }
 
-void SceneManager::LoadWorld(std::string_view path) {
+void SceneManager::LoadWorld(const std::string& path) {
   // call destructor of active scene
   active_scene_ = nullptr;
   Renderer::Get().SetSkyboxShaderFunc({});

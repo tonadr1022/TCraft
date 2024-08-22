@@ -1,4 +1,4 @@
 {
-  "biomes": ["plains"],
-  "frequencies": [1.0]
+  "biomes": ["plains", "plains2"],
+  "frequencies": [0.5,0.5]
 }
