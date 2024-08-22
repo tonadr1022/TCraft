@@ -9,7 +9,6 @@
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/GamePlayer.hpp"
-#include "gameplay/InventoryUI.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 #include "renderer/Constants.hpp"
@@ -21,6 +20,8 @@
 #include "resource/Image.hpp"
 #include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
+#include "ui/Button.hpp"
+#include "ui/Constraint.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -122,6 +123,15 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
   });
 
   chunk_manager_->Init(player_.Position());
+
+  // for (int i = 0; i < 10; i++) {
+  //   ui::Button button;
+  //   button.x = i * 10;
+  //   button.y = 0;
+  //   button.width = 50;
+  //   button.height = 50;
+  //   button.mat_handle
+  // }
 }
 
 void WorldScene::Update(double dt) {

@@ -3,6 +3,7 @@
 #include <SDL_events.h>
 
 #include "renderer/RenderInfo.hpp"
+#include "ui/UI.hpp"
 
 class SceneManager;
 class Window;
@@ -20,4 +21,5 @@ class Scene {
   SceneManager& scene_manager_;
   Window& window_;
   RenderInfo curr_render_info_;
+  ui::UI ui_;
 };
