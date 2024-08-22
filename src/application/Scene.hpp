@@ -21,5 +21,5 @@ class Scene {
   SceneManager& scene_manager_;
   Window& window_;
   RenderInfo curr_render_info_;
-  ui::UI ui_;
+  UI ui_;
 };

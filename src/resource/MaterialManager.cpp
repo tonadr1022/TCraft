@@ -27,10 +27,22 @@ std::shared_ptr<TextureMaterial> MaterialManager::LoadTextureMaterial(
   if (it != texture_mat_map_.end()) {
     return it->second;
   }
-
   auto tex = TextureManager::Get().Load(name, params);
-  TextureMaterialData data{tex->BindlessHandle()};
-  auto mat = std::make_shared<TextureMaterial>(data, tex);
+  auto mat = std::make_shared<TextureMaterial>(tex);
+  texture_mat_map_.emplace(name, mat);
+  return mat;
+}
+
+std::shared_ptr<TextureMaterial> MaterialManager::LoadTextureMaterial(
+    const Texture2DArrayCreateParams& params) {
+  auto name = std::to_string(next_handle_++);
+  auto it = texture_mat_map_.find(name);
+  if (it != texture_mat_map_.end()) {
+    return it->second;
+  }
+
+  auto tex = TextureManager::Get().Load(params);
+  auto mat = std::make_shared<TextureMaterial>(tex);
   texture_mat_map_.emplace(name, mat);
   return mat;
 }
@@ -42,9 +54,7 @@ std::shared_ptr<TextureMaterial> MaterialManager::LoadTextureMaterial(
   if (it != texture_mat_map_.end()) {
     return it->second;
   }
-
-  TextureMaterialData data{tex->BindlessHandle()};
-  auto mat = std::make_shared<TextureMaterial>(data, tex);
+  auto mat = std::make_shared<TextureMaterial>(tex);
   texture_mat_map_.emplace(params.filepath, mat);
   return mat;
 }

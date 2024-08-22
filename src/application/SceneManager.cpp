@@ -18,6 +18,7 @@ void SceneManager::LoadScene(const std::string& name) {
   EASSERT_MSG(scene_creators_.count(name), "Scene not found");
   // call destructor of active scene
   active_scene_ = nullptr;
+  Renderer::Get().SetSkyboxShaderFunc({});
   // construct new scene
   active_scene_ = scene_creators_.at(name)();
 
@@ -34,7 +35,6 @@ void SceneManager::LoadScene(const std::string& name) {
   MaterialManager::Get().RemoveUnused();
   TextureManager::Get().RemoveUnusedTextures();
   // TODO: make a reset function instead?
-  Renderer::Get().SetSkyboxShaderFunc({});
 }
 
 Scene& SceneManager::GetActiveScene() {
@@ -52,6 +52,7 @@ void SceneManager::Shutdown() {
 void SceneManager::LoadWorld(std::string_view path) {
   // call destructor of active scene
   active_scene_ = nullptr;
+  Renderer::Get().SetSkyboxShaderFunc({});
   // construct new scene
   active_scene_ = std::make_unique<WorldScene>(*this, path);
   if (next_scene_after_scene_construction_err_ != "") {
@@ -62,7 +63,6 @@ void SceneManager::LoadWorld(std::string_view path) {
     MaterialManager::Get().RemoveUnused();
     TextureManager::Get().RemoveUnusedTextures();
     // TODO: make a reset function instead?
-    Renderer::Get().SetSkyboxShaderFunc({});
   }
 }
 

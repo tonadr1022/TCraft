@@ -491,6 +491,8 @@ void Renderer::Render(const RenderInfo& render_info) {
   uniform_ubo_.ResetOffset();
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
   uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
+  auto dims = window_.GetWindowSize();
+  glViewport(0, 0, dims.x, dims.y);
 
   glBindFramebuffer(GL_FRAMEBUFFER, fbo1_);
   glEnable(GL_STENCIL_TEST);
@@ -505,7 +507,9 @@ void Renderer::Render(const RenderInfo& render_info) {
     DrawNonStaticChunks(render_info);
   }
   if (settings.draw_regular_meshes) DrawRegularMeshes(render_info);
+  glLineWidth(2);
   if (settings.draw_lines) DrawLines(render_info);
+  glLineWidth(1);
 
   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -520,6 +524,7 @@ void Renderer::Render(const RenderInfo& render_info) {
   if (settings.draw_quads) DrawQuads();
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, dims.x, dims.y);
   glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 

@@ -70,18 +70,15 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     std::unordered_map<std::string, uint32_t> tex_name_to_idx;
     Image image;
     int tex_idx = 0;
-    std::vector<void*> all_texture_pixel_data;
     std::vector<Image> images;
     for (const auto& tex_name : block_db_.GetTextureNamesInUse()) {
-      util::LoadImage(image, GET_PATH("resources/textures/" + tex_name + ".png"), 4);
+      util::LoadImage(image, GET_PATH("resources/textures/" + tex_name + ".png"), 4, true);
       // TODO: handle other sizes/animations
       if (image.width != 32 || image.height != 32) continue;
       tex_name_to_idx[tex_name] = tex_idx++;
-      all_texture_pixel_data.emplace_back(image.pixels);
       images.emplace_back(image);
     }
-    chunk_tex_array_ = TextureManager::Get().Load({.all_pixels_data = all_texture_pixel_data,
-                                                   .dims = glm::ivec2{32, 32},
+    chunk_tex_array_ = TextureManager::Get().Load({.images = images,
                                                    .generate_mipmaps = true,
                                                    .internal_format = GL_RGBA8,
                                                    .format = GL_RGBA,
@@ -91,11 +88,9 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
     Renderer::Get().chunk_tex_array = chunk_tex_array_;
 
     block_db_.LoadMeshData(tex_name_to_idx, images);
-    for (auto* const p : all_texture_pixel_data) {
-      util::FreeImage(p);
+    for (auto const& p : images) {
+      util::FreeImage(p.pixels);
     }
-    util::renderer::RenderAndWriteIcons(block_db_.GetBlockData(), block_db_.GetMeshData(),
-                                        *chunk_tex_array_);
   }
 
   std::vector<Vertex> cube_vertices;
@@ -120,14 +115,9 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
 
   chunk_manager_->Init(player_.Position());
 
-  for (int i = 0; i < 10; i++) {
-    ui::Button button;
-    button.x = i * 10;
-    button.y = 0;
-    button.width = 50;
-    button.height = 50;
-    button.mat_handle = cross_hair_mat_;
-  }
+  icon_texture_atlas_ = util::renderer::LoadIconTextureAtlas(block_db_, *chunk_tex_array_);
+
+  player_.held_item_id = block_db_.GetBlockData("stone")->id;
 }
 
 void WorldScene::Update(double dt) {
@@ -135,7 +125,6 @@ void WorldScene::Update(double dt) {
   chunk_manager_->SetCenter(player_.Position());
   chunk_manager_->Update(dt);
   loaded_ = loaded_ || chunk_manager_->IsLoaded();
-  // if (loaded_) player_.Update(dt);
   if (!loaded_) time_ += dt;
   player_.Update(dt);
 }
@@ -183,18 +172,18 @@ void WorldScene::Render() {
     auto ray_cast_pos = player_.GetRayCastBlockPos();
     if (ray_cast_pos != glm::NullIVec3) {
       Renderer::Get().DrawLine(glm::translate(glm::mat4{1}, glm::vec3(ray_cast_pos)), glm::vec3(0),
-                               cube_mesh_.Handle(), true);
+                               cube_mesh_.Handle(), false);
     }
   } else {
-    // draw loading bar
-    const auto& state = chunk_manager_->GetStateStats();
-    float loading_percentage =
-        static_cast<float>(state.loaded_chunks) / static_cast<float>(state.max_chunks);
-    for (int i = 0; i < 100; i++) {
-      auto color = static_cast<float>(i) / 100.f >= loading_percentage ? color::Red : color::Green;
-      Renderer::Get().DrawQuad(color, glm::ivec2{win_center.x + i * 3, win_center.y + 275},
-                               {10, 10});
-    }
+    // // draw loading bar
+    // const auto& state = chunk_manager_->GetStateStats();
+    // float loading_percentage =
+    //     static_cast<float>(state.loaded_chunks) / static_cast<float>(state.max_chunks);
+    // for (int i = 0; i < 100; i++) {
+    //   auto color = static_cast<float>(i) / 100.f >= loading_percentage ? color::Red :
+    //   color::Green; Renderer::Get().DrawQuad(color, glm::ivec2{i * 3, 0}, {win_dims.x / 100,
+    //   win_dims.y});
+    // }
   }
 
   if (show_chunk_map_) {
@@ -238,10 +227,80 @@ WorldScene::~WorldScene() {
 
 void WorldScene::OnImGui() {
   ZoneScoped;
-  chunk_manager_->OnImGui();
 
+  chunk_manager_->OnImGui();
   player_.OnImGui();
   ImGui::Text("time: %f", time_);
   ImGui::SliderInt("Chunk State Y", &chunk_map_display_y_level_, 0, NumVerticalChunks);
   ImGui::Checkbox("Show Chunk Map", &show_chunk_map_);
+  DrawInventory();
+}
+
+void WorldScene::DrawInventory() {
+  ImGuiStyle& style = ImGui::GetStyle();
+  ImGuiWindowFlags flags =
+      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
+  bool inventory_open{true};
+  glm::vec2 img_dims{50, 50};
+  // static int icons_per_row = 6;
+  float max_inv_screen_width_percentage = 1.f / 3.f;
+  auto full_window_dims = Window::Get().GetWindowSize();
+  float max_inv_width = full_window_dims.x * max_inv_screen_width_percentage;
+
+  float padded_width = img_dims.x + style.ItemSpacing.x;
+  int icons_per_row = std::min(6, (static_cast<int>(max_inv_width / padded_width)));
+  uint32_t num_rows =
+      glm::ceil(static_cast<float>(icon_texture_atlas_.id_to_offset_map.size()) / icons_per_row);
+  float window_width =
+      (img_dims.x * icons_per_row + style.ItemSpacing.x * (icons_per_row - 1)) * 1.25 +
+      style.WindowPadding.x * 2;
+  float window_height = img_dims.y * num_rows * 1.15 + style.ItemSpacing.y * (num_rows - 1) +
+                        style.WindowPadding.y * 2;
+  ImGui::SliderFloat2("window padding", &style.WindowPadding.x, 0.0f, 10.0f);
+  ImGui::SliderFloat2("item spacing", &style.ItemSpacing.x, 0.0f, 10.0f);
+  ImGui::Text("Held item id %i", player_.held_item_id);
+  ImGui::SetNextWindowPos(ImVec2(full_window_dims.x - window_width, 0));
+  ImGui::SetNextWindowSize(ImVec2(window_width, window_height));
+
+  ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.3f));
+  ImGui::Begin("Inventory", &inventory_open, flags);
+  int i = 0;
+  ImVec2 uv0, uv1;
+  for (size_t id = 1; id < block_db_.GetBlockData().size(); id++) {
+    icon_texture_atlas_.ComputeUVs(id, uv0, uv1);
+
+    bool is_selected = (id == static_cast<size_t>(player_.held_item_id));
+    if (is_selected) {
+      constexpr ImVec4 ActiveColor(0.2, 0.8f, 0.2f, 0.5f);
+      ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+                            ImVec4(0.0f, 0.0f, 0.6f, 0.0f));  // Default button color
+      ImGui::PushStyleColor(ImGuiCol_Button,
+                            ActiveColor);  // Change button color when selected
+      ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ActiveColor);  // Hover color
+    } else {
+      ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+                            ImVec4(0.0f, 0.0f, 0.6f, 0.0f));  // Default button color
+      ImGui::PushStyleColor(ImGuiCol_Button,
+                            ImVec4(0.6f, 0.6f, 0.6f, 0.0f));  // Default button color
+      ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.7f, 0.5f));  // Hover color
+    }
+
+    ImGui::PushID(id);
+    if (ImGui::ImageButton(reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
+                           ImVec2(img_dims.x, img_dims.y), uv0, uv1)) {
+      player_.held_item_id = id;
+    }
+    if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
+      ImGui::SetTooltip("%s", block_db_.GetBlockData()[id].formatted_name.c_str());
+    }
+    ImGui::PopID();
+
+    ImGui::PopStyleColor(3);
+
+    if (++i % icons_per_row != 0) {
+      ImGui::SameLine();
+    }
+  }
+  ImGui::End();
+  ImGui::PopStyleColor();
 }

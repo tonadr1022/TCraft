@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "renderer/Renderer.hpp"
+#include "renderer/opengl/Texture2d.hpp"
 
 TextureMaterial::~TextureMaterial() {
   if (handle_) {
@@ -12,11 +13,11 @@ TextureMaterial::~TextureMaterial() {
 
 TextureMaterial::TextureMaterial() = default;
 
-TextureMaterial::TextureMaterial(TextureMaterialData& data, std::shared_ptr<Texture> tex)
-    : tex_(std::move(tex)) {
+TextureMaterial::TextureMaterial(const std::shared_ptr<Texture>& tex) : tex_(tex) {
   EASSERT_MSG(tex_ != nullptr, "TextureMaterial: texture cannot be null");
+  TextureMaterialData data{.texture_bindless_handle = tex->BindlessHandle()};
   handle_ = Renderer::Get().AllocateMaterial(data);
-};
+}
 
 TextureMaterial::TextureMaterial(TextureMaterial&& other) noexcept { *this = std::move(other); }
 

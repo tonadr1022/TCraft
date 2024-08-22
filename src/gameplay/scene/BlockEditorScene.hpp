@@ -3,6 +3,8 @@
 #include "application/Scene.hpp"
 #include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
+#include "gameplay/world/Terrain.hpp"
+#include "renderer/TextureAtlas.hpp"
 
 class Texture;
 class TextureMaterial;
@@ -32,6 +34,7 @@ class BlockEditorScene : public Scene {
     EditModel,
     AddBlock,
     EditBlock,
+    EditTerrain,
   };
 
   EditMode edit_mode_{EditMode::AddBlock};
@@ -43,6 +46,7 @@ class BlockEditorScene : public Scene {
   void HandleModelChange(BlockModelType type);
   void ResetAddModelData();
   void SetAddBlockModelData();
+  void ImGuiTerrainEdit();
   bool first_edit_{true};
   bool add_model_editor_open_{false};
 
@@ -71,6 +75,8 @@ class BlockEditorScene : public Scene {
   std::unordered_map<std::string, uint32_t> tex_name_to_idx_;
   void TexSelectMenu(EditMode mode);
 
+  Terrain terrain_;
+
   constexpr const static std::array<std::string, 3> TexTypes = {"all", "top_bottom", "unique"};
   constexpr const static std::array<std::string, 3> TexTypeNames = {"All", "Top Bottom", "Unique"};
 
@@ -82,4 +88,5 @@ class BlockEditorScene : public Scene {
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
   std::unique_ptr<detail::BlockEditorState> state_{nullptr};
+  SquareTextureAtlas icon_texture_atlas_;
 };

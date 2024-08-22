@@ -17,6 +17,8 @@ class GamePlayer : public Player {
   [[nodiscard]] const glm::ivec3& GetRayCastBlockPos() const;
   [[nodiscard]] const glm::ivec3& GetAirRayCastBlockPos() const;
 
+  int held_item_id{0};
+
  private:
   glm::ivec3 ray_cast_non_air_pos_;
   glm::ivec3 ray_cast_air_pos_;

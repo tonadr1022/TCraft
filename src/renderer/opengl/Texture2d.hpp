@@ -3,6 +3,8 @@
 #include <glm/vec2.hpp>
 #include <string>
 
+#include "resource/Image.hpp"
+
 struct Texture2DCreateParams {
   std::string filepath;
   uint32_t internal_format{GL_RGBA8};
@@ -30,14 +32,14 @@ struct TextureCubeCreateParamsPaths {
 };
 
 struct Texture2DArrayCreateParams {
-  const std::vector<void*>& all_pixels_data;
-  glm::ivec2 dims;
+  const std::vector<Image>& images;
   bool generate_mipmaps{true};
   uint32_t internal_format;
   uint32_t format;
-  uint32_t filter_mode_min;
-  uint32_t filter_mode_max;
-  uint32_t texture_wrap{0x812F};
+  uint32_t filter_mode_min{GL_LINEAR};
+  uint32_t filter_mode_max{GL_LINEAR};
+  uint32_t texture_wrap{GL_CLAMP_TO_EDGE};
+  bool bindless{false};
 };
 
 class Texture {

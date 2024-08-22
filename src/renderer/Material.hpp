@@ -3,12 +3,13 @@
 class Texture;
 
 struct TextureMaterialData {
-  uint64_t texture_handle{0};
+  uint64_t texture_bindless_handle{0};
+  uint64_t layer_idx{0};
 };
 
 class TextureMaterial {
  public:
-  TextureMaterial(TextureMaterialData& data, std::shared_ptr<Texture> tex);
+  explicit TextureMaterial(const std::shared_ptr<Texture>& tex);
   TextureMaterial();
   ~TextureMaterial();
 

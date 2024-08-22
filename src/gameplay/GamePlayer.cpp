@@ -166,7 +166,7 @@ bool GamePlayer::OnEvent(const SDL_Event& event) {
       if (event.button.button == SDL_BUTTON_RIGHT) {
         if (ray_cast_air_pos_ != glm::NullIVec3) {
           // TODO: access held block in inventory
-          chunk_manager_.SetBlock(ray_cast_air_pos_, 2);
+          chunk_manager_.SetBlock(ray_cast_air_pos_, held_item_id);
         }
         return true;
       } else if (event.button.button == SDL_BUTTON_LEFT) {
@@ -176,6 +176,17 @@ bool GamePlayer::OnEvent(const SDL_Event& event) {
     case SDL_MOUSEBUTTONUP:
       if (event.button.button == SDL_BUTTON_LEFT) {
         is_mining_ = false;
+      }
+      break;
+
+    case SDL_MOUSEWHEEL:
+      if (event.wheel.y > 0) {
+        held_item_id += 1;
+        if (static_cast<uint32_t>(held_item_id) == block_db_.GetBlockData().size())
+          held_item_id = 1;
+      } else {
+        held_item_id -= 1;
+        if (held_item_id == 0) held_item_id = block_db_.GetBlockData().size() - 1;
       }
   }
   return false;

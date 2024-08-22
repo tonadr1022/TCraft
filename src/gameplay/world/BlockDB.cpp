@@ -23,6 +23,7 @@ const std::vector<BlockData>& BlockDB::GetBlockData() const { return block_data_
 void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx,
                            const std::vector<Image>& image_data) {
   mesh_data_initialized_ = true;
+  block_mesh_data_.clear();
   // reserve 0 index for air
   block_mesh_data_.emplace_back(default_mesh_data_);
 
@@ -395,7 +396,6 @@ bool BlockData::operator==(const BlockData& other) const {
 
 void BlockDB::WriteBlockModelTypeAll(const BlockModelDataAll& data, const std::string& path) {
   nlohmann::json j = {{"type", "block/all"}, {"textures", {{"all", data.tex_all}}}};
-  spdlog::info("writing all");
   util::json::WriteJson(j, path);
 }
 
@@ -418,5 +418,4 @@ void BlockDB::WriteBlockModelTypeUnique(const BlockModelDataUnique& data, const 
                           {"negz", data.tex_neg_z},
                       }};
   util::json::WriteJson(j, path);
-  // TODO: implement in block Editor scene
 }

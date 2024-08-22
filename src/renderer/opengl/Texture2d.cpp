@@ -162,7 +162,8 @@ bool Texture::IsValid() const { return id_ != 0; }
 
 Texture::Texture(const Texture2DArrayCreateParams& params) {
   ZoneScoped;
-  dims_ = params.dims;
+  if (params.images.empty()) return;
+  dims_ = {params.images.front().width, params.images.front().height};
   glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &id_);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, params.texture_wrap);
   glTextureParameteri(id_, GL_TEXTURE_WRAP_T, params.texture_wrap);
@@ -176,14 +177,18 @@ Texture::Texture(const Texture2DArrayCreateParams& params) {
   }
 
   glTextureStorage3D(id_, mip_levels, params.internal_format, dims_.x, dims_.y,
-                     params.all_pixels_data.size());
+                     params.images.size());
 
   // spdlog::info("create tex array {} of depth: {}", id_, params.all_pixels_data.size());
-  for (size_t i = 0; i < params.all_pixels_data.size(); i++) {
-    glTextureSubImage3D(id_, 0, 0, 0, i, params.dims.x, params.dims.y, 1, params.format,
-                        GL_UNSIGNED_BYTE, params.all_pixels_data[i]);
+  for (size_t i = 0; i < params.images.size(); i++) {
+    glTextureSubImage3D(id_, 0, 0, 0, i, dims_.x, dims_.y, 1, params.format, GL_UNSIGNED_BYTE,
+                        params.images[i].pixels);
   }
   if (params.generate_mipmaps) glGenerateTextureMipmap(id_);
+  if (params.bindless) {
+    bindless_handle_ = glGetTextureHandleARB(id_);
+    MakeResident();
+  }
 }
 
 void Texture::Bind(int unit) const { glBindTextureUnit(unit, id_); }

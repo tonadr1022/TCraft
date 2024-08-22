@@ -4,6 +4,7 @@
 #include "gameplay/GamePlayer.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "renderer/Mesh.hpp"
+#include "renderer/TextureAtlas.hpp"
 
 class TextureMaterial;
 class Texture;
@@ -42,8 +43,9 @@ class WorldScene : public Scene {
   double time_{0};
   int chunk_map_display_y_level_{0};
   ChunkMapMode chunk_map_mode_{ChunkMapMode::ChunkState};
-  // std::unique_ptr<InventoryUI> inv_ui_{nullptr};
 
+  SquareTextureAtlas icon_texture_atlas_;
   Mesh cube_mesh_;
   std::shared_ptr<Texture> chunk_tex_array_;
+  void DrawInventory();
 };

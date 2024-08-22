@@ -13,6 +13,7 @@
 #include "pch.hpp"
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
+#include "renderer/RendererUtil.hpp"
 #include "resource/Image.hpp"
 #include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
@@ -81,9 +82,9 @@ void BlockEditorScene::Reload() {
   {
     ZoneScopedN("Load texture data");
     // auto all_texture_names = BlockDB::GetAllBlockTexturesFromAllModels();
-    std::vector<void*> all_texture_pixel_data;
     Image image;
     int tex_idx = 0;
+    std::vector<Image> images;
     // TODO: handle diff sizes?
     for (const auto& file :
          std::filesystem::directory_iterator(GET_PATH("resources/textures/block"))) {
@@ -97,11 +98,10 @@ void BlockEditorScene::Reload() {
       util::LoadImage(image, str, 4);
       if (image.width != 32 || image.height != 32) continue;
       tex_name_to_idx_[tex_name] = tex_idx++;
-      all_texture_pixel_data.emplace_back(image.pixels);
+      images.emplace_back(image);
     }
 
-    chunk_tex_array_ = TextureManager::Get().Load({.all_pixels_data = all_texture_pixel_data,
-                                                   .dims = glm::ivec2{32, 32},
+    chunk_tex_array_ = TextureManager::Get().Load({.images = images,
                                                    .generate_mipmaps = true,
                                                    .internal_format = GL_RGBA8,
                                                    .format = GL_RGBA,
@@ -109,8 +109,8 @@ void BlockEditorScene::Reload() {
                                                    .filter_mode_max = GL_NEAREST,
                                                    .texture_wrap = GL_REPEAT});
     Renderer::Get().chunk_tex_array = chunk_tex_array_;
-    for (auto* p : all_texture_pixel_data) {
-      util::FreeImage(p);
+    for (const auto& image : images) {
+      util::FreeImage(image.pixels);
     }
   }
   // block_db_.Init();
@@ -141,6 +141,9 @@ void BlockEditorScene::Reload() {
   state_->add_block_data = block_db_.block_data_arr_[1];
   state_->add_block_model_name = "default";
   SetAddBlockModelData();
+
+  terrain_.Load(block_db_);
+  icon_texture_atlas_ = util::renderer::LoadIconTextureAtlas(block_db_, *chunk_tex_array_);
 }
 
 void BlockEditorScene::SetModelTexIndices(std::array<uint32_t, 6>& indices,
@@ -360,6 +363,9 @@ void BlockEditorScene::OnImGui() {
     ZoneScopedN("Tab Bar");
     if (ImGui::BeginTabItem("Add Model")) {
       ZoneScopedN("Add Model tab");
+      if (edit_mode_ != EditMode::AddModel) {
+        player_.LookAt({0.5, 0.5, 0.5});
+      }
       edit_mode_ = EditMode::AddModel;
       ImGui::InputText("Name", &state_->add_model_name);
 
@@ -395,6 +401,9 @@ void BlockEditorScene::OnImGui() {
         } else {
           BlockDB::WriteBlockModelTypeUnique(add_model_data_unique_, path);
         }
+        block_db_.block_model_names_.emplace_back("block/" + state_->add_model_name);
+        // TODO: not this!
+        all_block_model_names_ = BlockDB::GetAllBlockModelNames();
       }
       ImGui::EndDisabled();
 
@@ -409,6 +418,9 @@ void BlockEditorScene::OnImGui() {
     if (all_block_model_names_.size() > 0) {
       if (ImGui::BeginTabItem("Edit Model")) {
         ZoneScopedN("Edit Model tab");
+        if (edit_mode_ != EditMode::EditModel) {
+          player_.LookAt({0.5, 0.5, 0.5});
+        }
         edit_mode_ = EditMode::EditModel;
         static std::string edit_model_name = all_block_model_names_[0];
         state_->model_data = BlockDB::LoadBlockModelDataFromName("block/" + edit_model_name);
@@ -559,6 +571,9 @@ void BlockEditorScene::OnImGui() {
     }
 
     if (ImGui::BeginTabItem("Add Block")) {
+      if (edit_mode_ != EditMode::AddBlock) {
+        player_.LookAt({0.5, 0.5, 0.5});
+      }
       edit_mode_ = EditMode::AddBlock;
       detail::EditBlockImGui(state_->add_block_data, state_->add_block_model_name,
                              all_block_model_names_, [this]() { SetAddBlockModelData(); });
@@ -566,15 +581,16 @@ void BlockEditorScene::OnImGui() {
                            state_->add_block_model_name != "default";
       ImGui::BeginDisabled(!changes_exist);
       if (ImGui::Button("Save")) {
+        std::string model_name = "block/" + state_->add_block_model_name;
         // set full file path
         state_->add_block_data.full_file_path =
             GET_PATH("resources/data/block/") + state_->add_block_data.name + ".json";
         // id is the next id
         state_->add_block_data.id = block_db_.GetBlockData().size();
-        block_db_.WriteBlockData(state_->add_block_data, state_->add_block_model_name);
+        block_db_.WriteBlockData(state_->add_block_data, model_name);
         // add to the block db
         block_db_.block_data_arr_.emplace_back(state_->add_block_data);
-        block_db_.block_model_names_.emplace_back(state_->add_block_model_name);
+        block_db_.block_model_names_.emplace_back(model_name);
         block_db_.block_name_to_id_.emplace(state_->add_block_data.name, state_->add_block_data.id);
         // reset state
         state_->add_block_data = {};
@@ -591,10 +607,38 @@ void BlockEditorScene::OnImGui() {
 
       ImGui::EndTabItem();
     }
+    if (ImGui::BeginTabItem("Edit Terrain")) {
+      edit_mode_ = EditMode::EditTerrain;
+      ImGuiTerrainEdit();
+      ImGui::EndTabItem();
+    }
     ImGui::EndTabBar();
   }
 
   ImGui::End();
+}
+
+void BlockEditorScene::ImGuiTerrainEdit() {
+  for (auto& biome : terrain_.biomes) {
+    for (auto& layer : biome.layers) {
+      ImGui::PushID(&layer);
+      if (ImGui::CollapsingHeader("Layer")) {
+        EASSERT(layer.block_types.size() == layer.block_type_frequencies.size());
+        for (size_t layer_idx = 0; layer_idx < layer.block_types.size(); layer_idx++) {
+          ImGui::PushID(layer_idx);
+          ImVec2 uv0, uv1;
+          icon_texture_atlas_.ComputeUVs(layer.block_types[layer_idx], uv0, uv1);
+          constexpr glm::vec2 ImageDims = {50, 50};
+          ImGui::Image(reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
+                       ImVec2(ImageDims.x, ImageDims.y), uv0, uv1);
+          ImGui::SameLine();
+          ImGui::SliderFloat("Frequency", &layer.block_type_frequencies[layer_idx], 0.0001, 1.0);
+          ImGui::PopID();
+        }
+      }
+      ImGui::PopID();
+    }
+  }
 }
 
 bool BlockEditorScene::OnEvent(const SDL_Event& event) {
