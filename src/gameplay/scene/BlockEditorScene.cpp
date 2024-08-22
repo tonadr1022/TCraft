@@ -570,15 +570,26 @@ void BlockEditorScene::OnImGui() {
                            state_->add_block_model_name != "default";
       ImGui::BeginDisabled(!changes_exist);
       if (ImGui::Button("Save")) {
+        // set full file path
         state_->add_block_data.full_file_path =
             GET_PATH("resources/data/block/") + state_->add_block_data.name + ".json";
+        // id is the next id
+        state_->add_block_data.id = block_db_.GetBlockData().size();
         block_db_.WriteBlockData(state_->add_block_data, state_->add_block_model_name);
+        // add to the block db
+        block_db_.block_data_arr_.emplace_back(state_->add_block_data);
+        block_db_.block_model_names_.emplace_back(state_->add_block_model_name);
+        block_db_.block_name_to_id_.emplace(state_->add_block_data.name, state_->add_block_data.id);
+        // reset state
+        state_->add_block_data = {};
+        state_->add_block_model_name = "default";
       }
       ImGui::EndDisabled();
 
       ImGui::BeginDisabled(changes_exist);
       if (ImGui::Button("Cancel")) {
         state_->add_block_data = {};
+        state_->add_block_model_name = "default";
       }
       ImGui::EndDisabled();
 

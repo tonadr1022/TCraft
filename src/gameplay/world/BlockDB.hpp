@@ -15,7 +15,7 @@ struct BlockMeshData {
 };
 
 struct BlockData {
-  BlockType id;
+  BlockType id{0};
   std::string full_file_path;
   std::string name;
   std::string formatted_name;

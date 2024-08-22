@@ -232,8 +232,13 @@ void BlockDB::WriteBlockData(const BlockData& block_data, const std::string& mod
       {"move_slow_multiplier", block_data.move_slow_multiplier},
       {"emits_light", block_data.emits_light},
   };
-  json block_data_json = {
-      {"model", model_name}, {"name", block_data.formatted_name}, {"properties", properties}};
+  if (block_data.id == 0) {
+    spdlog::error("Cannot write data, invalid block id {}", block_data.id);
+  }
+  json block_data_json = {{"id", block_data.id},
+                          {"model", model_name},
+                          {"name", block_data.formatted_name},
+                          {"properties", properties}};
   util::json::WriteJson(block_data_json, block_data.full_file_path);
 }
 
