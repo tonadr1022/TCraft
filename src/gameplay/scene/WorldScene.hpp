@@ -13,7 +13,7 @@ class Window;
 
 class WorldScene : public Scene {
  public:
-  WorldScene(SceneManager& scene_manager, std::string_view path);
+  WorldScene(SceneManager& scene_manager, const std::string& directory_path);
 
   void Update(double dt) override;
   void OnImGui() override;

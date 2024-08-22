@@ -24,46 +24,42 @@
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
 
-WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
+WorldScene::WorldScene(SceneManager& scene_manager, const std::string& directory_path)
     : Scene(scene_manager),
       chunk_manager_(std::make_unique<ChunkManager>(block_db_)),
       player_(*chunk_manager_, block_db_),
-      directory_path_(path) {
+      directory_path_(directory_path) {
   ZoneScoped;
-  EASSERT_MSG(!path.empty(), "Can't load world scene without a loaded world name");
-  {
-    ZoneScopedN("Initialize data");
-    try {
-      auto data = util::LoadJsonFile(std::string(path) + "/data.json");
-      auto level_data = util::LoadJsonFile(std::string(path) + "/level.json");
-      auto seed = util::json::GetString(level_data, "seed");
-      EASSERT_MSG(seed.has_value(), "Missing seed from level.json");
-      static std::hash<std::string> hasher;
-      seed_ = hasher(seed.value());
-      chunk_manager_->SetSeed(seed_);
-      std::array<float, 3> player_pos =
-          data.value("player_position", std::array<float, 3>{0, 0, 0});
-      player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
-      auto camera = data["camera"];
-      float pitch = 0, yaw = 0;
-      if (camera.is_object()) {
-        pitch = camera.value("pitch", 0);
-        yaw = camera.value("yaw", 0);
-      }
-      player_.GetFPSCamera().SetOrientation(pitch, yaw);
-    } catch (std::runtime_error& error) {
-      spdlog::info("failed to load world data");
-      scene_manager_.SetNextSceneOnConstructionError("main_menu");
-      return;
-    }
+  std::filesystem::path data_path = directory_path / std::filesystem::path("data.json");
+  std::filesystem::path level_path = directory_path / std::filesystem::path("level.json");
+  if (!std::filesystem::exists(data_path)) {
+    spdlog::error("Required file does not exist: {}", data_path.string());
+    return;
   }
-  {
-    ZoneScopedN("Texture load");
-    cross_hair_mat_ =
-        MaterialManager::Get().LoadTextureMaterial({.filepath = GET_TEXTURE_PATH("crosshair.png")});
-    // sun_skybox_ =
-    //     TextureManager::Get().Load("day", TextureCubeCreateParams{GET_TEXTURE_PATH("day3.png")});
+  if (!std::filesystem::exists(level_path)) {
+    spdlog::error("Required file does not exist: {}", level_path.string());
+    return;
   }
+
+  auto data = util::LoadJsonFile(data_path);
+  auto level_data = util::LoadJsonFile(level_path);
+  auto seed = util::json::GetString(level_data, "seed");
+  EASSERT_MSG(seed.has_value(), "Missing seed from level.json");
+  static std::hash<std::string> hasher;
+  seed_ = hasher(seed.value());
+  chunk_manager_->SetSeed(seed_);
+  std::array<float, 3> player_pos = data.value("player_position", std::array<float, 3>{0, 0, 0});
+  player_.SetPosition({player_pos[0], player_pos[1], player_pos[2]});
+  auto camera = data["camera"];
+  float pitch = 0, yaw = 0;
+  if (camera.is_object()) {
+    pitch = camera.value("pitch", 0);
+    yaw = camera.value("yaw", 0);
+  }
+  player_.GetFPSCamera().SetOrientation(pitch, yaw);
+
+  cross_hair_mat_ =
+      MaterialManager::Get().LoadTextureMaterial({.filepath = GET_TEXTURE_PATH("crosshair.png")});
 
   {
     ZoneScopedN("Load block mesh data");
@@ -174,16 +170,6 @@ void WorldScene::Render() {
       Renderer::Get().DrawLine(glm::translate(glm::mat4{1}, glm::vec3(ray_cast_pos)), glm::vec3(0),
                                cube_mesh_.Handle(), false);
     }
-  } else {
-    // // draw loading bar
-    // const auto& state = chunk_manager_->GetStateStats();
-    // float loading_percentage =
-    //     static_cast<float>(state.loaded_chunks) / static_cast<float>(state.max_chunks);
-    // for (int i = 0; i < 100; i++) {
-    //   auto color = static_cast<float>(i) / 100.f >= loading_percentage ? color::Red :
-    //   color::Green; Renderer::Get().DrawQuad(color, glm::ivec2{i * 3, 0}, {win_dims.x / 100,
-    //   win_dims.y});
-    // }
   }
 
   if (show_chunk_map_) {
