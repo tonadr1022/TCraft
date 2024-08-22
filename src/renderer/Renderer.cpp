@@ -19,8 +19,7 @@
 #include "renderer/RenderInfo.hpp"
 #include "renderer/Shape.hpp"
 #include "renderer/opengl/Debug.hpp"
-#include "renderer/opengl/Texture2dArray.hpp"
-#include "resource/TextureManager.hpp"
+#include "renderer/opengl/Texture2d.hpp"
 #include "util/Paths.hpp"
 
 namespace {
@@ -362,8 +361,7 @@ void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
     chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
     chunk_shader->SetBool("u_UseAO", settings.chunk_use_ao);
 
-    const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle);
-    chunk_tex_arr.Bind(0);
+    chunk_tex_array->Bind(0);
     static_chunk_vao_.Bind();
     static_chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
     static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
@@ -412,8 +410,7 @@ void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
     chunk_shader->Bind();
     chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
 
-    const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle);
-    chunk_tex_arr.Bind(0);
+    chunk_tex_array->Bind(0);
     lod_static_chunk_vao_.Bind();
     lod_static_chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
     lod_static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
@@ -453,8 +450,7 @@ void Renderer::DrawNonStaticChunks(const RenderInfo&) {
   chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
 
   ShaderManager::Get().GetShader("chunk_batch_block")->Bind();
-  const auto& chunk_tex_arr = TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle);
-  chunk_tex_arr.Bind(0);
+  chunk_tex_array->Bind(0);
   chunk_vao_.Bind();
   glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, chunk_frame_dei_cmds_.size(),
                               0);
@@ -504,7 +500,7 @@ void Renderer::Render(const RenderInfo& render_info) {
   glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
 
   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  if (settings.draw_chunks && chunk_tex_array_handle != 0) {
+  if (settings.draw_chunks && chunk_tex_array) {
     DrawStaticChunks(render_info);
     DrawNonStaticChunks(render_info);
   }

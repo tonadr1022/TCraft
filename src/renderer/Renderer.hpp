@@ -25,6 +25,7 @@ struct Vertex;
 struct ChunkVertex;
 struct TextureMaterialData;
 struct RenderInfo;
+class Texture;
 union SDL_Event;
 
 class Renderer {
@@ -38,7 +39,7 @@ class Renderer {
   bool render_gui{true};
   bool render_chunks_{true};
   bool wireframe_enabled_{false};
-  uint32_t chunk_tex_array_handle{};
+  std::shared_ptr<Texture> chunk_tex_array{nullptr};
 
   void SetUBOData(const RenderInfo& render_info);
   void Render(const RenderInfo& render_info);

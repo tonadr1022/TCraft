@@ -4,6 +4,7 @@
 #include "gameplay/Player.hpp"
 #include "gameplay/world/BlockDB.hpp"
 
+class Texture;
 class TextureMaterial;
 namespace detail {
 struct BlockEditorState;
@@ -77,7 +78,7 @@ class BlockEditorScene : public Scene {
   std::string original_edit_block_model_name_;
   uint32_t edit_block_idx_{1};
 
-  uint32_t chunk_tex_array_handle_{0};
+  std::shared_ptr<Texture> chunk_tex_array_{nullptr};
 
   std::shared_ptr<TextureMaterial> cross_hair_mat_;
   std::unique_ptr<detail::BlockEditorState> state_{nullptr};

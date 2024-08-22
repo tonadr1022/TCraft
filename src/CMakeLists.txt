@@ -21,7 +21,6 @@ set(SOURCES
     renderer/Material.cpp
     renderer/RendererUtil.cpp
     renderer/opengl/Texture2d.cpp
-    renderer/opengl/Texture2dArray.cpp
     renderer/opengl/Debug.cpp
     renderer/opengl/Shader.cpp
     renderer/opengl/VertexArray.cpp

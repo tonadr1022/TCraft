@@ -58,6 +58,11 @@ void SceneManager::LoadWorld(std::string_view path) {
     auto tmp = next_scene_after_scene_construction_err_;
     next_scene_after_scene_construction_err_ = "";
     LoadScene(tmp);
+  } else {
+    MaterialManager::Get().RemoveUnused();
+    TextureManager::Get().RemoveUnusedTextures();
+    // TODO: make a reset function instead?
+    Renderer::Get().SetSkyboxShaderFunc({});
   }
 }
 

@@ -45,5 +45,5 @@ class WorldScene : public Scene {
   // std::unique_ptr<InventoryUI> inv_ui_{nullptr};
 
   Mesh cube_mesh_;
-  uint32_t chunk_tex_array_handle_;
+  std::shared_ptr<Texture> chunk_tex_array_;
 };

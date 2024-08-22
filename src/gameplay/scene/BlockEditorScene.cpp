@@ -100,16 +100,15 @@ void BlockEditorScene::Reload() {
       all_texture_pixel_data.emplace_back(image.pixels);
     }
 
-    chunk_tex_array_handle_ =
-        TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
-                                             .dims = glm::ivec2{32, 32},
-                                             .generate_mipmaps = true,
-                                             .internal_format = GL_RGBA8,
-                                             .format = GL_RGBA,
-                                             .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
-                                             .filter_mode_max = GL_NEAREST,
-                                             .texture_wrap = GL_REPEAT});
-    Renderer::Get().chunk_tex_array_handle = chunk_tex_array_handle_;
+    chunk_tex_array_ = TextureManager::Get().Load({.all_pixels_data = all_texture_pixel_data,
+                                                   .dims = glm::ivec2{32, 32},
+                                                   .generate_mipmaps = true,
+                                                   .internal_format = GL_RGBA8,
+                                                   .format = GL_RGBA,
+                                                   .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
+                                                   .filter_mode_max = GL_NEAREST,
+                                                   .texture_wrap = GL_REPEAT});
+    Renderer::Get().chunk_tex_array = chunk_tex_array_;
     for (auto* p : all_texture_pixel_data) {
       util::FreeImage(p);
     }
@@ -258,10 +257,7 @@ BlockEditorScene::BlockEditorScene(SceneManager& scene_manager) : Scene(scene_ma
   player_.camera_mode = Player::CameraMode::Orbit;
 }
 
-BlockEditorScene::~BlockEditorScene() {
-  Renderer::Get().chunk_tex_array_handle = 0;
-  TextureManager::Get().Remove2dArray(chunk_tex_array_handle_);
-};
+BlockEditorScene::~BlockEditorScene() { Renderer::Get().chunk_tex_array = nullptr; };
 
 void BlockEditorScene::Render() {
   ZoneScoped;

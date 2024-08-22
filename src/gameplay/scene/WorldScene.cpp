@@ -20,8 +20,6 @@
 #include "resource/Image.hpp"
 #include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
-#include "ui/Button.hpp"
-#include "ui/Constraint.hpp"
 #include "util/JsonUtil.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -82,24 +80,22 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
       all_texture_pixel_data.emplace_back(image.pixels);
       images.emplace_back(image);
     }
-    chunk_tex_array_handle_ =
-        TextureManager::Get().Create2dArray({.all_pixels_data = all_texture_pixel_data,
-                                             .dims = glm::ivec2{32, 32},
-                                             .generate_mipmaps = true,
-                                             .internal_format = GL_RGBA8,
-                                             .format = GL_RGBA,
-                                             .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
-                                             .filter_mode_max = GL_NEAREST,
-                                             .texture_wrap = GL_REPEAT});
-    Renderer::Get().chunk_tex_array_handle = chunk_tex_array_handle_;
+    chunk_tex_array_ = TextureManager::Get().Load({.all_pixels_data = all_texture_pixel_data,
+                                                   .dims = glm::ivec2{32, 32},
+                                                   .generate_mipmaps = true,
+                                                   .internal_format = GL_RGBA8,
+                                                   .format = GL_RGBA,
+                                                   .filter_mode_min = GL_NEAREST_MIPMAP_LINEAR,
+                                                   .filter_mode_max = GL_NEAREST,
+                                                   .texture_wrap = GL_REPEAT});
+    Renderer::Get().chunk_tex_array = chunk_tex_array_;
 
     block_db_.LoadMeshData(tex_name_to_idx, images);
     for (auto* const p : all_texture_pixel_data) {
       util::FreeImage(p);
     }
-    util::renderer::RenderAndWriteIcons(
-        block_db_.GetBlockData(), block_db_.GetMeshData(),
-        TextureManager::Get().GetTexture2dArray(chunk_tex_array_handle_));
+    util::renderer::RenderAndWriteIcons(block_db_.GetBlockData(), block_db_.GetMeshData(),
+                                        *chunk_tex_array_);
   }
 
   std::vector<Vertex> cube_vertices;
@@ -238,8 +234,7 @@ WorldScene::~WorldScene() {
       {"camera",
        {{"pitch", player_.GetCamera().GetPitch()}, {"yaw", player_.GetCamera().GetYaw()}}}};
   util::json::WriteJson(j, directory_path_ + "/data.json");
-  TextureManager::Get().Remove2dArray(chunk_tex_array_handle_);
-  Renderer::Get().chunk_tex_array_handle = 0;
+  Renderer::Get().chunk_tex_array = nullptr;
 }
 
 void WorldScene::OnImGui() {

@@ -12,7 +12,7 @@
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/ShaderManager.hpp"
 #include "renderer/opengl/Buffer.hpp"
-#include "renderer/opengl/Texture2dArray.hpp"
+#include "renderer/opengl/Texture2d.hpp"
 #include "renderer/opengl/VertexArray.hpp"
 #include "util/LoadFile.hpp"
 #include "util/Paths.hpp"
@@ -21,8 +21,7 @@ namespace util::renderer {
 
 // TODO: separate block data struct and block mesh data struct to own file
 void RenderAndWriteIcons(const std::vector<BlockData>& data,
-                         const std::vector<BlockMeshData>& mesh_data,
-                         const Texture2dArray& tex_arr) {
+                         const std::vector<BlockMeshData>& mesh_data, const Texture& tex_arr) {
   Buffer vbo;
   Buffer ebo;
   vbo.Init(sizeof(ChunkVertex) * 24, GL_DYNAMIC_STORAGE_BIT);

@@ -12,7 +12,6 @@ struct Button {
   uint32_t layer;
   uint32_t mat_handle;
 
- private:
   bool active_;
 };
 

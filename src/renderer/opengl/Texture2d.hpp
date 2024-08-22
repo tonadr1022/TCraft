@@ -29,10 +29,22 @@ struct TextureCubeCreateParamsPaths {
   std::array<std::string, 6> paths;
 };
 
+struct Texture2DArrayCreateParams {
+  const std::vector<void*>& all_pixels_data;
+  glm::ivec2 dims;
+  bool generate_mipmaps{true};
+  uint32_t internal_format;
+  uint32_t format;
+  uint32_t filter_mode_min;
+  uint32_t filter_mode_max;
+  uint32_t texture_wrap{0x812F};
+};
+
 class Texture {
  public:
   explicit Texture(const Texture2DCreateParamsEmpty& params);
   explicit Texture(const Texture2DCreateParams& params);
+  explicit Texture(const Texture2DArrayCreateParams& params);
   // explicit Texture(const TextureCubeCreateParams& params);
   explicit Texture(const TextureCubeCreateParamsPaths& params);
   Texture(const Texture& other) = delete;
@@ -48,6 +60,7 @@ class Texture {
   [[nodiscard]] bool IsValid() const;
 
   void Bind() const;
+  void Bind(int unit) const;
 
  private:
   uint32_t id_{0};
