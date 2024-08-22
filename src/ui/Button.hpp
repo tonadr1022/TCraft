@@ -2,6 +2,8 @@
 
 #include "ui/Constraint.hpp"
 
+class TextureMaterial;
+
 namespace ui {
 
 struct Button {
@@ -10,7 +12,7 @@ struct Button {
   float x, y;
   float width, height;
   uint32_t layer;
-  uint32_t mat_handle;
+  std::shared_ptr<TextureMaterial> mat_handle{nullptr};
 
   bool active_;
 };

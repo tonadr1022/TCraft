@@ -120,14 +120,14 @@ WorldScene::WorldScene(SceneManager& scene_manager, std::string_view path)
 
   chunk_manager_->Init(player_.Position());
 
-  // for (int i = 0; i < 10; i++) {
-  //   ui::Button button;
-  //   button.x = i * 10;
-  //   button.y = 0;
-  //   button.width = 50;
-  //   button.height = 50;
-  //   button.mat_handle
-  // }
+  for (int i = 0; i < 10; i++) {
+    ui::Button button;
+    button.x = i * 10;
+    button.y = 0;
+    button.width = 50;
+    button.height = 50;
+    button.mat_handle = cross_hair_mat_;
+  }
 }
 
 void WorldScene::Update(double dt) {
@@ -219,7 +219,6 @@ void WorldScene::Render() {
     Renderer::Get().DrawQuad(chunk_state_tex_->Handle(), quad_pos, quad_dims);
   }
 
-  // chunk_render_params_.render_chunks_on_ = loaded_;
   Renderer::Get().Render(curr_render_info_);
 }
 
