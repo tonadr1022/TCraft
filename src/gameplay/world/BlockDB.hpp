@@ -1,7 +1,5 @@
 #pragma once
 
-#include <array>
-#include <glm/vec3.hpp>
 #include <nlohmann/json_fwd.hpp>
 
 #include "gameplay/world/ChunkDef.hpp"
@@ -24,22 +22,22 @@ struct BlockData {
   bool operator==(const BlockData& other) const;
 };
 
-enum class BlockModelType { All, TopBottom, Unique };
+enum class BlockModelType { kAll, kTopBottom, kUnique };
 
 struct BlockModelDataAll {
-  static const BlockModelType Type{BlockModelType::All};
+  static const BlockModelType kType{BlockModelType::kAll};
   std::string tex_all;
 };
 
 struct BlockModelDataTopBot {
-  static const BlockModelType Type{BlockModelType::TopBottom};
+  static const BlockModelType kType{BlockModelType::kTopBottom};
   std::string tex_top;
   std::string tex_bottom;
   std::string tex_side;
 };
 
 struct BlockModelDataUnique {
-  static const BlockModelType Type{BlockModelType::Unique};
+  static const BlockModelType kType{BlockModelType::kUnique};
   std::string tex_pos_x;
   std::string tex_neg_x;
   std::string tex_pos_y;

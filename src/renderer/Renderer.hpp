@@ -107,9 +107,9 @@ class Renderer {
   explicit Renderer(Window& window);
   Window& window_;
 
-  constexpr const static uint32_t MaxDrawCmds{1'000'000};
-  constexpr const static uint32_t MaxChunkDrawCmds{1'000'00};
-  constexpr const static uint32_t MaxUIDrawCmds{10'000};
+  constexpr const static uint32_t kMaxDrawCmds{1'000'000};
+  constexpr const static uint32_t kMaxChunkDrawCmds{1'000'00};
+  constexpr const static uint32_t kMaxUIDrawCmds{10'000};
 
   void DrawQuads();
   void RenderRegMeshes();

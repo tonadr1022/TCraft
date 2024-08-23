@@ -30,14 +30,14 @@ class BlockEditorScene : public Scene {
   };
 
   enum class EditMode {
-    AddModel,
-    EditModel,
-    AddBlock,
-    EditBlock,
-    EditTerrain,
+    kAddModel,
+    kEditModel,
+    kAddBlock,
+    kEditBlock,
+    kEditTerrain,
   };
 
-  EditMode edit_mode_{EditMode::AddBlock};
+  EditMode edit_mode_{EditMode::kAddBlock};
   float block_rot_{0};
   void Reload();
   void HandleAddModelTextureChange(BlockModelType type);
@@ -51,14 +51,14 @@ class BlockEditorScene : public Scene {
   bool add_model_editor_open_{false};
 
   std::array<SingleBlock, 3> add_model_blocks_;
-  BlockModelType add_model_type_{BlockModelType::All};
+  BlockModelType add_model_type_{BlockModelType::kAll};
   BlockModelDataAll add_model_data_all_;
   BlockModelDataTopBot add_model_data_top_bot_;
   BlockModelDataUnique add_model_data_unique_;
 
   SingleBlock edit_model_block_;
   SingleBlock add_block_block_;
-  BlockModelType edit_model_type_{BlockModelType::All};
+  BlockModelType edit_model_type_{BlockModelType::kAll};
   BlockModelDataAll edit_model_data_all_;
   BlockModelDataTopBot edit_model_data_top_bot_;
   BlockModelDataUnique edit_model_data_unique_;
@@ -77,8 +77,8 @@ class BlockEditorScene : public Scene {
 
   Terrain terrain_;
 
-  constexpr const static std::array<std::string, 3> TexTypes = {"all", "top_bottom", "unique"};
-  constexpr const static std::array<std::string, 3> TexTypeNames = {"All", "Top Bottom", "Unique"};
+  constexpr const static std::array<std::string, 3> kTexTypes = {"all", "top_bottom", "unique"};
+  constexpr const static std::array<std::string, 3> kTexTypeNames = {"All", "Top Bottom", "Unique"};
 
   BlockData original_edit_block_data_;
   std::string original_edit_block_model_name_;

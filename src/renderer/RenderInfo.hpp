@@ -1,7 +1,5 @@
 #pragma once
 
-#include <glm/mat4x4.hpp>
-
 struct RenderInfo {
   glm::mat4 vp_matrix;
   glm::mat4 view_matrix;

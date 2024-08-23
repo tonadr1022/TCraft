@@ -24,11 +24,11 @@ class Chunk {
 
   ChunkData data;
   uint32_t mesh_handle{0};
-  LODLevel lod_level{LODLevel::NoMesh};
+  LODLevel lod_level{LODLevel::kNoMesh};
 
-  enum class State { NotFinished, Queued, Finished };
-  State terrain_state{State::NotFinished};
-  State mesh_state{State::NotFinished};
+  enum class State { kNotFinished, kQueued, kFinished };
+  State terrain_state{State::kNotFinished};
+  State mesh_state{State::kNotFinished};
 
  private:
   glm::ivec3 pos_;

@@ -1,8 +1,11 @@
 #pragma once
 
-#include "renderer/opengl/Texture2d.hpp"
-
 using TextureHandle = uint32_t;
+class Texture;
+struct Texture2DArrayCreateParams;
+struct TextureCubeCreateParamsPaths;
+struct Texture2DCreateParams;
+struct Texture2DCreateParamsEmpty;
 
 class TextureManager {
  public:

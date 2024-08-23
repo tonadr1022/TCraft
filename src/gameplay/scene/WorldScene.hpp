@@ -41,7 +41,7 @@ class WorldScene : public Scene {
   bool show_chunk_map_{true};
   double time_{0};
   int chunk_map_display_y_level_{0};
-  ChunkMapMode chunk_map_mode_{ChunkMapMode::ChunkState};
+  ChunkMapMode chunk_map_mode_{ChunkMapMode::kChunkState};
 
   SquareTextureAtlas icon_texture_atlas_;
   Mesh cube_mesh_;

@@ -2,6 +2,7 @@
 
 #include <FastNoise/FastNoise.h>
 
+#include <cstddef>
 #include <glm/vec3.hpp>
 
 #include "EAssert.hpp"
@@ -14,18 +15,18 @@ namespace {
 std::vector<int> GetHeightMap(float frequency, float multiplier, int start_x, int start_z,
                               int seed) {
   ZoneScoped;
-  std::vector<float> height_floats(ChunkArea);
+  std::vector<float> height_floats(kChunkArea);
   auto fn_simplex = FastNoise::New<FastNoise::Simplex>();
   auto fn_fractal = FastNoise::New<FastNoise::FractalRidged>();
   {
     ZoneScopedN("Get grid call");
     fn_fractal->SetSource(fn_simplex);
     fn_fractal->SetOctaveCount(4);
-    fn_fractal->GenUniformGrid2D(height_floats.data(), start_x, start_z, ChunkLength, ChunkLength,
+    fn_fractal->GenUniformGrid2D(height_floats.data(), start_x, start_z, kChunkLength, kChunkLength,
                                  frequency, seed);
   }
-  std::vector<int> height(ChunkArea);
-  for (int i = 0; i < ChunkArea; i++) {
+  std::vector<int> height(kChunkArea);
+  for (int i = 0; i < kChunkArea; i++) {
     height[i] = floor((height_floats[i] + 1) * .5 * multiplier);
   }
   return height;
@@ -40,12 +41,12 @@ std::vector<int> GetHeightMap(float frequency, float multiplier, int start_x, in
 // }
 
 std::vector<float> GetNoiseMap3D(float frequency, int start_x, int start_z, int seed, int height) {
-  std::vector<float> noise_map(height * ChunkArea);
+  std::vector<float> noise_map(static_cast<size_t>(height * kChunkArea));
   auto fn_noise = FastNoise::New<FastNoise::White>();
   // fn_noise->GenUniformGrid2D(noise_map.data(), start_x, start_z, ChunkLength, ChunkLength,
   //                            frequency, seed);
-  fn_noise->GenUniformGrid3D(noise_map.data(), start_x, 0, start_z, ChunkLength, height,
-                             ChunkLength, frequency, seed);
+  fn_noise->GenUniformGrid3D(noise_map.data(), start_x, 0, start_z, kChunkLength, height,
+                             kChunkLength, frequency, seed);
   return noise_map;
 }
 
@@ -59,7 +60,7 @@ SingleChunkTerrainGenerator::SingleChunkTerrainGenerator(ChunkData& chunk,
 }
 
 void TerrainGenerator::SetBlock(int x, int y, int z, BlockType block) {
-  chunks_[y / ChunkLength]->data.SetBlock(x, y % ChunkLength, z, block);
+  chunks_[y / kChunkLength]->data.SetBlock(x, y % kChunkLength, z, block);
 }
 
 void TerrainGenerator::GenerateBiome() {
@@ -67,7 +68,7 @@ void TerrainGenerator::GenerateBiome() {
   EASSERT_MSG(!terrain_.biomes.empty(), "Need biomes");
   // Timer timer;
   auto noise_map =
-      GetNoiseMap3D(0.0013, chunk_world_pos_[0], chunk_world_pos_[1], seed_, ChunkLength);
+      GetNoiseMap3D(0.0013, chunk_world_pos_[0], chunk_world_pos_[1], seed_, kChunkLength);
   // auto noise_map = GetNoiseMap2D(0.0013, chunk_world_pos_[0], chunk_world_pos_[1], seed_);
   auto get_block = [this, &noise_map](uint32_t y, uint32_t max_height,
                                       int noise_map_idx) -> BlockType {
@@ -91,15 +92,15 @@ void TerrainGenerator::GenerateBiome() {
     return terrain_.sand;
   };
 
-  auto height_map = GetHeightMap(0.0013, static_cast<float>(MaxBlockHeight) / 2,
+  auto height_map = GetHeightMap(0.0013, static_cast<float>(kMaxBlockHeight) / 2,
                                  chunk_world_pos_[0], chunk_world_pos_[1], seed_);
   int j = 0;
-  for (int y = 0; y < ChunkLength * NumVerticalChunks; y++) {
+  for (int y = 0; y < kChunkLength * kNumVerticalChunks; y++) {
     int i = 0;
-    for (int z = 0; z < ChunkLength; z++) {
-      for (int x = 0; x < ChunkLength; x++, i++, j++) {
+    for (int z = 0; z < kChunkLength; z++) {
+      for (int x = 0; x < kChunkLength; x++, i++, j++) {
         if (y <= height_map[i]) {
-          SetBlock(x, y, z, get_block(y, height_map[i], j % ChunkVolume));
+          SetBlock(x, y, z, get_block(y, height_map[i], j % kChunkVolume));
         }
       }
     }
@@ -115,10 +116,10 @@ void TerrainGenerator::GenerateBiome() {
 void SingleChunkTerrainGenerator::GenerateNoise(BlockType block, float frequency) {
   ZoneScoped;
   auto height = GetHeightMap(frequency, 22, chunk_world_pos_.x, chunk_world_pos_.z, seed_);
-  for (int y = chunk_world_pos_.y; y < chunk_world_pos_.y + ChunkLength; y++) {
+  for (int y = chunk_world_pos_.y; y < chunk_world_pos_.y + kChunkLength; y++) {
     int i = 0;
-    for (int z = 0; z < ChunkLength; z++) {
-      for (int x = 0; x < ChunkLength; x++, i++) {
+    for (int z = 0; z < kChunkLength; z++) {
+      for (int x = 0; x < kChunkLength; x++, i++) {
         if (y <= height[i] - 2) {
           // TODO: real terrain gen
           SetBlock(x, y, z, 1);
@@ -134,21 +135,21 @@ void TerrainGenerator::GenerateSolid(BlockType block) {
   for (const auto& chunk : chunks_) {
     chunk->data.blocks_ = std::make_unique<BlockTypeArray>();
     std::fill(chunk->data.blocks_->begin(), chunk->data.blocks_->end(), block);
-    chunk->data.block_count_ = ChunkVolume;
+    chunk->data.block_count_ = kChunkVolume;
   }
 }
 
 void SingleChunkTerrainGenerator::GenerateSolid(BlockType block) {
   std::fill(chunk_.blocks_->begin(), chunk_.blocks_->end(), block);
-  chunk_.block_count_ = ChunkVolume;
+  chunk_.block_count_ = kChunkVolume;
 }
 
 void SingleChunkTerrainGenerator::GenerateChecker(BlockType block) {
   ZoneScoped;
   glm::ivec3 iter;
-  for (iter.y = 0; iter.y < ChunkLength; iter.y += 2) {
-    for (iter.z = 0; iter.z < ChunkLength; iter.z += 2) {
-      for (iter.x = 0; iter.x < ChunkLength; iter.x += 2) {
+  for (iter.y = 0; iter.y < kChunkLength; iter.y += 2) {
+    for (iter.z = 0; iter.z < kChunkLength; iter.z += 2) {
+      for (iter.x = 0; iter.x < kChunkLength; iter.x += 2) {
         SetBlock(iter, block);
       }
     }
@@ -158,9 +159,9 @@ void SingleChunkTerrainGenerator::GenerateChecker(BlockType block) {
 void SingleChunkTerrainGenerator::GenerateChecker(std::vector<BlockType>& blocks) {
   ZoneScoped;
   glm::ivec3 iter;
-  for (iter.y = 0; iter.y < ChunkLength; iter.y += 2) {
-    for (iter.z = 0; iter.z < ChunkLength; iter.z += 2) {
-      for (iter.x = 0; iter.x < ChunkLength; iter.x += 2) {
+  for (iter.y = 0; iter.y < kChunkLength; iter.y += 2) {
+    for (iter.z = 0; iter.z < kChunkLength; iter.z += 2) {
+      for (iter.x = 0; iter.x < kChunkLength; iter.x += 2) {
         SetBlock(iter, blocks[rand() % blocks.size()]);
       }
     }
@@ -170,9 +171,9 @@ void SingleChunkTerrainGenerator::GenerateChecker(std::vector<BlockType>& blocks
 void SingleChunkTerrainGenerator::GenerateLayers(BlockType block) {
   ZoneScoped;
   glm::ivec3 iter;
-  for (iter.y = 0; iter.y < ChunkLength; iter.y += 2) {
-    for (iter.z = 0; iter.z < ChunkLength; iter.z++) {
-      for (iter.x = 0; iter.x < ChunkLength; iter.x++) {
+  for (iter.y = 0; iter.y < kChunkLength; iter.y += 2) {
+    for (iter.z = 0; iter.z < kChunkLength; iter.z++) {
+      for (iter.x = 0; iter.x < kChunkLength; iter.x++) {
         SetBlock(iter, block);
       }
     }
@@ -182,9 +183,9 @@ void SingleChunkTerrainGenerator::GenerateLayers(BlockType block) {
 void SingleChunkTerrainGenerator::GenerateLayers(std::vector<BlockType>& blocks) {
   ZoneScoped;
   glm::ivec3 iter;
-  for (iter.y = 0; iter.y < ChunkLength; iter.y += 2) {
-    for (iter.z = 0; iter.z < ChunkLength; iter.z++) {
-      for (iter.x = 0; iter.x < ChunkLength; iter.x++) {
+  for (iter.y = 0; iter.y < kChunkLength; iter.y += 2) {
+    for (iter.z = 0; iter.z < kChunkLength; iter.z++) {
+      for (iter.x = 0; iter.x < kChunkLength; iter.x++) {
         SetBlock(iter, blocks[rand() % blocks.size()]);
       }
     }
@@ -202,6 +203,6 @@ void SingleChunkTerrainGenerator::SetBlock(int x, int y, int z, BlockType block)
 }
 
 TerrainGenerator::TerrainGenerator(
-    const std::array<std::shared_ptr<Chunk>, NumVerticalChunks>& chunks,
+    const std::array<std::shared_ptr<Chunk>, kNumVerticalChunks>& chunks,
     const glm::ivec2& chunk_world_pos, int seed, const Terrain& terrain)
     : chunks_(chunks), terrain_(terrain), chunk_world_pos_(chunk_world_pos), seed_(seed) {}

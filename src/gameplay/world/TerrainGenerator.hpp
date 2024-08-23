@@ -9,13 +9,13 @@ struct Terrain;
 
 class TerrainGenerator {
  public:
-  explicit TerrainGenerator(const std::array<std::shared_ptr<Chunk>, NumVerticalChunks>& chunks,
+  explicit TerrainGenerator(const std::array<std::shared_ptr<Chunk>, kNumVerticalChunks>& chunks,
                             const glm::ivec2& chunk_world_pos, int seed, const Terrain& terrain);
   void GenerateBiome();
   void GenerateSolid(BlockType block);
 
  private:
-  const std::array<std::shared_ptr<Chunk>, NumVerticalChunks>& chunks_;
+  const std::array<std::shared_ptr<Chunk>, kNumVerticalChunks>& chunks_;
   const Terrain& terrain_;
   glm::ivec2 chunk_world_pos_;
   int seed_;

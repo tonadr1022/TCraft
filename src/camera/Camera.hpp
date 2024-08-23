@@ -2,9 +2,6 @@
 
 #include <SDL_events.h>
 
-#include <glm/fwd.hpp>
-#include <glm/vec3.hpp>
-
 class Camera {
  public:
   [[nodiscard]] virtual glm::mat4 GetProjection(float aspect_ratio) const = 0;
@@ -19,7 +16,7 @@ class Camera {
   virtual void OnImGui() const = 0;
   virtual void LookAt(const glm::vec3& pos) = 0;
 
-  static constexpr const glm::vec3 UpVector{0.f, 1.f, 0.f};
+  static constexpr const glm::vec3 kUpVector{0.f, 1.f, 0.f};
 
   bool first_mouse_{true};
 

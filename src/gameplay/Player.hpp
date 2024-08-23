@@ -8,7 +8,7 @@
 class Player {
  public:
   Player();
-  enum class CameraMode { FPS, Orbit };
+  enum class CameraMode { kFPS, kOrbit };
   virtual void Update(double dt);
   virtual void OnImGui();
   virtual bool OnEvent(const SDL_Event& event);
@@ -19,7 +19,7 @@ class Player {
   Camera& GetCamera();
   FPSCamera& GetFPSCamera();
   OrbitCamera& GetOrbitCamera();
-  CameraMode camera_mode{CameraMode::FPS};
+  CameraMode camera_mode{CameraMode::kFPS};
   void LookAt(const glm::vec3& pos);
 
  protected:

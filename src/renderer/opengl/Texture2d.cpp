@@ -1,8 +1,5 @@
 #include "Texture2d.hpp"
 
-#include <glm/common.hpp>
-#include <glm/exponential.hpp>
-
 #include "pch.hpp"
 #include "resource/Image.hpp"
 #include "util/LoadFile.hpp"

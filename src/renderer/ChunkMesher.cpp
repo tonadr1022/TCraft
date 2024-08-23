@@ -16,7 +16,7 @@ ChunkMesher::ChunkMesher(const std::vector<BlockData>& db_block_data,
 namespace {
 
 /* clang-format off */
-constexpr int VertexLookup[120] = {
+constexpr int kVertexLookup[120] = {
     // front (pos x)
     1, 0, 0, 0, 0,  // bottom left
     1, 1, 0, 0, 1,  // bottom right
@@ -101,7 +101,7 @@ struct FaceInfo {
     //    \   2   11  20
     //     z
 
-    constexpr const int Lookup3[6][4][3] = {
+    constexpr const int kLookup3[6][4][3] = {
         {{21, 18, 19}, {21, 24, 25}, {23, 26, 25}, {23, 20, 19}},
         {{3, 0, 1}, {5, 2, 1}, {5, 8, 7}, {3, 6, 7}},
         {{15, 6, 7}, {17, 8, 7}, {17, 26, 25}, {15, 24, 25}},
@@ -115,7 +115,7 @@ struct FaceInfo {
 
     for (int v = 0; v < 4; ++v) {
       for (int i = 0; i < 3; ++i) {
-        sides[i] = block_neighbors[Lookup3[face_num][v][i]];
+        sides[i] = block_neighbors[kLookup3[face_num][v][i]];
         // TODO: transparency
         trans[i] = sides[i] == 0;
         // canPass[i] = BlockMethods::LightCanPass(sides[i]);
@@ -164,9 +164,9 @@ void ChunkMesher::AddQuad(uint8_t face_idx, uint8_t x, uint8_t y, uint8_t z,
        vertex_idx++, lookup_offset += 5) {
     int combined_offset = face_idx * 20 + lookup_offset;
     vertices.emplace_back(
-        GetVertexData1(x + VertexLookup[combined_offset], y + VertexLookup[combined_offset + 1],
-                       z + VertexLookup[combined_offset + 2], VertexLookup[combined_offset + 3],
-                       VertexLookup[combined_offset + 4], 0),
+        GetVertexData1(x + kVertexLookup[combined_offset], y + kVertexLookup[combined_offset + 1],
+                       z + kVertexLookup[combined_offset + 2], kVertexLookup[combined_offset + 3],
+                       kVertexLookup[combined_offset + 4], 0),
         GetVertexData2(tex_idx));
   }
 
@@ -188,9 +188,9 @@ void ChunkMesher::GenerateBlock(std::vector<ChunkVertex>& vertices, std::vector<
 namespace {
 
 uint8_t PosInChunkMeshToChunkNeighborOffset(int x, int y, int z) {
-  x = (x >= ChunkLength) - (x < 0);
-  y = (y >= ChunkLength) - (y < 0);
-  z = (z >= ChunkLength) - (z < 0);
+  x = (x >= kChunkLength) - (x < 0);
+  y = (y >= kChunkLength) - (y < 0);
+  z = (z >= kChunkLength) - (z < 0);
   return ChunkNeighborOffsetToIdx(x, y, z);
 }
 }  // namespace
@@ -205,8 +205,8 @@ bool ChunkMesher::ShouldShowFace(BlockType curr_block, BlockType compare_block) 
 }
 
 namespace {
-constexpr const int NeighborOffsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
-                                             {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
+constexpr const int kNeighborOffsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
+                                              {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
 }
 void ChunkMesher::GenerateSmart(const ChunkNeighborArray& chunks,
                                 std::vector<ChunkVertex>& vertices,
@@ -221,20 +221,20 @@ void ChunkMesher::GenerateSmart(const ChunkNeighborArray& chunks,
   int z;
   int face_idx;
   const BlockTypeArray& mesh_chunk_blocks = *chunks[13]->data.blocks_;
-  for (y = 0; y < ChunkLength; y++) {
-    for (z = 0; z < ChunkLength; z++) {
-      for (x = 0; x < ChunkLength; x++, idx++) {
+  for (y = 0; y < kChunkLength; y++) {
+    for (z = 0; z < kChunkLength; z++) {
+      for (x = 0; x < kChunkLength; x++, idx++) {
         BlockType block = mesh_chunk_blocks[idx];
         if (block == 0) continue;
         for (face_idx = 0; face_idx < 6; face_idx++) {
-          nx = x + NeighborOffsets[face_idx][0];
-          ny = y + NeighborOffsets[face_idx][1];
-          nz = z + NeighborOffsets[face_idx][2];
+          nx = x + kNeighborOffsets[face_idx][0];
+          ny = y + kNeighborOffsets[face_idx][1];
+          nz = z + kNeighborOffsets[face_idx][2];
           if (ChunkData::IsOutOfBounds(nx, ny, nz)) {
             if ((*chunks[PosInChunkMeshToChunkNeighborOffset(nx, ny, nz)])
-                    .data.GetBlock((nx + ChunkLength) % ChunkLength,
-                                   (ny + ChunkLength) % ChunkLength,
-                                   (nz + ChunkLength) % ChunkLength) == 0) {
+                    .data.GetBlock((nx + kChunkLength) % kChunkLength,
+                                   (ny + kChunkLength) % kChunkLength,
+                                   (nz + kChunkLength) % kChunkLength) == 0) {
               // AddQuad(face_idx, x, y, z, vertices, indices,
               //         db_mesh_data[block].texture_indices[face_idx]);
               AddQuad(face_idx, x, y, z, vertices, indices, 0);
@@ -265,19 +265,19 @@ void ChunkMesher::GenerateNaive(const BlockTypeArray& blocks, std::vector<ChunkV
   };
 
   int idx = 0;
-  for (int y = 0; y < ChunkLength; y++) {
-    for (int z = 0; z < ChunkLength; z++) {
-      for (int x = 0; x < ChunkLength; x++, idx++) {
+  for (int y = 0; y < kChunkLength; y++) {
+    for (int z = 0; z < kChunkLength; z++) {
+      for (int x = 0; x < kChunkLength; x++, idx++) {
         ZoneScopedN("for loop iter");
         BlockType block = blocks[idx];
         if (block == 0) continue;
-        static constexpr const int Offsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
-                                                    {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
+        static constexpr const int kOffsets[6][3] = {{1, 0, 0},  {-1, 0, 0}, {0, 1, 0},
+                                                     {0, -1, 0}, {0, 0, 1},  {0, 0, -1}};
         for (int face_idx = 0; face_idx < 6; face_idx++) {
           ZoneScopedN("Face idx");
-          int nx = x + Offsets[face_idx][0];
-          int ny = y + Offsets[face_idx][1];
-          int nz = z + Offsets[face_idx][2];
+          int nx = x + kOffsets[face_idx][0];
+          int ny = y + kOffsets[face_idx][1];
+          int nz = z + kOffsets[face_idx][2];
           {
             if (get_block_type(nx, ny, nz) == 0) {
               AddQuad(face_idx, x, y, z, vertices, indices,
@@ -297,7 +297,7 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
   BlockTypeArray* mesh_chunk_blocks_ptr = (*chunks[13]).data.GetBlocks();
   if (!mesh_chunk_blocks_ptr) return;
   const BlockTypeArray& mesh_chunk_blocks = *mesh_chunk_blocks_ptr;
-  int chunk_length = ChunkLength;
+  int chunk_length = kChunkLength;
   auto get_block = [chunk_length, &chunks](int x, int y, int z) -> BlockType {
     const std::shared_ptr<Chunk>& c = chunks[PosInChunkMeshToChunkNeighborOffset(x, y, z)];
     if (c == nullptr) return 0;
@@ -330,11 +330,13 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
       if (!neighbors_initialized) {
         neighbors_initialized = true;
         int it[3], ind = 0;
-        for (it[0] = x - 1; it[0] <= x + 1; ++it[0])
-          for (it[1] = y - 1; it[1] <= y + 1; ++it[1])
+        for (it[0] = x - 1; it[0] <= x + 1; ++it[0]) {
+          for (it[1] = y - 1; it[1] <= y + 1; ++it[1]) {
             for (it[2] = z - 1; it[2] <= z + 1; ++it[2], ++ind) {
               neighbors[ind] = get_block(it[0], it[1], it[2]);
             }
+          }
+        }
       }
       face_info_map[idx][face].SetValues(face, neighbors);
     }
@@ -346,8 +348,8 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
     const std::size_t u = (axis + 1) % 3;
     const std::size_t v = (axis + 2) % 3;
 
-    int x[3] = {0}, q[3] = {0}, block_mask[ChunkArea];
-    FaceInfo* info_mask[ChunkArea];
+    int x[3] = {0}, q[3] = {0}, block_mask[kChunkArea];
+    FaceInfo* info_mask[kChunkArea];
 
     // Compute mask
     q[axis] = 1;
@@ -513,12 +515,13 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
               indices.push_back(base_vertex_idx + 3);
             }
 
-            for (std::size_t b = 0; b < width; ++b)
+            for (std::size_t b = 0; b < width; ++b) {
               for (std::size_t a = 0; a < height; ++a) {
                 size_t ind = counter + b + a * chunk_length;
                 block_mask[ind] = 0;
                 info_mask[ind] = nullptr;
               }
+            }
 
             // Increment counters
             i += width;
@@ -545,15 +548,16 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
   ZoneScoped;
   // TODO: make parameter
   uint32_t f = 2;
-  int chunk_length = ChunkLength / f;
+  uint32_t chunk_length = kChunkLength / f;
 
-  glm::ivec3 dims = {chunk_length, chunk_length * NumVerticalChunks, chunk_length};
+  glm::ivec3 dims = {chunk_length, chunk_length * kNumVerticalChunks, chunk_length};
   auto get_block = [&chunk_data, &chunk_length](int x, int y, int z) {
     const std::shared_ptr<Chunk>& c = chunk_data[y / chunk_length];
     return c != nullptr ? c->data.GetBlockLOD1(x, y % chunk_length, z) : 0;
   };
 
-  std::vector<int> block_mask(chunk_length * chunk_length * NumVerticalChunks);
+  std::vector<int> block_mask(
+      static_cast<size_t>(chunk_length * chunk_length * kNumVerticalChunks));
   for (std::size_t axis = 0; axis < 3; ++axis) {
     const std::size_t u = (axis + 1) % 3;
     const std::size_t v = (axis + 2) % 3;
@@ -600,7 +604,7 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
             bool done = false;
             for (height = 1; j + height < dims[v]; ++height) {
               for (int k = 0; k < width; ++k) {
-                if (quad_type != block_mask[counter + k + height * dims[u]]) {
+                if (quad_type != block_mask[counter + k + static_cast<size_t>(height * dims[u])]) {
                   done = true;
                   break;
                 }
@@ -658,10 +662,11 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
             indices.push_back(base_vertex_idx + 1);
             indices.push_back(base_vertex_idx + 3);
 
-            for (int b = 0; b < width; ++b)
+            for (int b = 0; b < width; ++b) {
               for (int a = 0; a < height; ++a) {
-                block_mask[counter + b + a * dims[u]] = 0;
+                block_mask[counter + b + static_cast<size_t>(a * dims[u])] = 0;
               }
+            }
 
             // Increment counters
             i += width;

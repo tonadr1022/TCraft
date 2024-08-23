@@ -3,7 +3,6 @@
 #include <SDL_events.h>
 
 #include <cstdint>
-#include <glm/fwd.hpp>
 
 struct SDL_Window;
 

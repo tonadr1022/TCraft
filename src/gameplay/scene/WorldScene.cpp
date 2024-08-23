@@ -90,11 +90,12 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& directory
   }
 
   std::vector<Vertex> cube_vertices;
-  for (size_t i = 0; i < CubeVertices.size(); i += 5) {
-    cube_vertices.emplace_back(glm::vec3{CubeVertices[i], CubeVertices[i + 1], CubeVertices[i + 2]},
-                               glm::vec2{CubeVertices[i + 3], CubeVertices[i + 4]});
+  for (size_t i = 0; i < kCubeVertices.size(); i += 5) {
+    cube_vertices.emplace_back(
+        glm::vec3{kCubeVertices[i], kCubeVertices[i + 1], kCubeVertices[i + 2]},
+        glm::vec2{kCubeVertices[i + 3], kCubeVertices[i + 4]});
   }
-  std::vector cube_indices(CubeIndices.begin(), CubeIndices.end());
+  std::vector cube_indices(kCubeIndices.begin(), kCubeIndices.end());
   cube_mesh_.Allocate(cube_vertices, cube_indices);
 
   Renderer::Get().SetSkyboxShaderFunc([this]() {
@@ -146,7 +147,7 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
     auto dims = Window::Get().GetWindowSize();
     if (pos.x < dims.x / 2 && dims.y - pos.y < dims.y / 2) {
       chunk_map_mode_ = static_cast<ChunkMapMode>((static_cast<int>(chunk_map_mode_) + 1) %
-                                                  (static_cast<int>(ChunkMapMode::Count)));
+                                                  (static_cast<int>(ChunkMapMode::kCount)));
     }
   }
   return false;
@@ -166,7 +167,7 @@ void WorldScene::Render() {
   if (loaded_) {
     Renderer::Get().DrawQuad(cross_hair_mat_->Handle(), {win_center.x, win_center.y}, {20, 20});
     auto ray_cast_pos = player_.GetRayCastBlockPos();
-    if (ray_cast_pos != glm::NullIVec3) {
+    if (ray_cast_pos != glm::kNullIVec3) {
       Renderer::Get().DrawLine(glm::translate(glm::mat4{1}, glm::vec3(ray_cast_pos)), glm::vec3(0),
                                cube_mesh_.Handle(), false);
     }
@@ -217,7 +218,7 @@ void WorldScene::OnImGui() {
   chunk_manager_->OnImGui();
   player_.OnImGui();
   ImGui::Text("time: %f", time_);
-  ImGui::SliderInt("Chunk State Y", &chunk_map_display_y_level_, 0, NumVerticalChunks);
+  ImGui::SliderInt("Chunk State Y", &chunk_map_display_y_level_, 0, kNumVerticalChunks);
   ImGui::Checkbox("Show Chunk Map", &show_chunk_map_);
   DrawInventory();
 }
@@ -257,12 +258,12 @@ void WorldScene::DrawInventory() {
 
     bool is_selected = (id == static_cast<size_t>(player_.held_item_id));
     if (is_selected) {
-      constexpr ImVec4 ActiveColor(0.2, 0.8f, 0.2f, 0.5f);
+      constexpr ImVec4 kActiveColor(0.2, 0.8f, 0.2f, 0.5f);
       ImGui::PushStyleColor(ImGuiCol_ButtonActive,
                             ImVec4(0.0f, 0.0f, 0.6f, 0.0f));  // Default button color
       ImGui::PushStyleColor(ImGuiCol_Button,
-                            ActiveColor);  // Change button color when selected
-      ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ActiveColor);  // Hover color
+                            kActiveColor);  // Change button color when selected
+      ImGui::PushStyleColor(ImGuiCol_ButtonHovered, kActiveColor);  // Hover color
     } else {
       ImGui::PushStyleColor(ImGuiCol_ButtonActive,
                             ImVec4(0.0f, 0.0f, 0.6f, 0.0f));  // Default button color

@@ -18,7 +18,7 @@ glm::mat4 FPSCamera::GetProjection(float aspect_ratio) const {
 
 glm::mat4 FPSCamera::GetView() const {
   ZoneScoped;
-  return glm::lookAt(pos_, pos_ + front_, UpVector);
+  return glm::lookAt(pos_, pos_ + front_, kUpVector);
 }
 
 void FPSCamera::SetPosition(const glm::vec3& pos) { pos_ = pos; }

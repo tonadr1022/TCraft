@@ -321,13 +321,13 @@ std::vector<std::string> BlockDB::GetAllTextureNames() {
 }
 
 std::optional<BlockModelType> BlockDB::StringToBlockModelType(const std::string& model_type) {
-  static const std::unordered_map<std::string, BlockModelType> ModelTypeMap = {
-      {"block/all", BlockModelType::All},
-      {"block/top_bottom", BlockModelType::TopBottom},
-      {"block/unique", BlockModelType::Unique},
+  static const std::unordered_map<std::string, BlockModelType> kModelTypeMap = {
+      {"block/all", BlockModelType::kAll},
+      {"block/top_bottom", BlockModelType::kTopBottom},
+      {"block/unique", BlockModelType::kUnique},
   };
-  auto it = ModelTypeMap.find(model_type);
-  if (it == ModelTypeMap.end()) return std::nullopt;
+  auto it = kModelTypeMap.find(model_type);
+  if (it == kModelTypeMap.end()) return std::nullopt;
   return it->second;
 }
 
@@ -343,7 +343,7 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::str
     return std::nullopt;
   }
 
-  if (type == BlockModelType::All) {
+  if (type == BlockModelType::kAll) {
     auto tex_name = util::json::GetString(tex_obj.value(), "all");
     if (!tex_name.has_value()) {
       return std::nullopt;
@@ -351,7 +351,7 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::str
     return BlockModelDataAll{tex_name.value()};
   }
 
-  if (type == BlockModelType::TopBottom) {
+  if (type == BlockModelType::kTopBottom) {
     auto tex_name_top = util::json::GetString(tex_obj.value(), "top");
     auto tex_name_bot = util::json::GetString(tex_obj.value(), "bottom");
     auto tex_name_side = util::json::GetString(tex_obj.value(), "side");

@@ -139,7 +139,7 @@ void Renderer::Init() {
   chunk_vao_.AttachVertexBuffer(chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   chunk_vao_.AttachElementBuffer(chunk_ebo_.Id());
   chunk_uniform_ssbo_.Init(sizeof(DrawCmdUniformModelOnly) * 100000, GL_DYNAMIC_STORAGE_BIT);
-  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxDrawCmds / 10,
+  chunk_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * kMaxDrawCmds / 10,
                                    GL_DYNAMIC_STORAGE_BIT);
 
   reg_mesh_vao_.Init();
@@ -150,13 +150,13 @@ void Renderer::Init() {
   reg_mesh_ebo_.Init(sizeof(uint32_t) * 1'00'000, sizeof(uint32_t));
   reg_mesh_vao_.AttachVertexBuffer(reg_mesh_vbo_.Id(), 0, 0, sizeof(Vertex));
   reg_mesh_vao_.AttachElementBuffer(reg_mesh_ebo_.Id());
-  reg_mesh_uniform_ssbo_.Init(sizeof(UniformsModelMaterial) * MaxDrawCmds / 10,
+  reg_mesh_uniform_ssbo_.Init(sizeof(UniformsModelMaterial) * kMaxDrawCmds / 10,
                               GL_DYNAMIC_STORAGE_BIT);
-  reg_mesh_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * MaxDrawCmds / 10,
+  reg_mesh_draw_indirect_buffer_.Init(sizeof(DrawElementsIndirectCommand) * kMaxDrawCmds / 10,
                                       GL_DYNAMIC_STORAGE_BIT);
 
   // Quad vbo, ebo, and indirect buffer are length 1, for the quad mesh
-  std::vector<Vertex> vertices = {QuadVerticesCentered.begin(), QuadVerticesCentered.end()};
+  std::vector<Vertex> vertices = {kQuadVerticesCentered.begin(), kQuadVerticesCentered.end()};
   std::vector<uint32_t> indices = {0, 1, 2, 2, 1, 3};
   quad_vao_.Init();
   quad_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
@@ -169,7 +169,7 @@ void Renderer::Init() {
   full_screen_quad_vao_.Init();
   full_screen_quad_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
   full_screen_quad_vao_.EnableAttribute<float>(1, 2, offsetof(Vertex, tex_coords));
-  vertices = {QuadVerticesFull.begin(), QuadVerticesFull.end()};
+  vertices = {kQuadVerticesFull.begin(), kQuadVerticesFull.end()};
   full_screen_quad_vbo_.Init(sizeof(Vertex) * 4, 0, vertices.data());
   full_screen_quad_ebo_.Init(sizeof(uint32_t) * 6, 0, indices.data());
   full_screen_quad_vao_.AttachVertexBuffer(full_screen_quad_vbo_.Id(), 0, 0, sizeof(Vertex));
@@ -182,8 +182,8 @@ void Renderer::Init() {
   cube_vao_.Init();
   cube_vao_.EnableAttribute<float>(0, 3, offsetof(Vertex, position));
   cube_vao_.EnableAttribute<float>(1, 2, offsetof(Vertex, tex_coords));
-  auto cube_vertices = CubeVertices;
-  auto cube_indices = CubeIndices;
+  auto cube_vertices = kCubeVertices;
+  auto cube_indices = kCubeIndices;
   cube_vbo_.Init(sizeof(cube_vertices), 0, cube_vertices.data());
   cube_ebo_.Init(sizeof(cube_indices), 0, cube_indices.data());
   cube_vao_.AttachVertexBuffer(cube_vbo_.Id(), 0, 0, sizeof(Vertex));
@@ -193,7 +193,7 @@ void Renderer::Init() {
 
   skybox_vao_.Init();
   skybox_vao_.EnableAttribute<float>(0, 3, 0);
-  skybox_vbo_.Init(sizeof(CubePositionVertices), 0, CubePositionVertices);
+  skybox_vbo_.Init(sizeof(kCubePositionVertices), 0, kCubePositionVertices);
   skybox_vao_.AttachVertexBuffer(skybox_vbo_.Id(), 0, 0, sizeof(float) * 3);
 
   InitFrameBuffers();
@@ -252,8 +252,9 @@ void Renderer::DrawQuads() {
 
 void Renderer::DrawLines(const RenderInfo&) {
   if (lines_frame_uniforms_mesh_ids_.first.empty() &&
-      lines_no_depth_frame_uniforms_mesh_ids_.first.empty())
+      lines_no_depth_frame_uniforms_mesh_ids_.first.empty()) {
     return;
+  }
   auto shader = ShaderManager::Get().GetShader("color");
   shader->Bind();
   reg_mesh_vao_.Bind();
@@ -643,8 +644,8 @@ uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
   uint32_t vbo_handle;
   uint32_t ebo_handle;
   glm::ivec4 min = glm::ivec4(pos, 0);
-  glm::ivec4 max = min + ChunkLength;
-  if (level == LODLevel::Regular) {
+  glm::ivec4 max = min + kChunkLength;
+  if (level == LODLevel::kRegular) {
     ebo_handle = static_chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(),
                                             chunk_ebo_offset);
     vbo_handle = static_chunk_vbo_.Allocate(
@@ -665,7 +666,7 @@ uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
     stats_.total_chunk_indices += indices.size();
     static_chunk_buffer_dirty_ = true;
   } else {
-    max.y = MaxBlockHeight;
+    max.y = kMaxBlockHeight;
     ebo_handle = lod_static_chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(), indices.data(),
                                                 chunk_ebo_offset);
     vbo_handle = lod_static_chunk_vbo_.Allocate(
@@ -772,7 +773,7 @@ void Renderer::FreeChunkMesh(uint32_t handle) {
 void Renderer::FreeStaticChunkMesh(uint32_t handle) {
   if (handle == 0) return;
   auto level = static_cast<LODLevel>(handle >> 29);
-  if (level == LODLevel::Regular) {
+  if (level == LODLevel::kRegular) {
     static_chunk_buffer_dirty_ = true;
     auto it = static_chunk_allocs_.find(handle);
     if (it == static_chunk_allocs_.end()) {
@@ -848,40 +849,41 @@ bool Renderer::OnEvent(const SDL_Event& event) {
 }
 
 void Renderer::LoadShaders() {
-  ShaderManager::Get().AddShader("quad", {{GET_SHADER_PATH("quad.vs.glsl"), ShaderType::Vertex},
-                                          {GET_SHADER_PATH("quad.fs.glsl"), ShaderType::Fragment}});
+  ShaderManager::Get().AddShader("quad",
+                                 {{GET_SHADER_PATH("quad.vs.glsl"), ShaderType::kVertex},
+                                  {GET_SHADER_PATH("quad.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader("block",
-                                 {{GET_SHADER_PATH("block.vs.glsl"), ShaderType::Vertex},
-                                  {GET_SHADER_PATH("block.fs.glsl"), ShaderType::Fragment}});
+                                 {{GET_SHADER_PATH("block.vs.glsl"), ShaderType::kVertex},
+                                  {GET_SHADER_PATH("block.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader("skybox",
-                                 {{GET_SHADER_PATH("skybox.vs.glsl"), ShaderType::Vertex},
-                                  {GET_SHADER_PATH("skybox.fs.glsl"), ShaderType::Fragment}});
-  ShaderManager::Get().AddShader("sky", {{GET_SHADER_PATH("sky.vs.glsl"), ShaderType::Vertex},
-                                         {GET_SHADER_PATH("sky.fs.glsl"), ShaderType::Fragment}});
+                                 {{GET_SHADER_PATH("skybox.vs.glsl"), ShaderType::kVertex},
+                                  {GET_SHADER_PATH("skybox.fs.glsl"), ShaderType::kFragment}});
+  ShaderManager::Get().AddShader("sky", {{GET_SHADER_PATH("sky.vs.glsl"), ShaderType::kVertex},
+                                         {GET_SHADER_PATH("sky.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader("color",
-                                 {{GET_SHADER_PATH("color.vs.glsl"), ShaderType::Vertex},
-                                  {GET_SHADER_PATH("color.fs.glsl"), ShaderType::Fragment}});
-  ShaderManager::Get().AddShader("color_single",
-                                 {{GET_SHADER_PATH("color_single.vs.glsl"), ShaderType::Vertex},
-                                  {GET_SHADER_PATH("color_single.fs.glsl"), ShaderType::Fragment}});
+                                 {{GET_SHADER_PATH("color.vs.glsl"), ShaderType::kVertex},
+                                  {GET_SHADER_PATH("color.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader(
-      "chunk_batch_block", {{GET_SHADER_PATH("chunk_batch_block.vs.glsl"), ShaderType::Vertex},
-                            {GET_SHADER_PATH("chunk_batch_block.fs.glsl"), ShaderType::Fragment}});
+      "color_single", {{GET_SHADER_PATH("color_single.vs.glsl"), ShaderType::kVertex},
+                       {GET_SHADER_PATH("color_single.fs.glsl"), ShaderType::kFragment}});
+  ShaderManager::Get().AddShader(
+      "chunk_batch_block", {{GET_SHADER_PATH("chunk_batch_block.vs.glsl"), ShaderType::kVertex},
+                            {GET_SHADER_PATH("chunk_batch_block.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader("chunk_batch",
-                                 {{GET_SHADER_PATH("chunk_batch.vs.glsl"), ShaderType::Vertex},
-                                  {GET_SHADER_PATH("chunk_batch.fs.glsl"), ShaderType::Fragment}});
+                                 {{GET_SHADER_PATH("chunk_batch.vs.glsl"), ShaderType::kVertex},
+                                  {GET_SHADER_PATH("chunk_batch.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader(
-      "lod_chunk_batch", {{GET_SHADER_PATH("lod_chunk_batch.vs.glsl"), ShaderType::Vertex},
-                          {GET_SHADER_PATH("lod_chunk_batch.fs.glsl"), ShaderType::Fragment}});
+      "lod_chunk_batch", {{GET_SHADER_PATH("lod_chunk_batch.vs.glsl"), ShaderType::kVertex},
+                          {GET_SHADER_PATH("lod_chunk_batch.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader(
-      "single_texture", {{GET_SHADER_PATH("single_texture.vs.glsl"), ShaderType::Vertex},
-                         {GET_SHADER_PATH("single_texture.fs.glsl"), ShaderType::Fragment}});
+      "single_texture", {{GET_SHADER_PATH("single_texture.vs.glsl"), ShaderType::kVertex},
+                         {GET_SHADER_PATH("single_texture.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader(
-      "block_outline", {{GET_SHADER_PATH("block_outline.vs.glsl"), ShaderType::Vertex},
-                        {GET_SHADER_PATH("block_outline.gs.glsl"), ShaderType::Geometry},
-                        {GET_SHADER_PATH("block_outline.fs.glsl"), ShaderType::Fragment}});
+      "block_outline", {{GET_SHADER_PATH("block_outline.vs.glsl"), ShaderType::kVertex},
+                        {GET_SHADER_PATH("block_outline.gs.glsl"), ShaderType::kGeometry},
+                        {GET_SHADER_PATH("block_outline.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader("chunk_cull",
-                                 {{GET_SHADER_PATH("chunk_cull.cs.glsl"), ShaderType::Compute}});
+                                 {{GET_SHADER_PATH("chunk_cull.cs.glsl"), ShaderType::kCompute}});
 }
 
 void Renderer::OnImGui() {

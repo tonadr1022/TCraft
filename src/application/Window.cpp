@@ -289,7 +289,7 @@ void Window::SetVsync(bool vsync) {
 bool Window::GetVsync() const { return vsync_on_; }
 
 std::string Window::GetEventTypeString(Uint32 eventType) {
-  static const std::unordered_map<Uint32, std::string> EventTypeMap = {
+  static const std::unordered_map<Uint32, std::string> kEventTypeMap = {
       {SDL_QUIT, "SDL_QUIT"},
       {SDL_APP_TERMINATING, "SDL_APP_TERMINATING"},
       {SDL_APP_LOWMEMORY, "SDL_APP_LOWMEMORY"},
@@ -337,8 +337,8 @@ std::string Window::GetEventTypeString(Uint32 eventType) {
       {SDL_RENDER_TARGETS_RESET, "SDL_RENDER_TARGETS_RESET"},
       {SDL_RENDER_DEVICE_RESET, "SDL_RENDER_DEVICE_RESET"}};
 
-  auto it = EventTypeMap.find(eventType);
-  if (it != EventTypeMap.end()) {
+  auto it = kEventTypeMap.find(eventType);
+  if (it != kEventTypeMap.end()) {
     return it->second;
   }
   return "Unknown event";

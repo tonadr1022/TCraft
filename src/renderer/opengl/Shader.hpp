@@ -1,9 +1,5 @@
 #pragma once
 
-#include <glm/fwd.hpp>
-#include <string>
-#include <unordered_map>
-
 // Lightweight object containing id and reference to uniform locations stored in the manager.
 // This is a wrapper to access the shader and set uniforms
 using Float4Arr = float[4];

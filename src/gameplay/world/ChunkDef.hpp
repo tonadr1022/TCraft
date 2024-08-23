@@ -1,30 +1,30 @@
 #pragma once
 
-constexpr const int ChunkLength = 32;
-constexpr const int LOD1ChunkLength = 16;
-constexpr const int ChunkLengthM1 = ChunkLength - 1;
-constexpr const int ChunkArea = ChunkLength * ChunkLength;
-constexpr const int ChunkVolume = ChunkArea * ChunkLength;
-constexpr const int MeshChunkLength = ChunkLength + 2;
-constexpr const int MeshChunkArea = MeshChunkLength * MeshChunkLength;
-constexpr const int MeshChunkVolume = MeshChunkArea * MeshChunkLength;
-constexpr const int NumVerticalChunks = 8;
-constexpr const int MaxBlockHeight = ChunkLength * NumVerticalChunks;
+constexpr const int kChunkLength = 32;
+constexpr const int kLOD1ChunkLength = 16;
+constexpr const int kChunkLengthM1 = kChunkLength - 1;
+constexpr const int kChunkArea = kChunkLength * kChunkLength;
+constexpr const int kChunkVolume = kChunkArea * kChunkLength;
+constexpr const int kMeshChunkLength = kChunkLength + 2;
+constexpr const int kMeshChunkArea = kMeshChunkLength * kMeshChunkLength;
+constexpr const int kMeshChunkVolume = kMeshChunkArea * kMeshChunkLength;
+constexpr const int kNumVerticalChunks = 8;
+constexpr const int kMaxBlockHeight = kChunkLength * kNumVerticalChunks;
 using BlockType = uint16_t;
 class ChunkData;
 class Chunk;
 
-using BlockTypeArray = std::array<BlockType, ChunkVolume>;
-using BlockTypeArrayLOD1 = std::array<BlockType, ChunkVolume / 8>;
+using BlockTypeArray = std::array<BlockType, kChunkVolume>;
+using BlockTypeArrayLOD1 = std::array<BlockType, kChunkVolume / 8>;
 
 using ChunkNeighborArray = std::array<std::shared_ptr<Chunk>, 27>;
-using ChunkStackArray = std::array<std::shared_ptr<Chunk>, NumVerticalChunks>;
+using ChunkStackArray = std::array<std::shared_ptr<Chunk>, kNumVerticalChunks>;
 
-enum class ChunkState { None, TerrainQueued, TerrainFinished, MeshQueued, MeshFinished };
-enum class LODLevel { NoMesh, Regular, One, Two, Three };
+enum class ChunkState { kNone, kTerrainQueued, kTerrainFinished, kMeshQueued, kMeshFinished };
+enum class LODLevel { kNoMesh, kRegular, kOne, kTwo, kThree };
 
 struct ChunkVertex {
   uint32_t data1;
   uint32_t data2;
 };
-enum class ChunkMapMode { ChunkState, LODLevels, Count };
+enum class ChunkMapMode { kChunkState, kLODLevels, kCount };

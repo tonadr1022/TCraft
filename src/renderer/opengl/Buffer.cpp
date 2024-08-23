@@ -1,7 +1,5 @@
 #include "Buffer.hpp"
 
-#include "pch.hpp"
-
 Buffer::Buffer() = default;
 
 Buffer::~Buffer() {

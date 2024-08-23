@@ -30,7 +30,7 @@ void Player::SetPosition(const glm::vec3& pos) {
 
 void Player::Update(double dt) {
   if (!camera_focused_ && !override_movement_) return;
-  if (camera_mode == CameraMode::FPS) {
+  if (camera_mode == CameraMode::kFPS) {
     fps_camera_.SetPosition(position_);
     float movement_offset = move_speed_ * dt;
     glm::vec3 movement{0.f};
@@ -41,16 +41,16 @@ void Player::Update(double dt) {
       movement -= fps_camera_.GetFront();
     }
     if (Input::IsKeyDown(SDLK_d) || Input::IsKeyDown(SDLK_l)) {
-      movement += glm::normalize(glm::cross(fps_camera_.GetFront(), FPSCamera::UpVector));
+      movement += glm::normalize(glm::cross(fps_camera_.GetFront(), FPSCamera::kUpVector));
     }
     if (Input::IsKeyDown(SDLK_a) || Input::IsKeyDown(SDLK_j)) {
-      movement -= glm::normalize(glm::cross(fps_camera_.GetFront(), FPSCamera::UpVector));
+      movement -= glm::normalize(glm::cross(fps_camera_.GetFront(), FPSCamera::kUpVector));
     }
     if (Input::IsKeyDown(SDLK_y) || Input::IsKeyDown(SDLK_r)) {
-      movement += FPSCamera::UpVector;
+      movement += FPSCamera::kUpVector;
     }
     if (Input::IsKeyDown(SDLK_h) || Input::IsKeyDown(SDLK_f)) {
-      movement -= FPSCamera::UpVector;
+      movement -= FPSCamera::kUpVector;
     }
     if (glm::length(movement) > 0) {
       movement = glm::normalize(movement) * movement_offset;
@@ -69,7 +69,7 @@ void Player::OnImGui() {
   ImGui::Text("Position %f, %f, %f", position_.x, position_.y, position_.z);
   ImGui::Text("Camera Focused: %s", camera_focused_ ? "true" : "false");
   ImGui::SliderFloat("Move Speed", &move_speed_, 1.f, 300.f);
-  if (camera_mode == CameraMode::FPS) {
+  if (camera_mode == CameraMode::kFPS) {
     if (ImGui::CollapsingHeader("FPS Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
       fps_camera_.OnImGui();
     }
@@ -91,7 +91,7 @@ bool Player::OnEvent(const SDL_Event& event) {
           }
         case SDLK_m:
           if (event.key.keysym.mod & KMOD_ALT) {
-            camera_mode = camera_mode == CameraMode::FPS ? CameraMode::Orbit : CameraMode::FPS;
+            camera_mode = camera_mode == CameraMode::kFPS ? CameraMode::kOrbit : CameraMode::kFPS;
             return true;
           }
         case SDLK_x:
@@ -101,7 +101,7 @@ bool Player::OnEvent(const SDL_Event& event) {
           }
       }
   }
-  if (camera_mode == CameraMode::FPS) {
+  if (camera_mode == CameraMode::kFPS) {
     return fps_camera_.OnEvent(event);
   }
   return orbit_camera_.OnEvent(event);
@@ -121,7 +121,7 @@ void Player::SetCameraFocused(bool state) {
 }
 
 Camera& Player::GetCamera() {
-  if (camera_mode == CameraMode::FPS) return fps_camera_;
+  if (camera_mode == CameraMode::kFPS) return fps_camera_;
   return orbit_camera_;
 }
 FPSCamera& Player::GetFPSCamera() { return fps_camera_; }

@@ -19,7 +19,7 @@ glm::mat4 OrbitCamera::GetProjection(float aspect_ratio) const {
 
 glm::mat4 OrbitCamera::GetView() const {
   ZoneScoped;
-  return glm::lookAt(pos_, target_, UpVector);
+  return glm::lookAt(pos_, target_, kUpVector);
 }
 
 bool OrbitCamera::OnEvent(const SDL_Event& event) {
@@ -63,7 +63,7 @@ void OrbitCamera::UpdatePosition() {
   pos_.y = target_.y + distance_ * sin_polar;
   pos_.z = target_.z + distance_ * cos_polar * sin_azimuth;
   front_ = glm::normalize(target_ - pos_);
-  right_ = glm::normalize(glm::cross(front_, UpVector));
+  right_ = glm::normalize(glm::cross(front_, kUpVector));
   up_ = glm::normalize(glm::cross(right_, front_));
 }
 

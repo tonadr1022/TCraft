@@ -1,8 +1,5 @@
 #pragma once
 
-#include <glm/vec2.hpp>
-#include <string>
-
 #include "resource/Image.hpp"
 
 struct Texture2DCreateParams {

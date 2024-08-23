@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "renderer/opengl/Texture2d.hpp"
+
 TextureManager* TextureManager::instance_ = nullptr;
 
 TextureManager& TextureManager::Get() { return *instance_; }

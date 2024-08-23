@@ -54,8 +54,8 @@ bool CheckShaderModuleCompilationSuccess(uint32_t shader_id, const char *shaderP
   return true;
 }
 
-static constexpr GLenum ShaderTypeToGl[] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER,
-                                            GL_GEOMETRY_SHADER, GL_COMPUTE_SHADER};
+static constexpr GLenum kShaderTypeToGl[] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER,
+                                             GL_GEOMETRY_SHADER, GL_COMPUTE_SHADER};
 
 bool CheckProgramLinkSuccess(GLuint id) {
   glLinkProgram(id);
@@ -71,7 +71,7 @@ bool CheckProgramLinkSuccess(GLuint id) {
 }
 
 uint32_t CompileShader(ShaderType type, const char *src) {
-  uint32_t id = glCreateShader(ShaderTypeToGl[static_cast<int>(type)]);
+  uint32_t id = glCreateShader(kShaderTypeToGl[static_cast<int>(type)]);
   glShaderSource(id, 1, &src, nullptr);
   glCompileShader(id);
   return id;

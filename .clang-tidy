@@ -48,6 +48,8 @@ Checks: >
   -readability-function-cognitive-complexity,
   -readability-convert-member-functions-to-static,
   -google-readability-todo,
+  -readability-isolate-declaration,
+  -performance-no-int-to-ptr
 # Turn all the warnings from the checks above into errors.
 WarningsAsErrors: "*"
 

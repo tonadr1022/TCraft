@@ -2,7 +2,7 @@
 
 #include "renderer/opengl/Shader.hpp"
 
-enum class ShaderType { Vertex, Fragment, Geometry, Compute };
+enum class ShaderType { kVertex, kFragment, kGeometry, kCompute };
 
 struct ShaderCreateInfo {
   std::string shaderPath;

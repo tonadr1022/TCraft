@@ -1,7 +1,5 @@
 #include "StringUtil.hpp"
 
-#include "pch.hpp"
-
 namespace util {
 
 std::string GetFilenameStem(const std::string& filename) {

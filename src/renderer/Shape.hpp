@@ -2,7 +2,7 @@
 
 /* clang-format off */
 #include "renderer/Vertex.hpp"
-const std::array<float, 120> CubeVertices= {
+const std::array<float, 120> kCubeVertices= {
       // right face
       1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
       1.0f, 1.0f, 0.0f, 1.0f, 0.0f,
@@ -41,7 +41,7 @@ const std::array<float, 120> CubeVertices= {
       1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
   };
 
-  const std::array<uint32_t, 36> CubeIndices = {
+  const std::array<uint32_t, 36> kCubeIndices = {
       0, 1, 2, 2, 1, 3, // front face
       4, 5, 6, 6, 5, 7, // back face
       8, 9, 10, 10, 9, 11, // left face
@@ -51,7 +51,7 @@ const std::array<float, 120> CubeVertices= {
   };
 /* clang-format on */
 
-constexpr const float CubePositionVertices[] = {
+constexpr const float kCubePositionVertices[] = {
     // positions
     -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f,
     1.0f,  -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  -1.0f,
@@ -71,19 +71,20 @@ constexpr const float CubePositionVertices[] = {
     -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, -1.0f,
     1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  1.0f,  -1.0f, 1.0f};
 
-const std::array<Vertex, 4> QuadVertices = {{// positions        // texture Coords
-                                             {glm::vec3{0.0f, 1.0f, 0.0f}, glm::vec2{0.0f, 1.0f}},
-                                             {glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec2{0.0f, 0.0f}},
-                                             {glm::vec3{1.0f, 1.0f, 0.0f}, glm::vec2{1.0f, 1.0f}},
-                                             {glm::vec3{1.0f, 0.0f, 0.0f}, glm::vec2{1.0f, 0.0f}}}};
+const std::array<Vertex, 4> kQuadVertices = {
+    {// positions        // texture Coords
+     {glm::vec3{0.0f, 1.0f, 0.0f}, glm::vec2{0.0f, 1.0f}},
+     {glm::vec3{0.0f, 0.0f, 0.0f}, glm::vec2{0.0f, 0.0f}},
+     {glm::vec3{1.0f, 1.0f, 0.0f}, glm::vec2{1.0f, 1.0f}},
+     {glm::vec3{1.0f, 0.0f, 0.0f}, glm::vec2{1.0f, 0.0f}}}};
 
-const std::array<Vertex, 4> QuadVerticesFull = {{// positions        // texture Coords
-                                                 {glm::vec3{-1, 1, 0.0f}, glm::vec2{0.0f, 1.0f}},
-                                                 {glm::vec3{-1, -1, 0.0f}, glm::vec2{0.0f, 0.0f}},
-                                                 {glm::vec3{1, 1, 0.0f}, glm::vec2{1.0f, 1.0f}},
-                                                 {glm::vec3{1, -1, 0.0f}, glm::vec2{1.0f, 0.0f}}}};
+const std::array<Vertex, 4> kQuadVerticesFull = {{// positions        // texture Coords
+                                                  {glm::vec3{-1, 1, 0.0f}, glm::vec2{0.0f, 1.0f}},
+                                                  {glm::vec3{-1, -1, 0.0f}, glm::vec2{0.0f, 0.0f}},
+                                                  {glm::vec3{1, 1, 0.0f}, glm::vec2{1.0f, 1.0f}},
+                                                  {glm::vec3{1, -1, 0.0f}, glm::vec2{1.0f, 0.0f}}}};
 
-const std::array<Vertex, 4> QuadVerticesCentered = {
+const std::array<Vertex, 4> kQuadVerticesCentered = {
     {// positions        // texture Coords
      {glm::vec3{-.5f, .5f, 0.0f}, glm::vec2{0.0f, 1.0f}},
      {glm::vec3{-.5f, -.5f, 0.0f}, glm::vec2{0.0f, 0.0f}},

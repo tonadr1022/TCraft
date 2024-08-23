@@ -2,8 +2,6 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "pch.hpp"
-
 void Shader::Bind() const {
   EASSERT_MSG(id_ != 0, "Shader is invalid");
   glUseProgram(id_);

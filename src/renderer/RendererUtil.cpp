@@ -1,6 +1,7 @@
 
 #include "RendererUtil.hpp"
 
+#include <cstddef>
 #include <filesystem>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -52,7 +53,7 @@ void RenderAndWriteIcons(const std::vector<BlockData>& data,
   vao.Bind();
   auto shader = ShaderManager::Get().GetShader("block");
   shader->Bind();
-  std::vector<uint8_t> pixels(dims.x * dims.y * 4);
+  std::vector<uint8_t> pixels(static_cast<size_t>(dims.x * dims.y * 4));
   glm::mat4 proj = glm::ortho(-1.f, 1.f, -1.f, 1.f, -100.f, 100.0f);
   glm::mat4 view =
       glm::lookAt(glm::vec3(1), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -130,7 +131,7 @@ extern void RenderAndWriteIcon(const std::string& path, const BlockMeshData& mes
   vao.Bind();
   auto shader = ShaderManager::Get().GetShader("block");
   shader->Bind();
-  std::vector<uint8_t> pixels(dims.x * dims.y * 4);
+  std::vector<uint8_t> pixels(static_cast<size_t>(dims.x * dims.y * 4));
   float rad = 0.85f;
   glm::mat4 proj = glm::ortho(-rad, rad, -rad, rad, -100.f, 100.0f);
   glm::mat4 view =

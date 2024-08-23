@@ -8,8 +8,8 @@ struct Frustum {
   explicit Frustum(const glm::mat4& clip_matrix);
   void SetData(const glm::mat4& clip_matrix);
 
-  enum Plane { Right, Left, Top, Bottom, Front, Back };
-  enum PlaneComponent { X, Y, Z, Dist };
+  enum Plane { kRight, kLeft, kTop, kBottom, kFront, kBack };
+  enum PlaneComponent { kX, kY, kZ, kDist };
 
   [[nodiscard]] glm::vec4 GetPlane(Plane plane) const;
 

@@ -3,8 +3,6 @@
 #include <SDL_keycode.h>
 #include <SDL_mouse.h>
 
-#include <map>
-
 class Input {
  public:
   static inline bool IsKeyDown(SDL_Keycode key) { return key_states_[key]; }

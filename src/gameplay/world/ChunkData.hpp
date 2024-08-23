@@ -18,11 +18,11 @@ class ChunkData {
   [[nodiscard]] inline bool HasLOD1() const { return has_lod_1_; }
 
   [[nodiscard]] static inline int GetIndex(glm::ivec3 pos) {
-    return pos.y * ChunkArea + pos.z * ChunkLength + pos.x;
+    return pos.y * kChunkArea + pos.z * kChunkLength + pos.x;
   }
 
   [[nodiscard]] static inline int GetIndex(int x, int y, int z) {
-    return y * ChunkArea + z * ChunkLength + x;
+    return y * kChunkArea + z * kChunkLength + x;
   }
 
   // return true if x, y, or z are not between 0-31 inclusive.

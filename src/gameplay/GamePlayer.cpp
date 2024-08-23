@@ -3,7 +3,6 @@
 #include <imgui.h>
 
 #include "Constants.hpp"
-#include "application/Input.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/ChunkManager.hpp"
 
@@ -33,18 +32,21 @@ void GamePlayer::RayCast() {
   glm::vec3 t_max = {IntBound(origin.x, direction.x), IntBound(origin.y, direction.y),
                      IntBound(origin.z, direction.z)};
   glm::vec3 t_delta = static_cast<glm::vec3>(step) / direction;
-  if (std::abs(direction.x) < 0.0001)
+  if (std::abs(direction.x) < 0.0001) {
     t_delta.x = 0;
-  else
+  } else {
     t_delta.x = static_cast<float>(step.x) / direction.x;
-  if (std::abs(direction.y) < 0.0001)
+  }
+  if (std::abs(direction.y) < 0.0001) {
     t_delta.y = 0;
-  else
+  } else {
     t_delta.y = static_cast<float>(step.y) / direction.y;
-  if (std::abs(direction.z) < 0.0001)
+  }
+  if (std::abs(direction.z) < 0.0001) {
     t_delta.z = 0;
-  else
+  } else {
     t_delta.z = static_cast<float>(step.z) / direction.z;
+  }
 
   float radius = raycast_radius_ / glm::length(direction);
 
@@ -91,8 +93,8 @@ void GamePlayer::RayCast() {
     }
   }
 not_found:
-  ray_cast_air_pos_ = glm::NullIVec3;
-  ray_cast_non_air_pos_ = glm::NullIVec3;
+  ray_cast_air_pos_ = glm::kNullIVec3;
+  ray_cast_non_air_pos_ = glm::kNullIVec3;
 }
 
 const glm::ivec3& GamePlayer::GetRayCastBlockPos() const { return ray_cast_non_air_pos_; }
@@ -100,9 +102,9 @@ const glm::ivec3& GamePlayer::GetAirRayCastBlockPos() const { return ray_cast_ai
 
 void GamePlayer::Update(double dt) {
   RayCast();
-  if (ray_cast_non_air_pos_ != glm::NullIVec3 &&
+  if (ray_cast_non_air_pos_ != glm::kNullIVec3 &&
       (ray_cast_non_air_pos_ == prev_frame_ray_cast_non_air_pos_ ||
-       prev_frame_ray_cast_non_air_pos_ == glm::NullIVec3)) {
+       prev_frame_ray_cast_non_air_pos_ == glm::kNullIVec3)) {
     if (is_mining_) {
       elapsed_break_time_ += dt * mine_speed_;
       // if (elapsed_break_time_ >=
@@ -133,26 +135,26 @@ void GamePlayer::OnImGui() {
     Chunk* chunk = chunk_manager_.GetChunk(ray_cast_non_air_pos_);
     if (chunk) {
       ImGui::Text("Aim Chunk Terrain State: %s",
-                  chunk->terrain_state == Chunk::State::Finished ? "Finished"
-                  : chunk->terrain_state == Chunk::State::Queued ? "Queued"
-                                                                 : "Not Finished");
+                  chunk->terrain_state == Chunk::State::kFinished ? "Finished"
+                  : chunk->terrain_state == Chunk::State::kQueued ? "Queued"
+                                                                  : "Not Finished");
       ImGui::Text("Aim Chunk Mesh State: %s",
-                  chunk->mesh_state == Chunk::State::Finished ? "Finished"
-                  : chunk->mesh_state == Chunk::State::Queued ? "Queued"
-                                                              : "Not Finished");
+                  chunk->mesh_state == Chunk::State::kFinished ? "Finished"
+                  : chunk->mesh_state == Chunk::State::kQueued ? "Queued"
+                                                               : "Not Finished");
     }
   }
   {
     Chunk* chunk = chunk_manager_.GetChunk(glm::ivec3(position_));
     if (chunk) {
       ImGui::Text("Pos Chunk Terrain State: %s",
-                  chunk->terrain_state == Chunk::State::Finished ? "Finished"
-                  : chunk->terrain_state == Chunk::State::Queued ? "Queued"
-                                                                 : "Not Finished");
+                  chunk->terrain_state == Chunk::State::kFinished ? "Finished"
+                  : chunk->terrain_state == Chunk::State::kQueued ? "Queued"
+                                                                  : "Not Finished");
       ImGui::Text("Pos Chunk Mesh State: %s",
-                  chunk->mesh_state == Chunk::State::Finished ? "Finished"
-                  : chunk->mesh_state == Chunk::State::Queued ? "Queued"
-                                                              : "Not Finished");
+                  chunk->mesh_state == Chunk::State::kFinished ? "Finished"
+                  : chunk->mesh_state == Chunk::State::kQueued ? "Queued"
+                                                               : "Not Finished");
     }
     ImGui::Text("Pos Chunk Exists: %s", chunk ? "Yes" : "No");
   }
@@ -164,7 +166,7 @@ bool GamePlayer::OnEvent(const SDL_Event& event) {
   switch (event.type) {
     case SDL_MOUSEBUTTONDOWN:
       if (event.button.button == SDL_BUTTON_RIGHT) {
-        if (ray_cast_air_pos_ != glm::NullIVec3) {
+        if (ray_cast_air_pos_ != glm::kNullIVec3) {
           // TODO: access held block in inventory
           chunk_manager_.SetBlock(ray_cast_air_pos_, held_item_id);
         }
@@ -182,8 +184,9 @@ bool GamePlayer::OnEvent(const SDL_Event& event) {
     case SDL_MOUSEWHEEL:
       if (event.wheel.y > 0) {
         held_item_id += 1;
-        if (static_cast<uint32_t>(held_item_id) == block_db_.GetBlockData().size())
+        if (static_cast<uint32_t>(held_item_id) == block_db_.GetBlockData().size()) {
           held_item_id = 1;
+        }
       } else {
         held_item_id -= 1;
         if (held_item_id == 0) held_item_id = block_db_.GetBlockData().size() - 1;

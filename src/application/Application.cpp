@@ -20,7 +20,7 @@
 
 namespace {
 
-constexpr const auto SettingsPath = GET_PATH("resources/settings.json");
+constexpr const auto kSettingsPath = GET_PATH("resources/settings.json");
 
 }  // namespace
 
@@ -29,7 +29,7 @@ Application::Application(int width, int height, const char* title) : scene_manag
   TextureManager::Init();
   MaterialManager::Init();
   ShaderManager::Init();
-  SettingsManager::Get().Load(SettingsPath);
+  SettingsManager::Get().Load(kSettingsPath);
 
   auto app_settings_json = SettingsManager::Get().LoadSetting("application");
   imgui_enabled_ = app_settings_json.value("imgui_enabled", true);
@@ -83,7 +83,7 @@ void Application::Run() {
   Renderer::Shutdown();
   window_.Shutdown();
   // TODO: cleanup
-  SettingsManager::Get().Shutdown(SettingsPath);
+  SettingsManager::Get().Shutdown(kSettingsPath);
   SettingsManager::Shutdown();
 }
 

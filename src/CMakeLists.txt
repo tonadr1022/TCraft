@@ -29,7 +29,6 @@ set(SOURCES
 
     gameplay/Player.cpp
     gameplay/GamePlayer.cpp
-    gameplay/InventoryUI.cpp
     gameplay/scene/WorldScene.cpp
     gameplay/scene/BlockEditorScene.cpp
     gameplay/scene/MainMenuScene.cpp

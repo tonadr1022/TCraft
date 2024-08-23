@@ -1,7 +1,5 @@
 #pragma once
 
-#include <glm/fwd.hpp>
-
 #include "gameplay/world/ChunkDef.hpp"
 
 struct ChunkVertex;

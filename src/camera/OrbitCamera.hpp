@@ -2,10 +2,6 @@
 
 #include <SDL_events.h>
 
-#include <glm/fwd.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-
 #include "camera/Camera.hpp"
 
 class OrbitCamera : public Camera {
@@ -29,9 +25,9 @@ class OrbitCamera : public Camera {
   float azimuth_angle_;
   float polar_angle_;
 
-  constexpr inline static glm::vec3 UpVector = {0, 1, 0};
-  static constexpr const float MinDistance = 0.5f;
-  static constexpr const float DefaultOrbitScrollSensitivity = 0.25f;
+  constexpr inline static glm::vec3 kUpVector = {0, 1, 0};
+  static constexpr const float kMinDistance = 0.5f;
+  static constexpr const float kDefaultOrbitScrollSensitivity = 0.25f;
   bool first_mouse_{true};
   float near_plane_{0.1f}, far_plane_{1000.f};
   void UpdatePosition();

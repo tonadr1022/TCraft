@@ -1,6 +1,5 @@
 #pragma once
 
-#include <unordered_set>
 struct WorldCreateParams {
   std::string name;
   std::string seed;

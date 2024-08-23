@@ -45,7 +45,7 @@ void ChunkData::DownSample() {
   if (blocks_lod_1_ == nullptr) blocks_lod_1_ = std::make_unique<BlockTypeArrayLOD1>();
   uint32_t f = 2;
   // TODO: templatize downsampling
-  uint32_t chunk_length = ChunkLength / f;
+  uint32_t chunk_length = kChunkLength / f;
   auto get_index = [](int x, int y, int z) -> int { return x | z << 4 | y << 8; };
 
   std::array<BlockType, 8> types;
