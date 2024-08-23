@@ -32,6 +32,8 @@ struct BlockEditorState {
   std::string add_block_model_name = "default";
   BlockData add_block_data{};
   BlockData default_block_data{};
+  bool show_add_biome_layer{false};
+  int edit_biome_idx{-1};
 };
 
 void EditBlockImGui(BlockData& data, std::string& curr_model_name,
@@ -624,9 +626,66 @@ void BlockEditorScene::ImGuiTerrainEdit() {
   if (ImGui::Button("Save")) {
     terrain_.Write(block_db_);
   }
+  static bool show_add_biome_layer = false;
+  int i = 0;
+
   for (auto& biome : terrain_.biomes) {
     ImGui::PushID(&biome);
+    if (i++ > 0) break;
     if (ImGui::CollapsingHeader(biome.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+      if (ImGui::Button("Create Layer")) {
+        show_add_biome_layer = true;
+      }
+      if (show_add_biome_layer) ImGui::OpenPopup("Add Layer");
+      static bool show_add_block_to_layer = false;
+      // Popup window for adding a new layer
+      if (ImGui::BeginPopup("Add Layer")) {
+        static char layer_name[128] = "";
+        ImGui::Text("Enter new layer name:");
+        ImGui::InputText("##LayerName", layer_name, IM_ARRAYSIZE(layer_name));
+
+        if (ImGui::Button("Add Block")) {
+          show_add_block_to_layer = true;
+        }
+        if (show_add_block_to_layer) ImGui::OpenPopup("Add Block");
+        if (ImGui::BeginPopup("Add Block")) {
+          for (size_t id = 1; id < block_db_.block_data_arr_.size(); id++) {
+            ImVec2 uv0, uv1;
+            icon_texture_atlas_.ComputeUVs(id, uv0, uv1);
+            constexpr glm::vec2 ImageDims{40, 40};
+            int per_row = 8;
+            if (id % per_row != 0 && id < block_db_.block_data_arr_.size() - 1) ImGui::SameLine();
+            ImGui::PushID(id);
+            if (ImGui::ImageButton(
+                    reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
+                    ImVec2(ImageDims.x, ImageDims.y), uv0, uv1)) {
+              spdlog::info("adding block {}", block_db_.GetBlockData()[id].name);
+            }
+            ImGui::PopID();
+          }
+
+          if (ImGui::Button("Close")) {
+            show_add_block_to_layer = false;
+            ImGui::CloseCurrentPopup();
+          }
+          ImGui::EndPopup();
+        }
+
+        if (ImGui::Button("Add")) {
+          if (strlen(layer_name) > 0) {
+            show_add_biome_layer = false;
+            ImGui::CloseCurrentPopup();
+          }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+          show_add_biome_layer = false;
+          ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+      }
+
       for (size_t i = 0; i < biome.layers.size(); i++) {
         auto& layer = biome.layers[i];
         ImGui::PushID(&layer);
