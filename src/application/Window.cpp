@@ -344,6 +344,10 @@ std::string Window::GetEventTypeString(Uint32 eventType) {
   return "Unknown event";
 }
 
+void Window::SetFullScreen(bool fullscreen) {
+  SDL_SetWindowFullscreen(window_, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+}
+
 glm::ivec2 Window::GetWindowSize() const {
   int x;
   int y;

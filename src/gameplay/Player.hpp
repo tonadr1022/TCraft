@@ -15,6 +15,8 @@ class Player {
   void SetCameraFocused(bool state);
   [[nodiscard]] bool GetCameraFocused() const;
   void SetPosition(const glm::vec3& pos);
+  void SetMovementSpeed(float speed);
+  float GetMovementSpeed() const;
   [[nodiscard]] const glm::vec3& Position() const;
   Camera& GetCamera();
   FPSCamera& GetFPSCamera();

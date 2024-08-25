@@ -56,6 +56,7 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& directory
     pitch = camera.value("pitch", 0);
     yaw = camera.value("yaw", 0);
   }
+  player_.SetMovementSpeed(data.value("player_movement_speed", 10.f));
   player_.GetFPSCamera().SetOrientation(pitch, yaw);
 
   cross_hair_mat_ =
@@ -206,6 +207,7 @@ WorldScene::~WorldScene() {
   // TODO: player save function
   nlohmann::json j = {
       {"player_position", player_pos},
+      {"player_movement_speed", player_.GetMovementSpeed()},
       {"camera",
        {{"pitch", player_.GetCamera().GetPitch()}, {"yaw", player_.GetCamera().GetYaw()}}}};
   util::json::WriteJson(j, directory_path_ + "/data.json");

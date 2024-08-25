@@ -18,18 +18,26 @@ std::vector<int> GetHeightMap(float frequency, float multiplier, int start_x, in
   std::vector<float> height_floats(kChunkArea);
   auto fn_simplex = FastNoise::New<FastNoise::Simplex>();
   auto fn_fractal = FastNoise::New<FastNoise::FractalRidged>();
-  {
-    ZoneScopedN("Get grid call");
-    fn_fractal->SetSource(fn_simplex);
-    fn_fractal->SetOctaveCount(4);
-    fn_fractal->GenUniformGrid2D(height_floats.data(), start_x, start_z, kChunkLength, kChunkLength,
-                                 frequency, seed);
-  }
+  fn_fractal->SetSource(fn_simplex);
+  fn_fractal->SetOctaveCount(4);
+  fn_fractal->GenUniformGrid2D(height_floats.data(), start_x, start_z, kChunkLength, kChunkLength,
+                               frequency, seed);
   std::vector<int> height(kChunkArea);
   for (int i = 0; i < kChunkArea; i++) {
     height[i] = floor((height_floats[i] + 1) * .5 * multiplier);
   }
   return height;
+}
+
+std::vector<float> GetBiomeMap(float frequency, int start_x, int start_z, int seed) {
+  std::vector<float> floats(static_cast<size_t>(kChunkArea));
+  auto fn_simplex = FastNoise::New<FastNoise::Simplex>();
+  auto fn_fbm = FastNoise::New<FastNoise::FractalFBm>();
+  fn_fbm->SetSource(fn_simplex);
+  fn_fbm->SetOctaveCount(2);
+  fn_fbm->GenUniformGrid2D(floats.data(), start_x, start_z, kChunkLength, kChunkLength, frequency,
+                           seed);
+  return floats;
 }
 
 // std::vector<float> GetNoiseMap2D(float frequency, int start_x, int start_z, int seed) {
@@ -69,11 +77,10 @@ void TerrainGenerator::GenerateBiome() {
   // Timer timer;
   auto noise_map =
       GetNoiseMap3D(0.0013, chunk_world_pos_[0], chunk_world_pos_[1], seed_, kChunkLength);
-  // auto noise_map = GetNoiseMap2D(0.0013, chunk_world_pos_[0], chunk_world_pos_[1], seed_);
-  auto get_block = [this, &noise_map](uint32_t y, uint32_t max_height,
-                                      int noise_map_idx) -> BlockType {
-    // TODO: more sophisticated biomes
-    const auto& biome = terrain_.biomes[0];
+  auto biome_map = GetBiomeMap(0.0013, chunk_world_pos_[0], chunk_world_pos_[1], seed_ + 1);
+  auto get_block = [this, &noise_map, &biome_map](uint32_t y, uint32_t max_height,
+                                                  int noise_map_idx, int xz) -> BlockType {
+    const auto& biome = terrain_.GetBiome(biome_map[xz]);
     if (y <= max_height - biome.layer_y_sum) {
       return terrain_.id_stone;
     }
@@ -82,7 +89,6 @@ void TerrainGenerator::GenerateBiome() {
     for (const auto& layer : biome.layers) {
       sum += layer.y_count;
       if (sum > max_height - y) {
-        // TODO: stack noise
         return layer.GetBlock(noise_map[noise_map_idx]);
       }
     }
@@ -97,10 +103,11 @@ void TerrainGenerator::GenerateBiome() {
   int j = 0;
   for (int y = 0; y < kChunkLength * kNumVerticalChunks; y++) {
     int i = 0;
+    int xz = 0;
     for (int z = 0; z < kChunkLength; z++) {
-      for (int x = 0; x < kChunkLength; x++, i++, j++) {
+      for (int x = 0; x < kChunkLength; x++, i++, j++, xz++) {
         if (y <= height_map[i]) {
-          SetBlock(x, y, z, get_block(y, height_map[i], j % kChunkVolume));
+          SetBlock(x, y, z, get_block(y, height_map[i], j % kChunkVolume, xz));
         }
       }
     }

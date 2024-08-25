@@ -28,6 +28,9 @@ void Player::SetPosition(const glm::vec3& pos) {
   orbit_camera_.SetPosition(pos);
 }
 
+float Player::GetMovementSpeed() const { return move_speed_; }
+void Player::SetMovementSpeed(float speed) { move_speed_ = std::max(speed, 1.f); }
+
 void Player::Update(double dt) {
   if (!camera_focused_ && !override_movement_) return;
   if (camera_mode == CameraMode::kFPS) {

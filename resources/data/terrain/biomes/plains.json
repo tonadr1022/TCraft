@@ -2,21 +2,8 @@
   "formatted_name": "plains",
   "layers": [
     {
-      "frequencies": [
-        0.10000000149011612,
-        0.4000000059604645,
-        0.5
-      ],
-      "names": [
-        "dirt",
-        "plains_grass",
-        "full_grass"
-      ],
+      "name": "diamond_ore",
       "y_count": 5
-    },
-    {
-      "name": "snow",
-      "y_count": 4
     }
   ],
   "name": "plains"

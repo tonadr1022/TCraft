@@ -23,7 +23,7 @@ class GamePlayer : public Player {
   glm::ivec3 prev_frame_ray_cast_non_air_pos_;
   double elapsed_break_time_{0};
   bool is_mining_{false};
-  float mine_speed_{1};
+  float mine_speed_{10};
   // bool active_aim_{false};
   float raycast_radius_{32.f};
 

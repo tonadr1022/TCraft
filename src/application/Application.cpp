@@ -124,6 +124,11 @@ void Application::OnImGui() {
   if (ImGui::Checkbox("Vsync", &vsync)) {
     window_.SetVsync(vsync);
   }
+  static bool fullscreen = false;
+  if (ImGui::Checkbox("Fullscreen", &fullscreen)) {
+    window_.SetFullScreen(fullscreen);
+  }
+
   if (ImGui::Button("Load world")) {
     scene_manager_.LoadWorld(GET_PATH("resources/worlds/default_world"));
   }

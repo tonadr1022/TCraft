@@ -115,7 +115,7 @@ void Renderer::Init() {
   static_chunk_vao_.Init();
   static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
-  static_chunk_vbo_.Init(sizeof(ChunkVertex) * 40'000'000, sizeof(ChunkVertex));
+  static_chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
   static_chunk_ebo_.Init(UINT32_MAX / 4, sizeof(uint32_t));
   static_chunk_vao_.AttachVertexBuffer(static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   static_chunk_vao_.AttachElementBuffer(static_chunk_ebo_.Id());
@@ -124,7 +124,7 @@ void Renderer::Init() {
   lod_static_chunk_vao_.Init();
   lod_static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
-  lod_static_chunk_vbo_.Init(sizeof(ChunkVertex) * 40'000'000, sizeof(ChunkVertex));
+  lod_static_chunk_vbo_.Init(sizeof(ChunkVertex) * 80'000'000, sizeof(ChunkVertex));
   lod_static_chunk_ebo_.Init(UINT32_MAX / 4, sizeof(uint32_t));
   lod_static_chunk_vao_.AttachVertexBuffer(lod_static_chunk_vbo_.Id(), 0, 0, sizeof(ChunkVertex));
   lod_static_chunk_vao_.AttachElementBuffer(lod_static_chunk_ebo_.Id());

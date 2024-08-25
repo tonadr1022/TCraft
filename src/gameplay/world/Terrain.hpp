@@ -21,6 +21,7 @@ struct Biome {
 struct Terrain {
   std::vector<Biome> biomes;
   std::vector<float> biome_frequencies;
+  [[nodiscard]] const Biome& GetBiome(float rand_neg_1_to_1) const;
 
   BlockType id_stone;
   BlockType id_sand;

@@ -21,6 +21,7 @@ class Window {
   void PollEvents();
   void SetMouseGrab(bool state);
   void SetTitle(std::string_view title);
+  void SetFullScreen(bool fullscreen);
   static void DisableImGuiInputs();
   static void EnableImGuiInputs();
   static std::string GetEventTypeString(Uint32 eventType);

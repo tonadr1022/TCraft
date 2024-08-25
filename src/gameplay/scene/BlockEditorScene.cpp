@@ -682,6 +682,23 @@ void BlockEditorScene::ImGuiTerrainEdit() {
       }
     }
 
+    if (ImGui::TreeNodeEx("Biome Frequencies", ImGuiTreeNodeFlags_DefaultOpen)) {
+      float biome_freq_sum = std::accumulate(terrain_.biome_frequencies.begin(),
+                                             terrain_.biome_frequencies.end(), 0.0f);
+      if (abs(1.0 - biome_freq_sum) > 0.0001) {
+        ImGui::TextColored(ImVec4(1, 0, 0, 1), "Biome frequencies for terrain do not sum to 1.");
+      }
+      for (size_t biome_idx = 0; biome_idx < terrain_.biomes.size(); biome_idx++) {
+        ImGui::PushID(biome_idx);
+        auto& biome = terrain_.biomes[biome_idx];
+        ImGui::Text("%s", biome.formatted_name.c_str());
+        ImGui::SliderFloat("Frequency", &terrain_.biome_frequencies[biome_idx], 0.0f,
+                           terrain_.biome_frequencies[biome_idx] + 1.0f - biome_freq_sum);
+        ImGui::PopID();
+      }
+      ImGui::TreePop();
+    }
+
     for (auto& biome : terrain_.biomes) {
       ImGui::PushID(&biome);
       if (ImGui::TreeNodeEx(biome.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {

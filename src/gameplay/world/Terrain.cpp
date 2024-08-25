@@ -1,7 +1,6 @@
 #include "Terrain.hpp"
 
 #include <nlohmann/json.hpp>
-#include <ratio>
 
 #include "gameplay/world/BlockDB.hpp"
 #include "util/JsonUtil.hpp"
@@ -15,7 +14,7 @@ BlockType BiomeLayer::GetBlock(float rand_neg_1_to_1) const {
   float sum = 0;
   for (size_t i = 0; i < block_type_frequencies.size(); i++) {
     sum += block_type_frequencies[i];
-    if (sum >= abs(rand_neg_1_to_1)) return block_types[i];
+    if (sum >= ((rand_neg_1_to_1 + 1) / 2.0f)) return block_types[i];
   }
   EASSERT_MSG(0, "Unreachable");
   return block_types[0];
@@ -235,4 +234,17 @@ void Terrain::Write(const BlockDB& block_db) {
       util::json::WriteJson(out_json, path);
     }
   }
+}
+
+const Biome& Terrain::GetBiome(float rand_neg_1_to_1) const {
+  if (biomes.size() == 1) return biomes[0];
+  float sum = 0;
+  for (size_t i = 0; i < biome_frequencies.size(); i++) {
+    sum += biome_frequencies[i];
+    if (sum >= (rand_neg_1_to_1 + 1) / 2.0f) {
+      return biomes[i];
+    }
+  }
+  EASSERT_MSG(0, "Unreachable");
+  return biomes[0];
 }

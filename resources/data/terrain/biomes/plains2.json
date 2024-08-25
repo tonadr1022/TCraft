@@ -2,7 +2,14 @@
   "formatted_name": "plains2",
   "layers": [
     {
-      "name": "plains_grass",
+      "frequencies": [
+        0.5,
+        0.5
+      ],
+      "names": [
+        "plains_grass",
+        "snow"
+      ],
       "y_count": 1
     },
     {
