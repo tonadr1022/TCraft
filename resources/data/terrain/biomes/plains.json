@@ -1,11 +1,19 @@
 {
-  "name": "plains",
-  "formatted_name": "Plains",
+  "formatted_name": "plains",
   "layers": [
     {
-      "names": ["dirt", "plains_grass", "full_grass"],
-      "frequencies": [0.1, 0.4, 0.5],
+      "frequencies": [
+        0.10000000149011612,
+        0.4000000059604645,
+        0.5
+      ],
+      "names": [
+        "dirt",
+        "plains_grass",
+        "full_grass"
+      ],
       "y_count": 5
     }
-  ]
+  ],
+  "name": "plains"
 }

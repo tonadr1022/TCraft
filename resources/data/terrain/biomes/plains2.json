@@ -1,9 +1,18 @@
 {
-  "name": "plains2",
-  "formatted_name": "Plains 2",
+  "formatted_name": "plains2",
   "layers": [
-    { "name": "plains_grass", "y_count": 1 },
-    { "name": "dirt", "y_count": 2 },
-    { "name": "sand", "y_count": 2 }
-  ]
+    {
+      "name": "plains_grass",
+      "y_count": 1
+    },
+    {
+      "name": "dirt",
+      "y_count": 2
+    },
+    {
+      "name": "sand",
+      "y_count": 2
+    }
+  ],
+  "name": "plains2"
 }

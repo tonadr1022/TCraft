@@ -21,6 +21,9 @@ BlockType BiomeLayer::GetBlock(float rand_neg_1_to_1) const {
 }
 
 void Terrain::Load(const BlockDB& block_db) {
+  biome_frequencies.clear();
+  biomes.clear();
+
   // Should never fail
   stone = block_db.GetBlockData("stone")->id;
   // default_id = block_db.GetBlockData("air")->id;
