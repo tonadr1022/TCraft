@@ -13,6 +13,10 @@
         "full_grass"
       ],
       "y_count": 5
+    },
+    {
+      "name": "snow",
+      "y_count": 4
     }
   ],
   "name": "plains"

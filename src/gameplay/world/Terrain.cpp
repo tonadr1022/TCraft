@@ -1,6 +1,7 @@
 #include "Terrain.hpp"
 
 #include <nlohmann/json.hpp>
+#include <ratio>
 
 #include "gameplay/world/BlockDB.hpp"
 #include "util/JsonUtil.hpp"
@@ -24,10 +25,8 @@ void Terrain::Load(const BlockDB& block_db) {
   biome_frequencies.clear();
   biomes.clear();
 
-  // Should never fail
-  stone = block_db.GetBlockData("stone")->id;
-  // default_id = block_db.GetBlockData("air")->id;
-  sand = block_db.GetBlockData("sand")->id;
+  id_stone = block_db.GetBlockData("stone")->id;
+  id_sand = block_db.GetBlockData("sand")->id;
 
   ZoneScoped;
   std::vector<std::string> biome_names;
@@ -136,9 +135,9 @@ void Terrain::Load(const BlockDB& block_db) {
         }
         auto y_count = layer_data["y_count"];
         if (y_count.is_number_unsigned()) {
-          biome.layer_y_counts.emplace_back(y_count);
+          layer.y_count = y_count;
         } else {
-          biome.layer_y_counts.emplace_back(1);
+          layer.y_count = 1;
         }
         biome.layers.emplace_back(layer);
 
@@ -160,9 +159,9 @@ void Terrain::Load(const BlockDB& block_db) {
         layer.block_type_frequencies.emplace_back(1);
         auto y_count = layer_data["y_count"];
         if (y_count.is_number_unsigned()) {
-          biome.layer_y_counts.emplace_back(y_count);
+          layer.y_count = y_count;
         } else {
-          biome.layer_y_counts.emplace_back(1);
+          layer.y_count = 1;
         }
         biome.layers.emplace_back(layer);
       } else {
@@ -175,8 +174,8 @@ void Terrain::Load(const BlockDB& block_db) {
     }
 
     int layer_y_sum = 0;
-    for (const auto layer_y_count : biome.layer_y_counts) {
-      layer_y_sum += layer_y_count;
+    for (const auto& layer : biome.layers) {
+      layer_y_sum += layer.y_count;
     }
     biome.layer_y_sum = layer_y_sum;
 
@@ -184,6 +183,24 @@ void Terrain::Load(const BlockDB& block_db) {
   }
 }
 
+bool Terrain::IsValid() const {
+  float biome_freq_sum = std::accumulate(biome_frequencies.begin(), biome_frequencies.end(), 0.0f);
+  constexpr const float kEpsilon = 0.0001f;
+  if (abs(1.0f - biome_freq_sum) > kEpsilon) {
+    return false;
+  }
+  for (const auto& biome : biomes) {
+    for (const auto& layer : biome.layers) {
+      float layer_block_freq_sum = std::accumulate(layer.block_type_frequencies.begin(),
+                                                   layer.block_type_frequencies.end(), 0.0f);
+      if (abs(1.0f - layer_block_freq_sum) > kEpsilon) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
 void Terrain::Write(const BlockDB& block_db) {
   for (const auto& biome : biomes) {
     std::filesystem::path path =
@@ -194,7 +211,7 @@ void Terrain::Write(const BlockDB& block_db) {
       if (layer.block_types.size() == 1) {
         nlohmann::json layer_obj = {
             {"name", block_db.GetBlockData()[layer.block_types.front()].name},
-            {"y_count", biome.layer_y_counts[layer_idx]},
+            {"y_count", layer.y_count},
         };
         layers.emplace_back(layer_obj);
       } else {
@@ -209,7 +226,7 @@ void Terrain::Write(const BlockDB& block_db) {
         nlohmann::json layer_obj = {
             {"names", names},
             {"frequencies", layer.block_type_frequencies},
-            {"y_count", biome.layer_y_counts[layer_idx]},
+            {"y_count", layer.y_count},
         };
         layers.emplace_back(layer_obj);
       }

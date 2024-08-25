@@ -75,21 +75,21 @@ void TerrainGenerator::GenerateBiome() {
     // TODO: more sophisticated biomes
     const auto& biome = terrain_.biomes[0];
     if (y <= max_height - biome.layer_y_sum) {
-      return terrain_.stone;
+      return terrain_.id_stone;
     }
 
     uint32_t sum = 0;
-    for (size_t i = 0; i < biome.layers.size(); i++) {
-      sum += biome.layer_y_counts[i];
+    for (const auto& layer : biome.layers) {
+      sum += layer.y_count;
       if (sum > max_height - y) {
         // TODO: stack noise
-        return biome.layers[i].GetBlock(noise_map[noise_map_idx]);
+        return layer.GetBlock(noise_map[noise_map_idx]);
       }
     }
 
     // Unreachable
     EASSERT(0);
-    return terrain_.sand;
+    return terrain_.id_sand;
   };
 
   auto height_map = GetHeightMap(0.0013, static_cast<float>(kMaxBlockHeight) / 2,

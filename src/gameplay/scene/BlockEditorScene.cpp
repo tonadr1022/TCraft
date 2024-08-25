@@ -11,6 +11,7 @@
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
+#include "gameplay/world/Terrain.hpp"
 #include "pch.hpp"
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
@@ -659,147 +660,168 @@ void BlockTypeSelectMenu(const std::string& name, BlockDB& block_db_,
 }  // namespace
 
 void BlockEditorScene::ImGuiTerrainEdit() {
-  ImGui::ShowDemoWindow();
-  ImGui::Text("Biomes");
-  if (ImGui::Button("Save")) {
-    terrain_.Write(block_db_);
-  }
-  ImGui::SameLine();
-  if (ImGui::Button("Reset")) {
-    terrain_.Load(block_db_);
-  }
-  static int edit_biome_idx = -1;
-
-  for (size_t biome_idx = 0; biome_idx < terrain_.biomes.size(); biome_idx++) {
-    auto& biome = terrain_.biomes[biome_idx];
-    ImGui::PushID(&biome);
-    if (ImGui::CollapsingHeader(biome.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
-      if (ImGui::Button("Create Layer")) {
-        edit_biome_idx = biome_idx;
-      }
-      if (edit_biome_idx == static_cast<int>(biome_idx)) {
-        if (ImGui::Button("Add")) {
-          edit_biome_idx = -1;
-          ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel")) {
-          edit_biome_idx = -1;
-          ImGui::CloseCurrentPopup();
-        }
-      }
-
-      for (size_t layer_idx = 0; layer_idx < biome.layers.size(); layer_idx++) {
-        auto& layer = biome.layers[layer_idx];
-        float block_type_freq_sum = std::accumulate(layer.block_type_frequencies.begin(),
-                                                    layer.block_type_frequencies.end(), 0.0);
-        ImGui::PushID(&layer);
-        EASSERT(layer.block_types.size() == layer.block_type_frequencies.size());
-        ImGui::Text("Layer %zu", layer_idx);
-        if (ImGui::BeginTable("layer options", 2 + (layer.block_types.size() > 1 ? 1 : 0))) {
-          ImGui::TableNextRow();
-          ImGui::TableNextColumn();
-          if (ImGui::Button("Add Block")) {
-            ImGui::OpenPopup("Add Block");
-          }
-          BlockTypeSelectMenu("Add Block", block_db_, icon_texture_atlas_,
-                              [&layer](BlockType type) {
-                                layer.block_types.emplace_back(type);
-                                layer.block_type_frequencies.emplace_back(0);
-                              });
-          if (layer.block_types.size() > 1) {
-            ImGui::TableNextColumn();
-            if (ImGui::Button("Equalize Frequencies")) {
-              std::fill(layer.block_type_frequencies.begin(), layer.block_type_frequencies.end(),
-                        1.0f / layer.block_type_frequencies.size());
-            }
-          }
-          ImGui::TableNextColumn();
-          int y_count = biome.layer_y_counts[layer_idx];
-          if (ImGui::SliderInt("Y Count", &y_count, 1, 32)) {
-            biome.layer_y_counts[layer_idx] = y_count;
-          }
-          ImGui::EndTable();
-        }
-
-        static int layer_block_edit_idx = -1;
-        constexpr const size_t kNumColsBeforeBlockCols = 1;
-        if (ImGui::BeginTable("Layer Table", layer.block_types.size() + kNumColsBeforeBlockCols)) {
-          constexpr const float kFirstColumnWidth = 80.0f;
-          // Set the first column to a fixed width
-          ImGui::TableSetupColumn("Block", ImGuiTableColumnFlags_WidthFixed, kFirstColumnWidth);
-          // Set up the remaining columns (these can be default or flexible width)
-          for (size_t i = 0; i < layer.block_types.size(); i++) {
-            ImGui::TableSetupColumn(nullptr);  // Use default settings for other columns
-          }
-
-          ImGui::TableNextRow();
-          ImGui::TableNextColumn();
-          ImGui::Text("Block");
-          for (size_t block_id_idx = 0; block_id_idx < layer.block_types.size(); block_id_idx++) {
-            ImGui::TableNextColumn();
-            ImGui::PushID(block_id_idx);
-
-            ImVec2 uv0, uv1;
-            icon_texture_atlas_.ComputeUVs(layer.block_types[block_id_idx], uv0, uv1);
-            constexpr glm::vec2 kImageDims = {50, 50};
-            if (ImGui::ImageButton(
-                    reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
-                    ImVec2(kImageDims.x, kImageDims.y), uv0, uv1)) {
-              ImGui::OpenPopup("Select Block");
-              layer_block_edit_idx = block_id_idx;
-            }
-            BlockTypeSelectMenu(
-                "Select Block", block_db_, icon_texture_atlas_,
-                [&layer](BlockType type) { layer.block_types[layer_block_edit_idx] = type; });
-            ImGui::PopID();
-          }
-          ImGui::TableNextRow();
-          ImGui::TableNextColumn();
-          ImGui::Text("Frequency");
-          for (size_t block_id_idx = 0; block_id_idx < layer.block_types.size(); block_id_idx++) {
-            ImGui::TableNextColumn();
-            ImGui::PushID(block_id_idx);
-            ImGui::SliderFloat(
-                "##BlockFrequency", &layer.block_type_frequencies[block_id_idx], 0.0001,
-                layer.block_type_frequencies[block_id_idx] + 1 - block_type_freq_sum);
-            ImGui::PopID();
-          }
-          ImGui::EndTable();
-        }
-        // if (ImGui::BeginTable("Layer Table", 2)) {
-        //   for (BlockType block_id_idx = 0;
-        //        block_id_idx < static_cast<BlockType>(layer.block_types.size()); block_id_idx++) {
-        //     ImGui::PushID(block_id_idx);
-        //     ImGui::TableNextRow();
-        //     ImGui::TableNextColumn();
-        //     ImVec2 uv0, uv1;
-        //     icon_texture_atlas_.ComputeUVs(layer.block_types[block_id_idx], uv0, uv1);
-        //     constexpr glm::vec2 kImageDims = {50, 50};
-        //     if (ImGui::ImageButton(
-        //             reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
-        //             ImVec2(kImageDims.x, kImageDims.y), uv0, uv1)) {
-        //       ImGui::OpenPopup("Select Block");
-        //       layer_block_edit_idx = block_id_idx;
-        //     }
-        //     BlockTypeSelectMenu(
-        //         "Select Block", block_db_, icon_texture_atlas_,
-        //         [&layer](BlockType type) { layer.block_types[layer_block_edit_idx] = type; });
-        //
-        //     ImGui::TableNextColumn();
-        //     ImGui::SliderFloat(
-        //         "Frequency", &layer.block_type_frequencies[block_id_idx], 0.0001,
-        //         layer.block_type_frequencies[block_id_idx] + 1 - block_type_freq_sum);
-        //     ImGui::PopID();
-        //   }
-        //   ImGui::EndTable();
-        // }
-        ImGui::PopID();
+  if (ImGui::CollapsingHeader("Biomes", ImGuiTreeNodeFlags_DefaultOpen)) {
+    static bool show_errors_exist_text = false;
+    if (ImGui::Button("Save")) {
+      if (terrain_.IsValid()) {
+        terrain_.Write(block_db_);
+      } else {
+        show_errors_exist_text = true;
       }
     }
-    ImGui::PopID();
+    ImGui::SameLine();
+    if (ImGui::Button("Reset")) {
+      terrain_.Load(block_db_);
+    }
+    if (show_errors_exist_text) {
+      ImGui::SameLine();
+      ImGui::TextColored(ImVec4(1, 0, 0, 1), "Cannot Save, errors exist.");
+      ImGui::SameLine();
+      if (ImGui::Button("Ok")) {
+        show_errors_exist_text = false;
+      }
+    }
+
+    for (auto& biome : terrain_.biomes) {
+      ImGui::PushID(&biome);
+      if (ImGui::TreeNodeEx(biome.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::TreeNodeEx("Layers", ImGuiTreeNodeFlags_DefaultOpen)) {
+          if (ImGui::Button("Create Layer")) {
+            biome.layers.insert(biome.layers.begin(), BiomeLayer{.block_types = {terrain_.id_stone},
+                                                                 .block_type_frequencies = {1.0f},
+                                                                 .y_count = 1});
+          }
+          for (size_t layer_idx = 0; layer_idx < biome.layers.size(); layer_idx++) {
+            auto& layer = biome.layers[layer_idx];
+            float block_type_freq_sum = std::accumulate(layer.block_type_frequencies.begin(),
+                                                        layer.block_type_frequencies.end(), 0.0);
+            ImGui::PushID(layer_idx);
+            if (abs(1.0 - block_type_freq_sum) > 0.0001) {
+              ImGui::TextColored(ImVec4(1, 0, 0, 1),
+                                 "Block frequencies for layer do not sum to 1.");
+            }
+
+            EASSERT(layer.block_types.size() == layer.block_type_frequencies.size());
+
+            ImGui::Text("Layer %zu", layer_idx);
+            ImGui::SameLine();
+            if (ImGui::Button("Delete")) {
+              biome.layers.erase(biome.layers.begin() + layer_idx);
+            }
+
+            if (layer_idx > 0) {
+              ImGui::SameLine();
+              if (ImGui::ArrowButton("Up", ImGuiDir_Up)) {
+                std::swap(biome.layers[layer_idx], biome.layers[layer_idx - 1]);
+              }
+            }
+            if (layer_idx < biome.layers.size() - 1) {
+              ImGui::SameLine();
+              if (ImGui::ArrowButton("Down", ImGuiDir_Down)) {
+                std::swap(biome.layers[layer_idx], biome.layers[layer_idx + 1]);
+              }
+            }
+
+            if (ImGui::BeginTable("layer options", 2 + (layer.block_types.size() > 1 ? 1 : 0))) {
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              if (ImGui::Button("Add Block")) {
+                ImGui::OpenPopup("Add Block");
+              }
+              BlockTypeSelectMenu(
+                  "Add Block", block_db_, icon_texture_atlas_,
+                  [&layer, &block_type_freq_sum](BlockType type) {
+                    layer.block_types.emplace_back(type);
+                    layer.block_type_frequencies.emplace_back(1.0f - block_type_freq_sum);
+                  });
+              if (layer.block_types.size() > 1) {
+                ImGui::TableNextColumn();
+                if (ImGui::Button("Equalize Frequencies")) {
+                  std::fill(layer.block_type_frequencies.begin(),
+                            layer.block_type_frequencies.end(),
+                            1.0f / layer.block_type_frequencies.size());
+                }
+              }
+              ImGui::TableNextColumn();
+              int y_count = layer.y_count;
+              if (ImGui::SliderInt("Y Count", &y_count, 1, 32)) {
+                layer.y_count = y_count;
+              }
+              ImGui::EndTable();
+            }
+
+            static int layer_block_edit_idx = -1;
+            constexpr const size_t kNumColsBeforeBlockCols = 1;
+            int delete_idx = -1;
+            if (ImGui::BeginTable("Layer Table",
+                                  layer.block_types.size() + kNumColsBeforeBlockCols)) {
+              constexpr const float kFirstColumnWidth = 80.0f;
+              ImGui::TableSetupColumn("Block", ImGuiTableColumnFlags_WidthFixed, kFirstColumnWidth);
+              for (size_t i = 0; i < layer.block_types.size(); i++) {
+                ImGui::TableSetupColumn(nullptr);
+              }
+
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              ImGui::Text("Block");
+              for (size_t block_id_idx = 0; block_id_idx < layer.block_types.size();
+                   block_id_idx++) {
+                ImGui::TableNextColumn();
+                ImGui::PushID(block_id_idx);
+
+                ImVec2 uv0, uv1;
+                icon_texture_atlas_.ComputeUVs(layer.block_types[block_id_idx], uv0, uv1);
+                constexpr glm::vec2 kImageDims = {50, 50};
+                if (ImGui::ImageButton(
+                        reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
+                        ImVec2(kImageDims.x, kImageDims.y), uv0, uv1)) {
+                  ImGui::OpenPopup("Select Block");
+                  layer_block_edit_idx = block_id_idx;
+                }
+                BlockTypeSelectMenu(
+                    "Select Block", block_db_, icon_texture_atlas_,
+                    [&layer](BlockType type) { layer.block_types[layer_block_edit_idx] = type; });
+                ImGui::PopID();
+              }
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              ImGui::Text("Frequency");
+              for (size_t block_id_idx = 0; block_id_idx < layer.block_types.size();
+                   block_id_idx++) {
+                ImGui::TableNextColumn();
+                ImGui::PushID(block_id_idx);
+                ImGui::SliderFloat(
+                    "##BlockFrequency", &layer.block_type_frequencies[block_id_idx], 0.0001,
+                    layer.block_type_frequencies[block_id_idx] + 1 - block_type_freq_sum);
+                ImGui::PopID();
+              }
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              for (size_t block_id_idx = 0; block_id_idx < layer.block_types.size();
+                   block_id_idx++) {
+                ImGui::TableNextColumn();
+                ImGui::PushID(block_id_idx);
+                if (ImGui::Button("Delete")) {
+                  delete_idx = block_id_idx;
+                }
+                ImGui::PopID();
+              }
+              ImGui::EndTable();
+            }
+            if (delete_idx != -1) {
+              layer.block_types.erase(layer.block_types.begin() + delete_idx);
+              layer.block_type_frequencies.erase(layer.block_type_frequencies.begin() + delete_idx);
+            }
+            ImGui::PopID();
+          }
+          ImGui::TreePop();
+        }
+        ImGui::TreePop();
+      }
+      ImGui::PopID();
+    }
   }
-}  // namespace
+}
 
 bool BlockEditorScene::OnEvent(const SDL_Event& event) {
   switch (event.type) {
