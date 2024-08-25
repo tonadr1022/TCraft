@@ -20,7 +20,7 @@ struct Biome {
 
 struct Terrain {
   std::vector<Biome> biomes;
-  std::vector<float> biom_frequencies;
+  std::vector<float> biome_frequencies;
 
   uint32_t stone;
   uint32_t sand;

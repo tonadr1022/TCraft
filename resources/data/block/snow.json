@@ -1,0 +1,9 @@
+{
+  "id": 9,
+  "model": "block/snow",
+  "name": "Snow",
+  "properties": {
+    "emits_light": false,
+    "move_slow_multiplier": 1.0
+  }
+}

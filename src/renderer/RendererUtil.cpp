@@ -152,6 +152,7 @@ extern void RenderAndWriteIcon(const std::string& path, const BlockMeshData& mes
   glNamedFramebufferTexture(fbo, GL_COLOR_ATTACHMENT0, tex, 0);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glViewport(0, 0, dims.x, dims.y);
+  glClearColor(0.0, 0.0, 0.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   ChunkMesher::GenerateBlock(vertices, indices, mesh_data.texture_indices);
   vbo.SubDataStart(sizeof(ChunkVertex) * vertices.size(), vertices.data());

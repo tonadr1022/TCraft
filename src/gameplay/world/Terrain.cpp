@@ -31,7 +31,7 @@ void Terrain::Load(const BlockDB& block_db) {
   auto fill_default_frequencies = [this, &biome_names]() {
     float freq = 1.0f / biome_names.size();
     for (size_t i = 0; i < biome_names.size(); i++) {
-      biom_frequencies.emplace_back(freq);
+      biome_frequencies.emplace_back(freq);
     }
   };
 
@@ -47,13 +47,13 @@ void Terrain::Load(const BlockDB& block_db) {
       fill_default_frequencies();
     } else {
       for (const float freq : biome_freqs) {
-        biom_frequencies.emplace_back(freq);
+        biome_frequencies.emplace_back(freq);
       }
     }
     if (biome_freqs.size() != biome_names.size()) {
       spdlog::error("Terrain load {}: Frequencies length {} is not same as biomes length", path,
                     biome_freqs.size(), biome_names.size());
-      biom_frequencies.clear();
+      biome_frequencies.clear();
       fill_default_frequencies();
     }
   }
@@ -183,8 +183,8 @@ void Terrain::Load(const BlockDB& block_db) {
 
 void Terrain::Write(const BlockDB& block_db) {
   for (const auto& biome : biomes) {
-    std::filesystem::path path = GET_PATH("resources/data/terrain/biomes") /
-                                 std::filesystem::path(biome.name + "_test.json");
+    std::filesystem::path path =
+        GET_PATH("resources/data/terrain/biomes") / std::filesystem::path(biome.name + ".json");
     std::vector<nlohmann::json> layers;
     for (size_t layer_idx = 0; layer_idx < biome.layers.size(); layer_idx++) {
       const auto& layer = biome.layers[layer_idx];
