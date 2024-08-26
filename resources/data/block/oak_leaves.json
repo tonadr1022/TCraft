@@ -1,0 +1,9 @@
+{
+  "id": 11,
+  "model": "block/oak_leaves",
+  "name": "Oak Leaves",
+  "properties": {
+    "emits_light": false,
+    "move_slow_multiplier": 1.0
+  }
+}

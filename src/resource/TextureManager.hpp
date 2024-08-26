@@ -12,7 +12,7 @@ class TextureManager {
   static void Init();
   static void Shutdown();
   static TextureManager& Get();
-  void Remove2dArray(uint32_t handle);
+  void Erase(const std::string& name);
 
   [[nodiscard]] std::shared_ptr<Texture> Load(const Texture2DArrayCreateParams& params);
   [[nodiscard]] std::shared_ptr<Texture> Load(const std::string& name,

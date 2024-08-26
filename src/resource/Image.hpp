@@ -1,6 +1,6 @@
 #pragma once
 
 struct Image {
-  void* pixels;
-  int width, height, channels;
+  uint8_t* pixels{};
+  int width{}, height{}, channels{};
 };

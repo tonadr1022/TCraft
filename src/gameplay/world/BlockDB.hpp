@@ -9,6 +9,7 @@ struct Image;
 struct BlockMeshData {
   // pos x,neg x, pos y, neg y, pos z, neg z
   std::array<uint32_t, 6> texture_indices;
+  std::array<bool, 6> transparent{false};
   std::array<glm::ivec3, 6> avg_colors;
 };
 
@@ -27,6 +28,7 @@ enum class BlockModelType { kAll, kTopBottom, kUnique };
 struct BlockModelDataAll {
   static const BlockModelType kType{BlockModelType::kAll};
   std::string tex_all;
+  bool transparent{false};
 };
 
 struct BlockModelDataTopBot {

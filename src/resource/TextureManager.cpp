@@ -1,7 +1,5 @@
 #include "TextureManager.hpp"
 
-#include <string>
-
 #include "renderer/opengl/Texture2d.hpp"
 
 TextureManager* TextureManager::instance_ = nullptr;
@@ -73,3 +71,5 @@ void TextureManager::RemoveUnusedTextures() {
     texture_map_.erase(name);
   }
 }
+
+void TextureManager::Erase(const std::string& name) { texture_map_.erase(name); }

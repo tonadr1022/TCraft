@@ -1,0 +1,7 @@
+{
+  "textures": {
+    "all": "block/acacia_leaves",
+    "transparent": true
+  },
+  "type": "block/all"
+}

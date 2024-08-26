@@ -203,8 +203,6 @@ void Renderer::DrawQuads() {
   ZoneScoped;
   stats_.textured_quad_draw_calls += static_textured_quad_uniforms_.size();
   if (stats_.textured_quad_draw_calls == 0 && stats_.color_quad_draw_calls == 0) return;
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   // change UBO to ortho
   auto window_dims = window_.GetWindowSize();
@@ -327,8 +325,6 @@ void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
           static_chunk_vbo_.Allocs().size() * sizeof(DrawCmdUniformPosOnly), GL_DYNAMIC_STORAGE_BIT,
           nullptr);
     }
-    // No blending for opaque. TODO: transparent chunks
-    glBlendFunc(GL_ONE, GL_ZERO);
 
     // reset the index counter for cull compute shader
     uint32_t zero{0};
@@ -504,6 +500,13 @@ void Renderer::Render(const RenderInfo& render_info) {
 
   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   if (settings.draw_chunks && chunk_tex_array) {
+    glDisable(GL_BLEND);
+    // glBlendFunc(GL_ONE, GL_ONE);
+    // glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+    // glDepthMask(GL_FALSE);
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // // No blending for opaque. TODO: transparent chunks
+    // glBlendFunc(GL_ONE, GL_ZERO);
     DrawStaticChunks(render_info);
     DrawNonStaticChunks(render_info);
   }
@@ -522,7 +525,11 @@ void Renderer::Render(const RenderInfo& render_info) {
     glDepthFunc(GL_LESS);
   }
 
-  if (settings.draw_quads) DrawQuads();
+  if (settings.draw_quads) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    DrawQuads();
+  }
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, dims.x, dims.y);

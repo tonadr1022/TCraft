@@ -14,6 +14,7 @@ out vec4 o_Color;
 void main() {
     if (u_UseTexture) {
         vec4 tex = texture(u_Texture, fs_in.tex_coords);
+        if (tex.a < 0.5) discard;
         o_Color = vec4(tex.rgb * fs_in.color, tex.a);
     } else {
         o_Color = vec4(fs_in.color, 1);

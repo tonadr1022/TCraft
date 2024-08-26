@@ -31,5 +31,8 @@ class ChunkMesher {
   static void AddQuad(uint8_t face_idx, uint8_t x, uint8_t y, uint8_t z,
                       std::vector<ChunkVertex>& vertices, std::vector<uint32_t>& indices,
                       uint32_t tex_idx);
-  static bool ShouldShowFace(BlockType curr_block, BlockType compare_block);
+  bool ShouldShowFace(BlockType curr_block, BlockType compare_block);
+  bool ShouldShowFace(BlockType curr_block, uint32_t curr_block_face, BlockType compare_block,
+                      uint32_t compare_block_face);
+  static bool ShouldShowFaceLOD(BlockType curr_block, BlockType compare_block);
 };

@@ -6,6 +6,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/vec2.hpp>
+#include <iostream>
 
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
@@ -227,4 +228,16 @@ SquareTextureAtlas LoadIconTextureAtlas(const BlockDB& block_db, const Texture& 
   return res;
 }
 
+bool LoadImageAndCheckHasTransparency(const std::string& path, int required_channels) {
+  Image img;
+  util::LoadImage(img, path, required_channels);
+  if (img.channels != 4) return false;
+  for (int i = 0; i < img.channels * img.width * img.height; i += 4) {
+    if (*(img.pixels + i + 3) != 255) {
+      return true;
+    }
+  }
+  return false;
+  util::FreeImage(img.pixels);
+}
 }  // namespace util::renderer

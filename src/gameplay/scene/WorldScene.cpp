@@ -218,6 +218,11 @@ void WorldScene::OnImGui() {
   ZoneScoped;
 
   chunk_manager_->OnImGui();
+  if (ImGui::Button("Reload Icons")) {
+    util::renderer::RenderAndWriteIcons(block_db_.GetBlockData(), block_db_.GetMeshData(),
+                                        *chunk_tex_array_);
+    icon_texture_atlas_ = util::renderer::LoadIconTextureAtlas(block_db_, *chunk_tex_array_);
+  }
   player_.OnImGui();
   ImGui::Text("time: %f", time_);
   ImGui::SliderInt("Chunk State Y", &chunk_map_display_y_level_, 0, kNumVerticalChunks);

@@ -159,13 +159,6 @@ class Renderer {
   };
   Buffer uniform_ubo_;
 
-  VertexArray static_chunk_vao_;
-  DynamicBuffer<> static_chunk_ebo_;
-  VertexArray chunk_vao_;
-  DynamicBuffer<> chunk_ebo_;
-  VertexArray lod_static_chunk_vao_;
-  DynamicBuffer<> lod_static_chunk_ebo_;
-
   struct AABB {
     glm::vec4 min;
     glm::vec4 max;
@@ -178,9 +171,22 @@ class Renderer {
     uint32_t count;
   };
 
-  DynamicBuffer<> chunk_vbo_;
-
+  VertexArray static_chunk_vao_;
   DynamicBuffer<ChunkDrawInfo> static_chunk_vbo_;
+  DynamicBuffer<> static_chunk_ebo_;
+
+  VertexArray static_transparent_chunk_vao_;
+  DynamicBuffer<ChunkDrawInfo> static_transparent_chunk_vbo_;
+  DynamicBuffer<> static_transparent_chunk_ebo_;
+
+  VertexArray chunk_vao_;
+  DynamicBuffer<> chunk_vbo_;
+  DynamicBuffer<> chunk_ebo_;
+
+  VertexArray lod_static_chunk_vao_;
+  DynamicBuffer<ChunkDrawInfo> lod_static_chunk_vbo_;
+  DynamicBuffer<> lod_static_chunk_ebo_;
+
   Buffer static_chunk_draw_info_buffer_;
   Buffer static_chunk_draw_count_buffer_;
   Buffer static_chunk_uniform_ssbo_;
@@ -189,7 +195,6 @@ class Renderer {
   Buffer chunk_uniform_ssbo_;
   std::unordered_map<uint32_t, MeshAlloc> static_chunk_allocs_;
 
-  DynamicBuffer<ChunkDrawInfo> lod_static_chunk_vbo_;
   Buffer lod_static_chunk_draw_info_buffer_;
   Buffer lod_static_chunk_draw_count_buffer_;
   Buffer lod_static_chunk_uniform_ssbo_;

@@ -19,7 +19,10 @@ void MaterialManager::Shutdown() {
   delete instance_;
 }
 
-void MaterialManager::Erase(const std::string& name) { texture_mat_map_.erase(name); }
+void MaterialManager::Erase(const std::string& name) {
+  texture_mat_map_.erase(name);
+  TextureManager::Get().Erase(name);
+}
 
 std::shared_ptr<TextureMaterial> MaterialManager::LoadTextureMaterial(
     const std::string& name, const Texture2DCreateParamsEmpty& params) {

@@ -195,9 +195,54 @@ uint8_t PosInChunkMeshToChunkNeighborOffset(int x, int y, int z) {
 }
 }  // namespace
 
-bool ChunkMesher::ShouldShowFace(BlockType curr_block, BlockType compare_block) {
+bool ChunkMesher::ShouldShowFaceLOD(BlockType curr_block, BlockType compare_block) {
   // TODO: transparency
   bool trans = curr_block == 0, trans_neighbour = compare_block == 0;
+  if (curr_block == 0) return false;
+  if (!trans && !trans_neighbour) return false;
+  if (trans && trans_neighbour && curr_block != compare_block) return true;
+  return !(trans && compare_block);
+}
+
+bool ChunkMesher::ShouldShowFace(BlockType curr_block, uint32_t curr_block_face,
+                                 BlockType compare_block, uint32_t compare_block_face) {
+  bool res;
+  int done = 0;
+  if (curr_block == 0) {
+    res = false;
+    done = 1;
+  }
+  bool trans = curr_block == 0 || db_mesh_data[curr_block].transparent[curr_block_face],
+       trans_neighbour =
+           compare_block == 0 || db_mesh_data[compare_block].transparent[compare_block_face];
+  if (!trans && !trans_neighbour && done == 0) {
+    res = false;
+    done = 2;
+  }
+  if (done == 0) {
+    res = !trans || trans_neighbour;
+    done = 3;
+  }
+  if (((trans && curr_block) || (compare_block && trans_neighbour)) &&
+      curr_block == compare_block) {
+    spdlog::info("{} {} {} {}", db_block_data[curr_block].name, db_block_data[compare_block].name,
+                 res, done);
+  }
+  return res;
+}
+
+// bool ChunkMesher::ShouldShowFace(BlockType curr_block, uint32_t curr_block_face,
+//                                  BlockType compare_block, uint32_t compare_block_face) {
+//   if (curr_block == 0) return false;
+//   bool trans = curr_block == 0 || db_mesh_data[curr_block].transparent[curr_block_face],
+//        trans_neighbour =
+//            compare_block == 0 || db_mesh_data[compare_block].transparent[compare_block_face];
+//   if (!trans && !trans_neighbour) return false;
+//   return !trans || trans_neighbour;
+// }
+bool ChunkMesher::ShouldShowFace(BlockType curr_block, BlockType compare_block) {
+  bool trans = curr_block == 0 || db_mesh_data[curr_block].transparent[0],
+       trans_neighbour = compare_block == 0;
   if (curr_block == 0) return false;
   if (!trans && !trans_neighbour) return false;
   if (trans && trans_neighbour && curr_block != compare_block) return true;
@@ -307,7 +352,7 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
 
   std::unordered_map<uint32_t, std::array<FaceInfo, 6>> face_info_map;
   BlockType neighbors[27];
-  auto get_face_info = [&face_info_map, &get_block, mesh_chunk_blocks, &neighbors](
+  auto get_face_info = [&face_info_map, &get_block, mesh_chunk_blocks, &neighbors, this](
                            int x, int y, int z, uint32_t face) -> FaceInfo& {
     uint32_t idx = chunk::GetIndex(x, y, z);
     auto it = face_info_map.find(idx);
@@ -325,7 +370,7 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
       nei[face >> 1] += 1 - ((face & 1) << 1);
       BlockType block_neighbor = get_block(nei[0], nei[1], nei[2]);
 
-      if (!ShouldShowFace(block, block_neighbor)) continue;
+      if (!ShouldShowFace(block, face, block_neighbor, face ^ 1)) continue;
 
       if (!neighbors_initialized) {
         neighbors_initialized = true;
@@ -366,11 +411,11 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks,
                   ? get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2])
                   : mesh_chunk_blocks[chunk::GetIndex(x[0] + q[0], x[1] + q[1], x[2] + q[2])];
 
-          if (!block1_oob && ShouldShowFace(block1, block2)) {
+          if (!block1_oob && ShouldShowFace(block1, axis << 1, block2, (axis << 1) ^ 1)) {
             block_mask[counter] = block1;
             info_mask[counter] = &get_face_info(x[0], x[1], x[2], axis << 1);
 
-          } else if (!block2_oob && ShouldShowFace(block2, block1)) {
+          } else if (!block2_oob && ShouldShowFace(block2, (axis << 1) ^ 1, block1, axis << 1)) {
             block_mask[counter] = -block2;
             info_mask[counter] =
                 &get_face_info(x[0] + q[0], x[1] + q[1], x[2] + q[2], axis << 1 | 1);
@@ -576,9 +621,9 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
           const BlockType block2 =
               block2_oob ? 0 : get_block(x[0] + q[0], x[1] + q[1], x[2] + q[2]);
 
-          if (!block1_oob && ShouldShowFace(block1, block2)) {
+          if (!block1_oob && ShouldShowFaceLOD(block1, block2)) {
             block_mask[counter] = block1;
-          } else if (!block2_oob && ShouldShowFace(block2, block1)) {
+          } else if (!block2_oob && ShouldShowFaceLOD(block2, block1)) {
             block_mask[counter] = -block2;
           } else {
             block_mask[counter] = 0;
