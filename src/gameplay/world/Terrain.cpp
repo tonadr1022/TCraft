@@ -201,6 +201,12 @@ bool Terrain::IsValid() const {
   return true;
 }
 void Terrain::Write(const BlockDB& block_db) {
+  std::vector<std::string> biome_names;
+  biome_names.reserve(biomes.size());
+  for (const auto& biome : biomes) {
+    biome_names.emplace_back(biome.name);
+  }
+  nlohmann::json terrain_json = {{"biomes", biome_names}, {"frequencies", biome_frequencies}};
   for (const auto& biome : biomes) {
     std::filesystem::path path =
         GET_PATH("resources/data/terrain/biomes") / std::filesystem::path(biome.name + ".json");

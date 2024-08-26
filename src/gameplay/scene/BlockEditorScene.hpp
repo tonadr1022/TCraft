@@ -47,6 +47,7 @@ class BlockEditorScene : public Scene {
   void ResetAddModelData();
   void SetAddBlockModelData();
   void ImGuiTerrainEdit();
+  void ReloadIcons();
   bool first_edit_{true};
   bool add_model_editor_open_{false};
 

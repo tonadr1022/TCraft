@@ -1,0 +1,7 @@
+{
+  "textures": {
+    "all": "block/clay",
+    "transparency_type": 0
+  },
+  "type": "block/all"
+}

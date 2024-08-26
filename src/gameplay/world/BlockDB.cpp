@@ -85,6 +85,8 @@ void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_t
 void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_to_idx) {
   mesh_data_initialized_ = true;
   // reserve 0 index for air
+  block_mesh_data_.clear();
+  block_mesh_data_.reserve(block_model_names_.size());
   block_mesh_data_.emplace_back(default_mesh_data_);
 
   // load block mesh data array
@@ -143,21 +145,25 @@ BlockDB::BlockDB() {
 
   {
     ZoneScopedN("Load block model data");
-    auto default_model_data = LoadBlockModelData("block/default");
+    // cannot fail
+    default_model_data_ = LoadBlockModelData("block/default").value();
     EASSERT_MSG(default_model_data.has_value(), "Default mesh data failed to load");
 
     // Load each block model file (skip air)
-    for (uint32_t i = 1; i < block_model_names_.size(); i++) {
-      const auto& model_name = block_model_names_[i];
-      auto block_model_data = LoadBlockModelData(model_name);
-      if (block_model_data.has_value()) {
-        model_name_to_model_data_.emplace(model_name, block_model_data.value());
-      } else {
-        model_name_to_model_data_.emplace(model_name, default_model_data.value());
-      }
+    for (size_t i = 1; i < block_model_names_.size(); i++) {
+      AddBlockModel(block_model_names_[i]);
     }
   }
 };
+
+void BlockDB::AddBlockModel(const std::string& model_name) {
+  auto block_model_data = LoadBlockModelData(model_name);
+  if (block_model_data.has_value()) {
+    model_name_to_model_data_.emplace(model_name, block_model_data.value());
+  } else {
+    model_name_to_model_data_.emplace(model_name, default_model_data_);
+  }
+}
 
 void BlockDB::LoadBlockData() {
   ZoneScoped;

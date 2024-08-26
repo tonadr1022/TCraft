@@ -2,7 +2,18 @@
   "formatted_name": "plains",
   "layers": [
     {
-      "name": "diamond_ore",
+      "frequencies": [
+        0.8539999723434448,
+        0.1459999978542328
+      ],
+      "names": [
+        "clay",
+        "diamond_ore"
+      ],
+      "y_count": 5
+    },
+    {
+      "name": "sand",
       "y_count": 5
     }
   ],

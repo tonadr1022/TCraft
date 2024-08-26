@@ -11,7 +11,13 @@ first real attempts at writing C++ and OpenGL and hence a learning experience
 from other iterations online. This time, though, I actually know the language
 and graphics programming (not really, both are a lifelong journey)
 
+![Building](screenshots/building.png)
+
 ## Demos
+
+[Demo Playlist](https://www.youtube.com/playlist?list=PLHcOWdaLwRvwq5tjGYTkSlascX6TRfaxz)
+
+[Demo 2](https://youtu.be/LivS4SBp9Ww)
 
 [Demo 1](https://youtu.be/nuAlO2GmP_g)
 
@@ -62,11 +68,13 @@ Pipeline Steps:
 2. Bind the aforementioned buffers and uniforms including view frustum and clear
    and bind the draw count parameter buffer that's atomically incremented during
    compute execution.
-3. Dispatch the compute and place a barrier for shader storage buffer
+3. Dispatch the frustum cull compute shader and place a barrier for shader storage buffer
 4. Bind state for draw command: uniform ssbo, draw commands, draw count
    parameter, vertex array.
 5. Draw thousands of chunks with 1 command:
    [glMultiDrawElementsIndirectCount](https://registry.khronos.org/OpenGL/extensions/ARB/ARB_indirect_parameters.txt)
+
+![GPU Frustum Culling](screenshots/frustum_culling.png)
 
 #### Bindless Textures
 
@@ -86,23 +94,28 @@ is their lack of support on older GPU's, and their inherent lack of safety.
 
 ### Data Driven Block/Terrain Editor
 
-Rather than hardcode blocks into an enum that needs to be recompiled everytime a
-new block is added, I use JSON to store block data and models. In combination
-with a crude editor using ImGui, blocks can be arbitrarily added and edited
-without recompilation. In a similar vein, terrain and biomes can be customized
-using JSON (no editor yet, and ideally more customization coming)
+Rather than hardcode blocks into an enum that needs to be recompiled every time a
+new block is added, I use JSON to store block, model, and terrain data. Blocks and terrain can be arbitrarily added and edited
+without recompilation using an in-game editor.
+
+![Block Editor](screenshots/block_editor.png)
+![Terrain Editor](screenshots/terrain_editor.png)
 
 ### Multi-threading
 
 Rather than implementing my own thread pool (which I'll learn eventually in
-Operating Systems class), I used a thread pool library to send chunk meshing and
+Operating Systems class), I use a [BS Thread Pool](https://github.com/bshoshany/thread-pool) to send chunk meshing and
 terrain generation tasks to. This massively improves frame-to-frame performance,
-since the most CPU heavy tasks are offloaded from the rendering/gameplay thread.
+since the most CPU heavy tasks are offloaded from the rendering/gameplay thread. I use [Tracy](https://github.com/wolfpld/tracy) profile.
+
+![Tracy Profiler Capture](screenshots/tracy_profiler.png)
 
 ### Other Features
 
 - Block editor to change and add block models and blocks
+- Terrain editor to modify biome and terrain content
 - World creation
+- Block icon generation and use in inventory and editor UIs
 - Block breaking and placing
 - Baked ambient occlusion
 - Efficient greedy meshing
@@ -110,9 +123,8 @@ since the most CPU heavy tasks are offloaded from the rendering/gameplay thread.
 
 ## TODO
 
-- Sky
+- Better Sky
 - Water and transparency
-- Better block/terrain editor GUI and experience
 - Multithread texture/data loading
 - Chunk serialization
 - Better shading and lighting (per-block lighting vs forward+ vs deferred?)

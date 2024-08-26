@@ -78,6 +78,7 @@ class BlockDB {
  private:
   // only the editor has full access to adding and changing data at runtime
   friend class BlockEditorScene;
+  void AddBlockModel(const std::string& model_name);
   bool mesh_data_initialized_{false};
 
   std::vector<BlockData> block_data_arr_;
@@ -87,6 +88,7 @@ class BlockDB {
   static std::optional<BlockModelData> LoadBlockModelDataFromPath(const std::string& path);
   static std::optional<BlockModelData> LoadBlockModelDataFromName(const std::string& model_name);
   std::optional<BlockModelData> LoadBlockModelData(const std::string& model_name);
+  BlockModelData default_model_data_;
 
   struct BlockDataDefaults {
     uint32_t id;

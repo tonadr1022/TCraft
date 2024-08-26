@@ -6,6 +6,7 @@
 #include <csignal>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <iostream>
 #include <numeric>
 
 #include "application/SceneManager.hpp"
@@ -61,6 +62,11 @@ void EditBlockImGui(BlockData& data, std::string& curr_model_name,
 }  // namespace detail
 
 void BlockEditorScene::SetAddBlockModelData() {
+  spdlog::info("{} ", state_->add_block_model_name);
+  for (const auto& i : add_block_block_.mesh_data.texture_indices) {
+    std::cout << i << ' ';
+  }
+  spdlog::info("");
   SetModelTexIndices(add_block_block_.mesh_data.texture_indices,
                      "block/" + state_->add_block_model_name);
   std::vector<ChunkVertex> vertices;
@@ -148,7 +154,8 @@ void BlockEditorScene::Reload() {
   SetAddBlockModelData();
 
   terrain_.Load(block_db_);
-  icon_texture_atlas_ = util::renderer::LoadIconTextureAtlas(block_db_, *chunk_tex_array_);
+  icon_texture_atlas_ =
+      util::renderer::LoadIconTextureAtlas("block_editor_icons", block_db_, *chunk_tex_array_);
 }
 
 void BlockEditorScene::SetModelTexIndices(std::array<uint32_t, 6>& indices,
@@ -404,16 +411,19 @@ void BlockEditorScene::OnImGui() {
       if (ImGui::Button("Save")) {
         std::string path =
             GET_PATH("resources/data/model/block/" + state_->add_model_name + ".json");
+        int add_idx;
         if (add_model_type_ == BlockModelType::kAll) {
           BlockDB::WriteBlockModelTypeAll(add_model_data_all_, path);
+          add_idx = 0;
         } else if (add_model_type_ == BlockModelType::kTopBottom) {
           BlockDB::WriteBlockModelTypeTopBot(add_model_data_top_bot_, path);
+          add_idx = 1;
         } else {
           BlockDB::WriteBlockModelTypeUnique(add_model_data_unique_, path);
+          add_idx = 2;
         }
-        block_db_.block_model_names_.emplace_back("block/" + state_->add_model_name);
-        // TODO: not this!
         all_block_model_names_ = BlockDB::GetAllBlockModelNames();
+        ReloadIcons();
       }
       ImGui::EndDisabled();
 
@@ -428,12 +438,12 @@ void BlockEditorScene::OnImGui() {
     if (all_block_model_names_.size() > 0) {
       if (ImGui::BeginTabItem("Edit Model")) {
         ZoneScopedN("Edit Model tab");
+        static std::string edit_model_name = all_block_model_names_[0];
         if (edit_mode_ != EditMode::kEditModel) {
           player_.LookAt({0.5, 0.5, 0.5});
+          state_->model_data = BlockDB::LoadBlockModelDataFromName("block/" + edit_model_name);
         }
         edit_mode_ = EditMode::kEditModel;
-        static std::string edit_model_name = all_block_model_names_[0];
-        state_->model_data = BlockDB::LoadBlockModelDataFromName("block/" + edit_model_name);
 
         auto set_data = [this](std::optional<BlockModelData>& model_data) {
           if (BlockModelDataAll* data = std::get_if<BlockModelDataAll>(&model_data.value())) {
@@ -531,6 +541,7 @@ void BlockEditorScene::OnImGui() {
           } else {
             BlockDB::WriteBlockModelTypeUnique(edit_model_data_unique_, path);
           }
+          ReloadIcons();
         }
         ImGui::EndTabItem();
       }
@@ -574,7 +585,10 @@ void BlockEditorScene::OnImGui() {
         block_db_.WriteBlockData(block_data_arr[edit_block_idx_],
                                  block_data_model_names[edit_block_idx_]);
         original_edit_block_data_ = block_data_arr[edit_block_idx_];
-        original_edit_block_model_name_ = block_data_model_names[edit_block_idx_];
+        if (original_edit_block_model_name_ != block_data_model_names[edit_block_idx_]) {
+          ReloadIcons();
+          original_edit_block_model_name_ = block_data_model_names[edit_block_idx_];
+        }
       }
       ImGui::EndDisabled();
       ImGui::EndTabItem();
@@ -601,10 +615,12 @@ void BlockEditorScene::OnImGui() {
         // add to the block db
         block_db_.block_data_arr_.emplace_back(state_->add_block_data);
         block_db_.block_model_names_.emplace_back(model_name);
+        block_db_.AddBlockModel(model_name);
         block_db_.block_name_to_id_.emplace(state_->add_block_data.name, state_->add_block_data.id);
         // reset state
         state_->add_block_data = {};
         state_->add_block_model_name = "default";
+        ReloadIcons();
       }
       ImGui::EndDisabled();
 
@@ -634,24 +650,34 @@ void BlockTypeSelectMenu(const std::string& name, BlockDB& block_db_,
                          const SquareTextureAtlas& icon_texture_atlas_,
                          const std::function<void(BlockType)>& on_select) {
   if (ImGui::BeginPopup(name.c_str())) {
-    for (size_t block_id = 1; block_id < block_db_.GetBlockData().size(); block_id++) {
-      ImGui::PushID(block_id);
-      ImVec2 uv0, uv1;
-      icon_texture_atlas_.ComputeUVs(block_id, uv0, uv1);
-      constexpr glm::vec2 kImageDims{40, 40};
-      int per_row = 5;
-      if (block_id % per_row != 0 && block_id < block_db_.GetBlockData().size() - 1) {
-        ImGui::SameLine();
+    if (ImGui::BeginTable("Block Type Select", 10)) {
+      int num_rows = block_db_.GetBlockData().size() / 10 + 1;
+      int block_id = 1;
+      bool done = false;
+      for (int row = 0; row < block_db_.GetBlockData().size(); row++) {
+        if (done) break;
+        ImGui::TableNextRow();
+        for (int col = 0; col < 10; col++, block_id++) {
+          if (block_id >= block_db_.GetBlockData().size()) {
+            done = true;
+            break;
+          }
+          ImGui::TableNextColumn();
+          ImVec2 uv0, uv1;
+          icon_texture_atlas_.ComputeUVs(block_id, uv0, uv1);
+          constexpr glm::vec2 kImageDims{40, 40};
+          ImGui::PushID(block_id);
+          if (ImGui::ImageButton(
+                  reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
+                  ImVec2(kImageDims.x, kImageDims.y), uv0, uv1)) {
+            on_select(block_id);
+            ImGui::CloseCurrentPopup();
+          }
+          ImGui::PopID();
+        }
       }
-      if (ImGui::ImageButton(
-              reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
-              ImVec2(kImageDims.x, kImageDims.y), uv0, uv1)) {
-        on_select(block_id);
-        ImGui::CloseCurrentPopup();
-      }
-      ImGui::PopID();
+      ImGui::EndTable();
     }
-
     if (ImGui::Button("Close")) {
       ImGui::CloseCurrentPopup();
     }
@@ -858,4 +884,13 @@ bool BlockEditorScene::OnEvent(const SDL_Event& event) {
 void BlockEditorScene::Update(double dt) {
   player_.Update(dt);
   block_rot_ += dt;
+}
+void BlockEditorScene::ReloadIcons() {
+  block_db_.LoadMeshData(tex_name_to_idx_);
+  util::renderer::RenderAndWriteIcons(block_db_.GetBlockData(), block_db_.GetMeshData(),
+                                      *chunk_tex_array_, false);
+  TextureManager::Get().Erase("block_editor_icons");
+  MaterialManager::Get().Erase("block_editor_icons");
+  icon_texture_atlas_ =
+      util::renderer::LoadIconTextureAtlas("block_editor_icons", block_db_, *chunk_tex_array_);
 }

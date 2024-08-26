@@ -113,7 +113,8 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& directory
 
   chunk_manager_->Init(player_.Position());
 
-  icon_texture_atlas_ = util::renderer::LoadIconTextureAtlas(block_db_, *chunk_tex_array_);
+  icon_texture_atlas_ =
+      util::renderer::LoadIconTextureAtlas("world_scene_icons", block_db_, *chunk_tex_array_);
 
   player_.held_item_id = block_db_.GetBlockData("stone")->id;
 }
@@ -221,8 +222,10 @@ void WorldScene::OnImGui() {
   chunk_manager_->OnImGui();
   if (ImGui::Button("Reload Icons")) {
     util::renderer::RenderAndWriteIcons(block_db_.GetBlockData(), block_db_.GetMeshData(),
-                                        *chunk_tex_array_);
-    icon_texture_atlas_ = util::renderer::LoadIconTextureAtlas(block_db_, *chunk_tex_array_);
+                                        *chunk_tex_array_, false);
+    TextureManager::Get().Erase("world_scene_icons");
+    icon_texture_atlas_ =
+        util::renderer::LoadIconTextureAtlas("world_scene_icons", block_db_, *chunk_tex_array_);
   }
   player_.OnImGui();
   ImGui::Text("time: %f", time_);

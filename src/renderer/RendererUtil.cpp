@@ -25,7 +25,8 @@ namespace util::renderer {
 
 // TODO: separate block data struct and block mesh data struct to own file
 void RenderAndWriteIcons(const std::vector<BlockData>& data,
-                         const std::vector<BlockMeshData>& mesh_data, const Texture& tex_arr) {
+                         const std::vector<BlockMeshData>& mesh_data, const Texture& tex_arr,
+                         bool rewrite) {
   Buffer vbo;
   Buffer ebo;
   vbo.Init(sizeof(ChunkVertex) * 24, GL_DYNAMIC_STORAGE_BIT);
@@ -70,6 +71,11 @@ void RenderAndWriteIcons(const std::vector<BlockData>& data,
   glViewport(0, 0, dims.x, dims.y);
   for (size_t j = 1; j < data.size(); j++) {
     const auto& d = data[j];
+    std::filesystem::path out_path =
+        std::filesystem::path(GET_PATH("resources/icons")) / (d.name + ".png");
+    if (!rewrite && std::filesystem::exists(out_path)) {
+      continue;
+    }
     // make tex
     glCreateTextures(GL_TEXTURE_2D, 1, &tex);
     glTextureStorage2D(tex, 1, GL_RGBA8, dims.x, dims.y);
@@ -85,8 +91,6 @@ void RenderAndWriteIcons(const std::vector<BlockData>& data,
     vbo.SubDataStart(sizeof(ChunkVertex) * vertices.size(), vertices.data());
     ebo.SubDataStart(sizeof(uint32_t) * indices.size(), indices.data());
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
-    std::filesystem::path out_path =
-        std::filesystem::path(GET_PATH("resources/icons")) / (d.name + ".png");
     // std::string out_path = GET_PATH("resources/icons/") + d.name + ".png";
     util::WriteImage(tex, 4, out_path);
 
@@ -156,6 +160,11 @@ extern void RenderAndWriteIcon(const std::string& path, const BlockMeshData& mes
   glClearColor(0.0, 0.0, 0.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   ChunkMesher::GenerateBlock(vertices, indices, mesh_data.texture_indices);
+  std::cout << "generating block\n";
+  for (int i = 0; i < 6; i++) {
+    std::cout << mesh_data.texture_indices[i] << ' ';
+  }
+  std::cout << '\n';
   vbo.SubDataStart(sizeof(ChunkVertex) * vertices.size(), vertices.data());
   ebo.SubDataStart(sizeof(uint32_t) * indices.size(), indices.data());
   glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
@@ -182,9 +191,9 @@ void LoadIcons(std::vector<Image>& images) {
   }
 }
 
-SquareTextureAtlas LoadIconTextureAtlas(const BlockDB& block_db, const Texture& tex_arr) {
+SquareTextureAtlas LoadIconTextureAtlas(const std::string& tex_name, const BlockDB& block_db,
+                                        const Texture& tex_arr) {
   SquareTextureAtlas res;
-
   // Load icons into atlas for ImGui
   std::vector<std::pair<uint32_t, Image>> images;
   for (const auto& data : block_db.GetBlockData()) {
@@ -193,6 +202,7 @@ SquareTextureAtlas LoadIconTextureAtlas(const BlockDB& block_db, const Texture& 
     std::filesystem::path path =
         GET_PATH("resources/icons") / std::filesystem::path(data.name + ".png");
     if (!std::filesystem::exists(path)) {
+      spdlog::info("{} rendering and writing", path.string());
       util::renderer::RenderAndWriteIcon(path, block_db.GetMeshData()[data.id], tex_arr);
     }
     util::LoadImage(img, path.string(), 0);
@@ -205,8 +215,9 @@ SquareTextureAtlas LoadIconTextureAtlas(const BlockDB& block_db, const Texture& 
   res.image_dims.x = images.front().second.width;
   res.image_dims.y = images.front().second.height;
 
+  MaterialManager::Get().Erase(tex_name);
   res.material = MaterialManager::Get().LoadTextureMaterial(
-      "icons",
+      tex_name,
       Texture2DCreateParamsEmpty{static_cast<uint32_t>(res.dims.x),
                                  static_cast<uint32_t>(res.dims.y), GL_LINEAR, GL_LINEAR, true});
   size_t i = 0;
@@ -215,7 +226,6 @@ SquareTextureAtlas LoadIconTextureAtlas(const BlockDB& block_db, const Texture& 
       if (i >= images.size()) break;
       uint32_t x_offset = row * res.image_dims.x;
       uint32_t y_offset = col * res.image_dims.y;
-      // spdlog::info("{}", block_db_.GetBlockData()[images[i].first].name);
       glTextureSubImage2D(res.material->GetTexture().Id(), 0, x_offset, y_offset, res.image_dims.x,
                           res.image_dims.y, GL_RGBA, GL_UNSIGNED_BYTE, images[i].second.pixels);
       res.id_to_offset_map.emplace(images[i].first, glm::vec2{x_offset, y_offset});
