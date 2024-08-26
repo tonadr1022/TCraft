@@ -516,7 +516,7 @@ void Renderer::DrawLine(const glm::mat4& model, const glm::vec3& color, uint32_t
                         bool ignore_depth) {
   auto& uniforms_ids =
       ignore_depth ? lines_no_depth_frame_uniforms_mesh_ids_ : lines_frame_uniforms_mesh_ids_;
-  uniforms_ids.first.emplace_back(model, color);
+  uniforms_ids.first.emplace_back(UniformsModelColor{model, color});
   uniforms_ids.second.emplace_back(mesh_handle);
 }
 
@@ -612,32 +612,32 @@ void Renderer::SetSkyboxShaderFunc(const std::function<void()>& func) { draw_sky
 void Renderer::SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_handle) {
   ZoneScoped;
   chunk_frame_uniforms_mesh_ids_.second.emplace_back(mesh_handle);
-  chunk_frame_uniforms_mesh_ids_.first.emplace_back(model);
+  chunk_frame_uniforms_mesh_ids_.first.emplace_back(DrawCmdUniformModelOnly{model});
 }
 
 void Renderer::SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_handle,
                                         uint32_t material_handle) {
   ZoneScoped;
-  reg_mesh_frame_uniforms_mesh_ids_.first.emplace_back(model, material_allocs_[material_handle]);
+  reg_mesh_frame_uniforms_mesh_ids_.first.emplace_back(UniformsModelMaterial{model, material_allocs_[material_handle]});
   reg_mesh_frame_uniforms_mesh_ids_.second.emplace_back(mesh_handle);
 }
 
 void Renderer::DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size) {
   // TODO: handle gracefully no material handle
-  quad_textured_uniforms_.emplace_back(CenterSizeToModel(center, size),
-                                       material_allocs_.at(material_handle));
+  quad_textured_uniforms_.emplace_back(UniformsModelMaterial{CenterSizeToModel(center, size),
+                                       material_allocs_.at(material_handle)});
   stats_.textured_quad_draw_calls++;
 }
 
 void Renderer::DrawQuad(const glm::vec3& color, const glm::vec2& center, const glm::vec2& size) {
-  quad_color_uniforms_.emplace_back(CenterSizeToModel(center, size), color);
+  quad_color_uniforms_.emplace_back(UniformsModelColor{CenterSizeToModel(center, size), color});
   stats_.color_quad_draw_calls++;
 }
 
 void Renderer::AddStaticQuad(uint32_t material_handle, const glm::vec2& center,
                              const glm::vec2& size) {
-  static_textured_quad_uniforms_.emplace_back(CenterSizeToModel(center, size),
-                                              material_allocs_.at(material_handle));
+  static_textured_quad_uniforms_.emplace_back(UniformsModelMaterial{CenterSizeToModel(center, size),
+                                              material_allocs_.at(material_handle)});
 }
 
 uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,

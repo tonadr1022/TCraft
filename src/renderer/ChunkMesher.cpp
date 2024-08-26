@@ -163,11 +163,11 @@ void ChunkMesher::AddQuad(uint8_t face_idx, uint8_t x, uint8_t y, uint8_t z,
   for (uint8_t vertex_idx = 0, lookup_offset = 0; vertex_idx < 4;
        vertex_idx++, lookup_offset += 5) {
     int combined_offset = face_idx * 20 + lookup_offset;
-    vertices.emplace_back(
+    vertices.emplace_back(ChunkVertex{
         GetVertexData1(x + kVertexLookup[combined_offset], y + kVertexLookup[combined_offset + 1],
                        z + kVertexLookup[combined_offset + 2], kVertexLookup[combined_offset + 3],
                        kVertexLookup[combined_offset + 4], 0),
-        GetVertexData2(tex_idx));
+        GetVertexData2(tex_idx)});
   }
 
   indices.push_back(base_vertex_idx);
@@ -681,15 +681,15 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
             int v11v = du[v];
 
             int base_vertex_idx = vertices.size();
-            vertices.emplace_back(GetLODVertexData1(vx, vy, vz),
-                                  GetLODVertexData2(v00u, v00v, tex_idx));
-            vertices.emplace_back(GetLODVertexData1(vx + du[0], vy + du[1], vz + du[2]),
-                                  GetLODVertexData2(v01u, v01v, tex_idx));
             vertices.emplace_back(
+                ChunkVertex{GetLODVertexData1(vx, vy, vz), GetLODVertexData2(v00u, v00v, tex_idx)});
+            vertices.emplace_back(ChunkVertex{GetLODVertexData1(vx + du[0], vy + du[1], vz + du[2]),
+                                              GetLODVertexData2(v01u, v01v, tex_idx)});
+            vertices.emplace_back(ChunkVertex{
                 GetLODVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1], vz + du[2] + dv[2]),
-                GetLODVertexData2(v10u, v10v, tex_idx));
-            vertices.emplace_back(GetLODVertexData1(vx + dv[0], vy + dv[1], vz + dv[2]),
-                                  GetLODVertexData2(v11u, v11v, tex_idx));
+                GetLODVertexData2(v10u, v10v, tex_idx)});
+            vertices.emplace_back(ChunkVertex{GetLODVertexData1(vx + dv[0], vy + dv[1], vz + dv[2]),
+                                              GetLODVertexData2(v11u, v11v, tex_idx)});
 
             indices.push_back(base_vertex_idx + 1);
             indices.push_back(base_vertex_idx + 2);

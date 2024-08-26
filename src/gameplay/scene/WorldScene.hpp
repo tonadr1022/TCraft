@@ -26,7 +26,6 @@ class WorldScene : public Scene {
   std::unique_ptr<ChunkManager> chunk_manager_;
   GamePlayer player_;
   bool loaded_{false};
-  bool render_chunks_{false};
   uint32_t seed_{0};
   std::string directory_path_;
 
