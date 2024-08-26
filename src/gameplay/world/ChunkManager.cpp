@@ -233,13 +233,19 @@ void ChunkManager::Update(double /*dt*/) {
       if (timer.ElapsedMS() > 5) break;
       auto& task = chunk_mesh_finished_queue_.front();
       chunk_map_.find_fn(task.pos, [this, &task](const std::shared_ptr<Chunk>& chunk) {
-        FreeChunkMesh(chunk->mesh_handle);
+        FreeChunkMesh(chunk->mesh);
         lod_chunk_handle_map_.find_fn(glm::ivec2{task.pos.x, task.pos.z},
-                                      [this](uint32_t& handle) { FreeChunkMesh(handle); });
+                                      [this](uint32_t& handle) { FreeOpaqueChunkMesh(handle); });
 
-        if (!task.vertices.empty()) {
-          chunk->mesh_handle = Renderer::Get().AllocateStaticChunk(
-              task.vertices, task.indices, task.pos * kChunkLength, LODLevel::kRegular);
+        if (!task.verts_indices.opaque_indices.empty()) {
+          chunk->mesh.opaque_mesh_handle = Renderer::Get().AllocateStaticChunk(
+              task.verts_indices.opaque_vertices, task.verts_indices.opaque_indices,
+              task.pos * kChunkLength, LODLevel::kRegular);
+        }
+        if (!task.verts_indices.transparent_indices.empty()) {
+          chunk->mesh.transparent_mesh_handle = Renderer::Get().AllocateStaticChunkTransparent(
+              task.verts_indices.transparent_vertices, task.verts_indices.transparent_indices,
+              task.pos);
         }
         // TODO: get rid of lod level here since it's in a diff queue now
         chunk->lod_level = LODLevel::kRegular;
@@ -252,7 +258,7 @@ void ChunkManager::Update(double /*dt*/) {
     while (!lod_chunk_mesh_finished_queue_.empty()) {
       auto& task = lod_chunk_mesh_finished_queue_.front();
       if (!lod_chunk_handle_map_.find_fn(task.pos, [this, &task](uint32_t& handle) {
-            FreeChunkMesh(handle);
+            FreeOpaqueChunkMesh(handle);
             handle = Renderer::Get().AllocateStaticChunk(
                 task.vertices, task.indices,
                 glm::ivec3{task.pos.x * kChunkLength, 0, task.pos.y * kChunkLength},
@@ -267,7 +273,7 @@ void ChunkManager::Update(double /*dt*/) {
       glm::ivec3 p{task.pos.x, 0, task.pos.y};
       for (p.y = 0; p.y < kNumVerticalChunks; p.y++) {
         chunk_map_.find_fn(p, [this](const std::shared_ptr<Chunk>& chunk) {
-          FreeChunkMesh(chunk->mesh_handle);
+          FreeChunkMesh(chunk->mesh);
           chunk->mesh_state = Chunk::State::kFinished;
           chunk->lod_level = LODLevel::kOne;
         });
@@ -286,18 +292,20 @@ void ChunkManager::Update(double /*dt*/) {
       ChunkNeighborArray a;
       PopulateChunkNeighbors(a, pos, false);
       ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
-      std::vector<ChunkVertex> vertices;
-      std::vector<uint32_t> indices;
-      if (mesh_greedy_) {
-        mesher.GenerateGreedy(a, vertices, indices);
-      } else {
-        mesher.GenerateSmart(a, vertices, indices);
-      }
+      MeshVerticesIndices verts_indices;
+      mesher.GenerateGreedy(a, verts_indices);
 
-      FreeChunkMesh(chunk->mesh_handle);
-      chunk->mesh_handle = Renderer::Get().AllocateStaticChunk(
-          vertices, indices, pos * kChunkLength, LODLevel::kRegular);
-      state_stats_.meshed_chunks++;
+      FreeChunkMesh(chunk->mesh);
+      if (!verts_indices.opaque_vertices.empty()) {
+        chunk->mesh.opaque_mesh_handle = Renderer::Get().AllocateStaticChunk(
+            verts_indices.opaque_vertices, verts_indices.opaque_indices, pos * kChunkLength,
+            LODLevel::kRegular);
+      }
+      if (!verts_indices.transparent_indices.empty()) {
+        chunk->mesh.transparent_mesh_handle = Renderer::Get().AllocateStaticChunkTransparent(
+            verts_indices.transparent_vertices, verts_indices.transparent_indices,
+            pos * kChunkLength);
+      }
       chunk->mesh_state = Chunk::State::kFinished;
     }
     chunk_mesh_queue_immediate_.clear();
@@ -321,7 +329,7 @@ void ChunkManager::UnloadChunksOutOfRange(int old_load_distance) {
       p.z = pos.y;
       for (p.y = 0; p.y < kNumVerticalChunks; p.y++) {
         if (chunk_map_.find_fn(
-                p, [this](const std::shared_ptr<Chunk>& c) { FreeChunkMesh(c->mesh_handle); })) {
+                p, [this](const std::shared_ptr<Chunk>& c) { FreeChunkMesh(c->mesh); })) {
           chunk_map_.erase(p);
         }
       }
@@ -332,14 +340,14 @@ void ChunkManager::UnloadChunksOutOfRange(int old_load_distance) {
 void ChunkManager::UnloadChunksOutOfRange(const glm::ivec3& diff) {
   ZoneScoped;
   auto erase_fn = [this](const glm::ivec3& pos) {
-    if (chunk_map_.find_fn(
-            pos, [this](const std::shared_ptr<Chunk>& c) { FreeChunkMesh(c->mesh_handle); })) {
+    if (chunk_map_.find_fn(pos,
+                           [this](const std::shared_ptr<Chunk>& c) { FreeChunkMesh(c->mesh); })) {
       chunk_map_.erase(pos);
     }
   };
   auto lod_erase_fn = [this](const glm::ivec3& pos) {
     if (lod_chunk_handle_map_.find_fn(glm::ivec2{pos.x, pos.z},
-                                      [this](uint32_t& handle) { FreeChunkMesh(handle); })) {
+                                      [this](uint32_t& handle) { FreeOpaqueChunkMesh(handle); })) {
       lod_chunk_handle_map_.erase(glm::ivec2{pos.x, pos.z});
     }
   };
@@ -415,14 +423,15 @@ void ChunkManager::PopulateChunkStatePixels(std::vector<uint8_t>& pixels, glm::i
           add_color(color::kWhite);
         } else {
           if (!chunk_map_.find_fn(iter, [this, &add_color](const std::shared_ptr<Chunk>& chunk) {
-                bool has_mesh_handle = chunk->mesh_handle != 0;
+                bool has_mesh_handle =
+                    chunk->mesh.opaque_mesh_handle != 0 || chunk->mesh.transparent_mesh_handle != 0;
                 if (chunk->lod_level > LODLevel::kRegular) {
                   lod_chunk_handle_map_.find_fn(glm::ivec2{chunk->GetPos().x, chunk->GetPos().z},
                                                 [&has_mesh_handle](const uint32_t handle) {
                                                   has_mesh_handle = has_mesh_handle || handle != 0;
                                                 });
                 }
-                if (chunk->mesh_handle != 0 || has_mesh_handle) {
+                if (has_mesh_handle) {
                   EASSERT(chunk->mesh_state == Chunk::State::kFinished);
                   add_color(color::kBlue);
                 } else if (chunk->mesh_state == Chunk::State::kFinished) {
@@ -541,9 +550,9 @@ ChunkManager::~ChunkManager() {
     glm::ivec3 p{pos.x, 0, pos.y};
     for (p.y = 0; p.y < kNumVerticalChunks; p.y++) {
       chunk_map_.find_fn(
-          p, [this](const std::shared_ptr<Chunk>& chunk) { FreeChunkMesh(chunk->mesh_handle); });
+          p, [this](const std::shared_ptr<Chunk>& chunk) { FreeChunkMesh(chunk->mesh); });
     }
-    lod_chunk_handle_map_.find_fn(pos, [this](uint32_t& handle) { FreeChunkMesh(handle); });
+    lod_chunk_handle_map_.find_fn(pos, [this](uint32_t& handle) { FreeOpaqueChunkMesh(handle); });
   });
 
   nlohmann::json j = {{"load_distance", load_distance_},
@@ -669,12 +678,13 @@ void ChunkManager::SetCenter(const glm::vec3& world_pos) {
 
 void ChunkManager::SetSeed(int seed) { seed_ = seed; }
 
-void ChunkManager::FreeChunkMesh(uint32_t& handle) {
-  if (handle != 0) {
-    Renderer::Get().FreeStaticChunkMesh(handle);
-    state_stats_.meshed_chunks--;
-    handle = 0;
-  }
+void ChunkManager::FreeOpaqueChunkMesh(uint32_t& handle) {
+  Renderer::Get().FreeStaticChunkMesh(handle);
+}
+
+void ChunkManager::FreeChunkMesh(ChunkMesh& mesh) {
+  Renderer::Get().FreeStaticChunkMesh(mesh.opaque_mesh_handle);
+  Renderer::Get().FreeStaticChunkMeshTransparent(mesh.transparent_mesh_handle);
 }
 
 void ChunkManager::SendChunkMeshTaskLOD1(const glm::ivec2& pos) {
@@ -724,17 +734,10 @@ void ChunkManager::SendChunkMeshTaskNoLOD(const glm::ivec3& pos) {
   PopulateChunkNeighbors(a, pos, false);
   thread_pool_.detach_task([this, a, pos] {
     ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
-    std::vector<ChunkVertex> vertices;
-    std::vector<uint32_t> indices;
-    if (mesh_greedy_) {
-      mesher.GenerateGreedy(a, vertices, indices);
-    } else {
-      mesher.GenerateSmart(a, vertices, indices);
-    }
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      chunk_mesh_finished_queue_.emplace(std::move(vertices), std::move(indices), pos);
-    }
+    MeshVerticesIndices verts_indices;
+    mesher.GenerateGreedy(a, verts_indices);
+    std::lock_guard<std::mutex> lock(mutex_);
+    chunk_mesh_finished_queue_.emplace(std::move(verts_indices), pos);
   });
 }
 

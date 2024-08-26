@@ -28,3 +28,11 @@ struct ChunkVertex {
   uint32_t data2;
 };
 enum class ChunkMapMode { kChunkState, kLODLevels, kCount };
+enum class TransparencyType { kNone, kAllOrNone, kSemi };
+
+struct MeshVerticesIndices {
+  std::vector<ChunkVertex> opaque_vertices;
+  std::vector<ChunkVertex> transparent_vertices;
+  std::vector<uint32_t> opaque_indices;
+  std::vector<uint32_t> transparent_indices;
+};

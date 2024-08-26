@@ -127,6 +127,7 @@ void GamePlayer::OnImGui() {
   Player::OnImGui();
   ImGui::Begin("Player", nullptr,
                ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoFocusOnAppearing);
+  ImGui::Text("Held Item %s", block_db_.GetBlockData()[held_item_id].formatted_name.c_str());
   ImGui::SliderFloat("Temp Mining Speed", &mine_speed_, 0.5, 10.0);
   if (chunk_manager_.BlockPosExists(ray_cast_air_pos_)) {
     ImGui::Text(

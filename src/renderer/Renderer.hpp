@@ -51,6 +51,9 @@ class Renderer {
   [[nodiscard]] uint32_t AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
                                              std::vector<uint32_t>& indices, const glm::ivec3& pos,
                                              LODLevel level);
+  [[nodiscard]] uint32_t AllocateStaticChunkTransparent(std::vector<ChunkVertex>& vertices,
+                                                        std::vector<uint32_t>& indices,
+                                                        const glm::ivec3& pos);
   uint32_t next_static_chunk_handle_{1};
 
   [[nodiscard]] uint32_t AllocateChunk(std::vector<ChunkVertex>& vertices,
@@ -71,9 +74,10 @@ class Renderer {
   uint32_t fbo1_depth_tex_{};
   uint32_t rbo1_{};
 
-  void FreeStaticChunkMesh(uint32_t handle);
-  void FreeChunkMesh(uint32_t handle);
-  void FreeRegMesh(uint32_t handle);
+  void FreeStaticChunkMesh(uint32_t& handle);
+  void FreeStaticChunkMeshTransparent(uint32_t& handle);
+  void FreeChunkMesh(uint32_t& handle);
+  void FreeRegMesh(uint32_t& handle);
   [[nodiscard]] uint32_t AllocateMaterial(TextureMaterialData& material);
   void FreeMaterial(uint32_t& material_handle);
 
@@ -113,11 +117,12 @@ class Renderer {
 
   void DrawQuads();
   void RenderRegMeshes();
-  void DrawStaticChunks(const RenderInfo& render_info);
+  void DrawStaticOpaqueChunks(const RenderInfo& render_info);
+  void DrawStaticTransparentChunks(const RenderInfo& render_info);
   void DrawNonStaticChunks(const RenderInfo& render_info);
+  void DrawStaticChunksImpl(const RenderInfo& render_info);
   void DrawRegularMeshes(const RenderInfo& render_info);
   void DrawLines(const RenderInfo& render_info);
-  // std::vector<OutlineDrawCmd> outline_draw_cmds_;
 
   // TODO: try without alignas
   struct DrawCmdUniformPosOnly {
@@ -187,6 +192,10 @@ class Renderer {
   DynamicBuffer<ChunkDrawInfo> lod_static_chunk_vbo_;
   DynamicBuffer<> lod_static_chunk_ebo_;
 
+  Buffer static_transparent_chunk_draw_info_buffer_;
+  Buffer static_transparent_chunk_draw_count_buffer_;
+  Buffer static_transparent_chunk_uniform_ssbo_;
+  Buffer static_transparent_chunk_draw_indirect_buffer_;
   Buffer static_chunk_draw_info_buffer_;
   Buffer static_chunk_draw_count_buffer_;
   Buffer static_chunk_uniform_ssbo_;
@@ -211,6 +220,7 @@ class Renderer {
   // std::vector<ChunkDrawCmdUniform> chunk_frame_draw_cmd_uniforms_;
   std::vector<DrawElementsIndirectCommand> chunk_frame_dei_cmds_;
   bool static_chunk_buffer_dirty_{true};
+  bool static_transparent_chunk_buffer_dirty_{true};
   bool lod_static_chunk_buffer_dirty_{true};
 
   VertexArray reg_mesh_vao_;
@@ -263,6 +273,8 @@ class Renderer {
   void ShutdownInternal();
   void HandleResize(int new_width, int new_height);
   void InitFrameBuffers();
+  void SetFrustumShaderData(const RenderInfo& render_info);
+  bool frustum_shader_data_set_this_frame_{false};
 
   struct Stats {
     uint32_t textured_quad_draw_calls{0};
@@ -273,6 +285,8 @@ class Renderer {
     uint32_t lod_chunk_indices{0};
     uint32_t total_reg_mesh_vertices{0};
     uint32_t total_reg_mesh_indices{0};
+    uint32_t opaque_chunk_allocs{0};
+    uint32_t transparent_chunk_allocs{0};
   };
   Stats stats_;
 };

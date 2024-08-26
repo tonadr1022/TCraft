@@ -121,6 +121,16 @@ void Renderer::Init() {
   static_chunk_vao_.AttachElementBuffer(static_chunk_ebo_.Id());
   static_chunk_draw_count_buffer_.Init(sizeof(GLuint), 0, nullptr);
 
+  static_transparent_chunk_vao_.Init();
+  static_transparent_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
+  // TODO: fine tune or make resizeable
+  static_transparent_chunk_vbo_.Init(sizeof(ChunkVertex) * 20'000'000, sizeof(ChunkVertex));
+  static_transparent_chunk_ebo_.Init(UINT32_MAX / 10, sizeof(uint32_t));
+  static_transparent_chunk_vao_.AttachVertexBuffer(static_transparent_chunk_vbo_.Id(), 0, 0,
+                                                   sizeof(ChunkVertex));
+  static_transparent_chunk_vao_.AttachElementBuffer(static_transparent_chunk_ebo_.Id());
+  static_transparent_chunk_draw_count_buffer_.Init(sizeof(GLuint), 0, nullptr);
+
   lod_static_chunk_vao_.Init();
   lod_static_chunk_vao_.EnableAttribute<uint32_t>(0, 2, offsetof(ChunkVertex, data1));
   // TODO: fine tune or make resizeable
@@ -279,40 +289,84 @@ void Renderer::DrawLines(const RenderInfo&) {
   }
 }
 
-void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
-  ZoneScoped;
-  bool frustum_shader_set = false;
-  auto set_frustum_shader_data = [this, &frustum_shader_set, &render_info](Shader& cull_shader) {
-    cull_shader.Bind();
-    if (frustum_shader_set) return;
+void Renderer::SetFrustumShaderData(const RenderInfo& render_info) {
+  auto cull_shader = ShaderManager::Get().GetShader("chunk_cull").value();
+  cull_shader.Bind();
+  if (frustum_shader_data_set_this_frame_) return;
+  frustum_shader_data_set_this_frame_ = true;
+  Frustum frustum;
+  if (settings.extra_fov_degrees > 0) {
+    auto aspect_ratio = Window::Get().GetAspectRatio();
+    frustum.SetData(glm::perspective(glm::radians(SettingsManager::Get().fps_cam_fov_deg +
+                                                  settings.extra_fov_degrees + 180),
+                                     aspect_ratio, 0.01f, 3000.f) *
+                    render_info.view_matrix);
+  } else {
+    frustum.SetData(render_info.vp_matrix);
+  }
+  cull_shader.SetVec3("u_view_pos", render_info.view_pos);
+  cull_shader.SetBool("u_cull_frustum", settings.cull_frustum);
+  cull_shader.SetFloat("u_min_cull_dist", settings.chunk_cull_distance_min);
+  cull_shader.SetFloat("u_max_cull_dist", settings.chunk_cull_distance_max);
+  // A UBO could be used, but this is more straightforward
+  const auto& frustum_data = frustum.GetData();
+  cull_shader.SetVec4("plane0", frustum_data[0]);
+  cull_shader.SetVec4("plane1", frustum_data[1]);
+  cull_shader.SetVec4("plane2", frustum_data[2]);
+  cull_shader.SetVec4("plane3", frustum_data[3]);
+  cull_shader.SetVec4("plane4", frustum_data[4]);
+  cull_shader.SetVec4("plane5", frustum_data[5]);
+}
 
-    frustum_shader_set = true;
-    Frustum frustum;
-    if (settings.extra_fov_degrees > 0) {
-      auto aspect_ratio = Window::Get().GetAspectRatio();
-      frustum.SetData(glm::perspective(glm::radians(SettingsManager::Get().fps_cam_fov_deg +
-                                                    settings.extra_fov_degrees + 180),
-                                       aspect_ratio, 0.01f, 3000.f) *
-                      render_info.view_matrix);
-    } else {
-      frustum.SetData(render_info.vp_matrix);
+void Renderer::DrawStaticTransparentChunks(const RenderInfo& render_info) {
+  if (stats_.transparent_chunk_allocs > 0) {
+    if (static_transparent_chunk_buffer_dirty_) {
+      static_transparent_chunk_buffer_dirty_ = false;
+      static_transparent_chunk_draw_info_buffer_.Init(
+          static_transparent_chunk_vbo_.Allocs().size() * static_transparent_chunk_vbo_.AllocSize(),
+          GL_DYNAMIC_STORAGE_BIT, static_transparent_chunk_vbo_.Allocs().data());
+      static_transparent_chunk_draw_indirect_buffer_.Init(
+          static_transparent_chunk_vbo_.NumActiveAllocs() * sizeof(DrawElementsIndirectCommand),
+          GL_DYNAMIC_STORAGE_BIT);
+      static_transparent_chunk_uniform_ssbo_.Init(
+          static_transparent_chunk_vbo_.Allocs().size() * sizeof(DrawCmdUniformPosOnly),
+          GL_DYNAMIC_STORAGE_BIT, nullptr);
     }
-    cull_shader.SetVec3("u_view_pos", render_info.view_pos);
-    cull_shader.SetBool("u_cull_frustum", settings.cull_frustum);
-    cull_shader.SetFloat("u_min_cull_dist", settings.chunk_cull_distance_min);
-    cull_shader.SetFloat("u_max_cull_dist", settings.chunk_cull_distance_max);
-    // A UBO could be used, but this is more straightforward
-    const auto& frustum_data = frustum.GetData();
-    cull_shader.SetVec4("plane0", frustum_data[0]);
-    cull_shader.SetVec4("plane1", frustum_data[1]);
-    cull_shader.SetVec4("plane2", frustum_data[2]);
-    cull_shader.SetVec4("plane3", frustum_data[3]);
-    cull_shader.SetVec4("plane4", frustum_data[4]);
-    cull_shader.SetVec4("plane5", frustum_data[5]);
-  };
-  // only render if there are static chunks
-  if (!static_chunk_allocs_.empty()) {
-    // if an allocation change happend this frame (alloc or free), reset the buffers
+
+    uint32_t zero{0};
+    glClearNamedBufferSubData(static_transparent_chunk_draw_count_buffer_.Id(), GL_R32UI, 0,
+                              sizeof(GLuint), GL_RED, GL_UNSIGNED_INT, &zero);
+
+    SetFrustumShaderData(render_info);
+    static_transparent_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    static_transparent_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
+    static_transparent_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
+    static_transparent_chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
+    // Round work groups up by one, and it's a one dimensional work load
+    glDispatchCompute((static_transparent_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
+    // Wait for data to be written to
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    // draw using the uniforms and indirect buffers
+    auto chunk_shader = ShaderManager::Get().GetShader("chunk_batch");
+    chunk_shader->Bind();
+    chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
+    chunk_shader->SetBool("u_UseAO", settings.chunk_use_ao);
+
+    chunk_tex_array->Bind(0);
+    static_transparent_chunk_vao_.Bind();
+    static_transparent_chunk_draw_indirect_buffer_.Bind(GL_DRAW_INDIRECT_BUFFER);
+    static_transparent_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+    static_transparent_chunk_draw_count_buffer_.Bind(GL_PARAMETER_BUFFER);
+    // https://registry.khronos.org/OpenGL/extensions/ARB/ARB_indirect_parameters.txt
+    glMultiDrawElementsIndirectCount(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr, 0,
+                                     static_transparent_chunk_vbo_.NumActiveAllocs(),
+                                     sizeof(DrawElementsIndirectCommand));
+  }
+}
+
+void Renderer::DrawStaticOpaqueChunks(const RenderInfo& render_info) {
+  ZoneScoped;
+  if (stats_.opaque_chunk_allocs > 0) {
     if (static_chunk_buffer_dirty_) {
       static_chunk_buffer_dirty_ = false;
       static_chunk_draw_info_buffer_.Init(
@@ -326,15 +380,11 @@ void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
           nullptr);
     }
 
-    // reset the index counter for cull compute shader
     uint32_t zero{0};
     glClearNamedBufferSubData(static_chunk_draw_count_buffer_.Id(), GL_R32UI, 0, sizeof(GLuint),
                               GL_RED, GL_UNSIGNED_INT, &zero);
 
-    // bind and generate indirect draw commands and uniform buffers with compute shader
-    auto cull_shader = ShaderManager::Get().GetShader("chunk_cull");
-    set_frustum_shader_data(cull_shader.value());
-
+    SetFrustumShaderData(render_info);
     static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     static_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
     static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
@@ -343,15 +393,6 @@ void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
     glDispatchCompute((static_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
     // Wait for data to be written to
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-    // auto* cnt =
-    //     (GLuint*)glMapNamedBufferRange(static_chunk_draw_count_buffer_.Id(), 0, sizeof(GLuint),
-    //                                    GL_MAP_READ_BIT | GL_MAP_COHERENT_BIT);
-    // if (cnt) {
-    //   spdlog::info("{}", *cnt);
-    //   glUnmapNamedBuffer(static_chunk_draw_count_buffer_.Id());
-    // }
-
     // draw using the uniforms and indirect buffers
     auto chunk_shader = ShaderManager::Get().GetShader("chunk_batch");
     chunk_shader->Bind();
@@ -390,9 +431,7 @@ void Renderer::DrawStaticChunks(const RenderInfo& render_info) {
     glClearNamedBufferSubData(lod_static_chunk_draw_count_buffer_.Id(), GL_R32UI, 0, sizeof(GLuint),
                               GL_RED, GL_UNSIGNED_INT, &zero);
 
-    auto cull_shader = ShaderManager::Get().GetShader("chunk_cull");
-    set_frustum_shader_data(cull_shader.value());
-
+    SetFrustumShaderData(render_info);
     lod_static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
     lod_static_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
     lod_static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
@@ -501,14 +540,14 @@ void Renderer::Render(const RenderInfo& render_info) {
   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   if (settings.draw_chunks && chunk_tex_array) {
     glDisable(GL_BLEND);
-    // glBlendFunc(GL_ONE, GL_ONE);
-    // glBlendFunc(GL_ZERO, GL_SRC_COLOR);
-    // glDepthMask(GL_FALSE);
-    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // // No blending for opaque. TODO: transparent chunks
-    // glBlendFunc(GL_ONE, GL_ZERO);
-    DrawStaticChunks(render_info);
+    DrawStaticOpaqueChunks(render_info);
     DrawNonStaticChunks(render_info);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE);
+    glDepthMask(GL_FALSE);
+    DrawStaticTransparentChunks(render_info);
+    glDepthMask(GL_TRUE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   }
   if (settings.draw_regular_meshes) DrawRegularMeshes(render_info);
   glLineWidth(2);
@@ -636,6 +675,42 @@ uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
   return id;
 }
 
+uint32_t Renderer::AllocateStaticChunkTransparent(std::vector<ChunkVertex>& vertices,
+                                                  std::vector<uint32_t>& indices,
+                                                  const glm::ivec3& pos) {
+  ZoneScoped;
+  if (vertices.empty() || indices.empty()) {
+    spdlog::error("no vertices or indices");
+    return 0;
+  }
+  uint32_t chunk_vbo_offset;
+  uint32_t chunk_ebo_offset;
+  glm::ivec4 min = glm::ivec4(pos, 0);
+  glm::ivec4 max = min + kChunkLength;
+  uint32_t handle = next_static_chunk_handle_++;
+  uint32_t ebo_handle = static_transparent_chunk_ebo_.Allocate(sizeof(uint32_t) * indices.size(),
+                                                               indices.data(), chunk_ebo_offset);
+  uint32_t vbo_handle = static_transparent_chunk_vbo_.Allocate(
+      sizeof(ChunkVertex) * vertices.size(), vertices.data(), chunk_vbo_offset,
+      {
+          .aabb = {min, max},
+          .first_index = static_cast<uint32_t>(chunk_ebo_offset / sizeof(uint32_t)),
+          .count = static_cast<uint32_t>(indices.size()),
+      });
+  static_chunk_allocs_.try_emplace(handle,
+                                   MeshAlloc{
+                                       .vbo_handle = vbo_handle,
+                                       .ebo_handle = ebo_handle,
+                                       .vertices_count = static_cast<uint32_t>(vertices.size()),
+                                       .indices_count = static_cast<uint32_t>(indices.size()),
+                                   });
+  stats_.total_chunk_vertices += vertices.size();
+  stats_.total_chunk_indices += indices.size();
+  stats_.transparent_chunk_allocs++;
+  static_transparent_chunk_buffer_dirty_ = true;
+  return handle;
+}
+
 uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
                                        std::vector<uint32_t>& indices, const glm::ivec3& pos,
                                        LODLevel level) {
@@ -646,8 +721,8 @@ uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
   }
   uint32_t chunk_vbo_offset;
   uint32_t chunk_ebo_offset;
-  uint32_t id = next_static_chunk_handle_++;
-  id = (static_cast<int>(level) << 29 | id);
+  uint32_t handle = next_static_chunk_handle_++;
+  handle = (static_cast<int>(level) << 29 | handle);
   uint32_t vbo_handle;
   uint32_t ebo_handle;
   glm::ivec4 min = glm::ivec4(pos, 0);
@@ -662,7 +737,7 @@ uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
             .first_index = static_cast<uint32_t>(chunk_ebo_offset / sizeof(uint32_t)),
             .count = static_cast<uint32_t>(indices.size()),
         });
-    static_chunk_allocs_.try_emplace(id,
+    static_chunk_allocs_.try_emplace(handle,
                                      MeshAlloc{
                                          .vbo_handle = vbo_handle,
                                          .ebo_handle = ebo_handle,
@@ -684,19 +759,20 @@ uint32_t Renderer::AllocateStaticChunk(std::vector<ChunkVertex>& vertices,
             .count = static_cast<uint32_t>(indices.size()),
         });
     lod_static_chunk_allocs_.try_emplace(
-        id, MeshAlloc{
-                .vbo_handle = vbo_handle,
-                .ebo_handle = ebo_handle,
-                .vertices_count = static_cast<uint32_t>(vertices.size()),
-                .indices_count = static_cast<uint32_t>(indices.size()),
-            });
+        handle, MeshAlloc{
+                    .vbo_handle = vbo_handle,
+                    .ebo_handle = ebo_handle,
+                    .vertices_count = static_cast<uint32_t>(vertices.size()),
+                    .indices_count = static_cast<uint32_t>(indices.size()),
+                });
     stats_.total_chunk_vertices += vertices.size();
     stats_.total_chunk_indices += indices.size();
     stats_.lod_chunk_vertices += vertices.size();
     stats_.lod_chunk_indices += indices.size();
+    stats_.opaque_chunk_allocs++;
     lod_static_chunk_buffer_dirty_ = true;
   }
-  return id;
+  return handle;
 }
 
 uint32_t Renderer::AllocateMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) {
@@ -749,8 +825,9 @@ void Renderer::FreeMaterial(uint32_t& material_handle) {
   material_handle = 0;
 }
 
-void Renderer::FreeRegMesh(uint32_t handle) {
+void Renderer::FreeRegMesh(uint32_t& handle) {
   auto it = reg_mesh_allocs_.find(handle);
+  handle = 0;
   if (it == reg_mesh_allocs_.end()) {
     spdlog::error("FreeRegMesh: handle not found: {}", handle);
     return;
@@ -763,9 +840,10 @@ void Renderer::FreeRegMesh(uint32_t handle) {
   reg_mesh_allocs_.erase(it);
 }
 
-void Renderer::FreeChunkMesh(uint32_t handle) {
+void Renderer::FreeChunkMesh(uint32_t& handle) {
   if (handle == 0) return;
   auto it = chunk_allocs_.find(handle);
+  handle = 0;
   if (it == chunk_allocs_.end()) {
     spdlog::error("FreeChunkMesh: handle not found: {}", handle);
   }
@@ -777,24 +855,43 @@ void Renderer::FreeChunkMesh(uint32_t handle) {
   chunk_allocs_.erase(it);
 }
 
-void Renderer::FreeStaticChunkMesh(uint32_t handle) {
+void Renderer::FreeStaticChunkMeshTransparent(uint32_t& handle) {
+  if (handle == 0) return;
+  static_transparent_chunk_buffer_dirty_ = true;
+  auto it = static_chunk_allocs_.find(handle);
+  handle = 0;
+  if (it == static_chunk_allocs_.end()) {
+    spdlog::error("FreeStaticChunkMesh: Regular handle not found: {}", handle);
+    return;
+  }
+  stats_.total_chunk_indices -= it->second.indices_count;
+  stats_.total_chunk_vertices -= it->second.vertices_count;
+  static_transparent_chunk_vbo_.Free(it->second.vbo_handle);
+  static_transparent_chunk_ebo_.Free(it->second.ebo_handle);
+  stats_.transparent_chunk_allocs--;
+  static_chunk_allocs_.erase(it);
+}
+void Renderer::FreeStaticChunkMesh(uint32_t& handle) {
   if (handle == 0) return;
   auto level = static_cast<LODLevel>(handle >> 29);
   if (level == LODLevel::kRegular) {
     static_chunk_buffer_dirty_ = true;
     auto it = static_chunk_allocs_.find(handle);
+    handle = 0;
     if (it == static_chunk_allocs_.end()) {
       spdlog::error("FreeStaticChunkMesh: Regular handle not found: {}", handle);
       return;
     }
     stats_.total_chunk_indices -= it->second.indices_count;
     stats_.total_chunk_vertices -= it->second.vertices_count;
+    stats_.opaque_chunk_allocs--;
     static_chunk_vbo_.Free(it->second.vbo_handle);
     static_chunk_ebo_.Free(it->second.ebo_handle);
     static_chunk_allocs_.erase(it);
   } else {
     lod_static_chunk_buffer_dirty_ = true;
     auto it = lod_static_chunk_allocs_.find(handle);
+    handle = 0;
     if (it == lod_static_chunk_allocs_.end()) {
       spdlog::error("FreeStaticChunkMesh: LOD handle not found: {}", handle);
       return;
@@ -830,6 +927,7 @@ void Renderer::StartFrame(const Window&) {
     quad_color_uniforms_.clear();
     stats_.textured_quad_draw_calls = 0;
     stats_.color_quad_draw_calls = 0;
+    frustum_shader_data_set_this_frame_ = false;
   }
 
   { ZoneScopedN("OpenGL state"); }

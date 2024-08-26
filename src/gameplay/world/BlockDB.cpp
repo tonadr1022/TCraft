@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "application/SettingsManager.hpp"
+#include "gameplay/world/ChunkDef.hpp"
 #include "renderer/RendererUtil.hpp"
 #include "resource/Image.hpp"
 #include "util/JsonUtil.hpp"
@@ -48,7 +49,8 @@ void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_t
     BlockMeshData mesh_data = default_mesh_data_;
     if (BlockModelDataAll* data = std::get_if<BlockModelDataAll>(&data_general)) {
       auto idx = tex_name_to_idx[data->tex_all];
-      std::fill(mesh_data.transparent.begin(), mesh_data.transparent.end(), data->transparent);
+      std::fill(mesh_data.transparency_type.begin(), mesh_data.transparency_type.end(),
+                static_cast<TransparencyType>(data->transparency_type));
       std::fill(mesh_data.texture_indices.begin(), mesh_data.texture_indices.end(), idx);
       std::fill(mesh_data.avg_colors.begin(), mesh_data.avg_colors.end(),
                 get_avg_color(image_data[idx]));
@@ -91,7 +93,8 @@ void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_t
     BlockModelData data_general = model_name_to_model_data_[model_name];
     BlockMeshData mesh_data = default_mesh_data_;
     if (BlockModelDataAll* data = std::get_if<BlockModelDataAll>(&data_general)) {
-      std::fill(mesh_data.transparent.begin(), mesh_data.transparent.end(), data->transparent);
+      std::fill(mesh_data.transparency_type.begin(), mesh_data.transparency_type.end(),
+                static_cast<TransparencyType>(data->transparency_type));
       std::fill(mesh_data.texture_indices.begin(), mesh_data.texture_indices.end(),
                 tex_name_to_idx[data->tex_all]);
     } else if (BlockModelDataTopBot* data = std::get_if<BlockModelDataTopBot>(&data_general)) {
@@ -274,8 +277,9 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelData(const std::string& mod
 
   BlockModelData block_model_data;
   if (block_model_type == "block/all") {
-    block_model_data = BlockModelDataAll{
-        .tex_all = get_tex_name("all"), .transparent = tex_obj.value().value("transparent", false)};
+    block_model_data = BlockModelDataAll{.tex_all = get_tex_name("all"),
+                                         .transparency_type = static_cast<TransparencyType>(
+                                             tex_obj.value().value("transparency_type", 0))};
   } else if (block_model_type == "block/top_bottom") {
     block_model_data = BlockModelDataTopBot{.tex_top = get_tex_name("top"),
                                             .tex_bottom = get_tex_name("bottom"),
@@ -351,7 +355,8 @@ std::optional<BlockModelData> BlockDB::LoadBlockModelDataFromPath(const std::str
     if (!tex_name.has_value()) {
       return std::nullopt;
     }
-    return BlockModelDataAll{tex_name.value(), tex_obj.value().value("transparent", false)};
+    return BlockModelDataAll{tex_name.value(), static_cast<TransparencyType>(
+                                                   tex_obj.value().value("transparency_type", 0))};
   }
 
   if (type == BlockModelType::kTopBottom) {
@@ -398,10 +403,11 @@ bool BlockData::operator==(const BlockData& other) const {
 }
 
 void BlockDB::WriteBlockModelTypeAll(const BlockModelDataAll& data, const std::string& path) {
-  bool transparent = util::renderer::LoadImageAndCheckHasTransparency(
+  TransparencyType type = util::renderer::LoadImageAndCheckHasTransparency(
       GET_PATH("resources/textures/") + data.tex_all + ".png");
-  nlohmann::json j = {{"type", "block/all"},
-                      {"textures", {{"all", data.tex_all}, {"transparent", transparent}}}};
+  nlohmann::json j = {
+      {"type", "block/all"},
+      {"textures", {{"all", data.tex_all}, {"transparency_type", static_cast<int>(type)}}}};
   util::json::WriteJson(j, path);
 }
 

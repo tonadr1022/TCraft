@@ -182,6 +182,7 @@ void WorldScene::Render() {
     if (dims != prev_chunk_state_pixels_dims_ || first_frame_) {
       first_frame_ = false;
       MaterialManager::Get().Erase("chunk_state_map");
+
       chunk_state_tex_ = MaterialManager::Get().LoadTextureMaterial(
           "chunk_state_map", Texture2DCreateParamsEmpty{.width = static_cast<uint32_t>(dims.x),
                                                         .height = static_cast<uint32_t>(dims.y),

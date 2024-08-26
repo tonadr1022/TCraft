@@ -98,7 +98,8 @@ class ChunkManager {
 
   BS::thread_pool thread_pool_;
 
-  void FreeChunkMesh(uint32_t& handle);
+  void FreeChunkMesh(ChunkMesh& mesh);
+  void FreeOpaqueChunkMesh(uint32_t& handle);
   void SendChunkMeshTaskNoLOD(const glm::ivec3& pos);
   void SendChunkMeshTaskLOD1(const glm::ivec2& pos);
   void AllocateChunkMesh();

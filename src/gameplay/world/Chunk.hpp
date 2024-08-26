@@ -12,9 +12,13 @@ struct LODChunkMeshTask {
 };
 
 struct ChunkMeshTask {
-  std::vector<ChunkVertex> vertices;
-  std::vector<uint32_t> indices;
+  MeshVerticesIndices verts_indices;
   glm::ivec3 pos;
+};
+
+struct ChunkMesh {
+  uint32_t opaque_mesh_handle{};
+  uint32_t transparent_mesh_handle{};
 };
 
 class Chunk {
@@ -23,7 +27,7 @@ class Chunk {
   [[nodiscard]] const glm::ivec3& GetPos() const;
 
   ChunkData data;
-  uint32_t mesh_handle{0};
+  ChunkMesh mesh;
   LODLevel lod_level{LODLevel::kNoMesh};
 
   enum class State { kNotFinished, kQueued, kFinished };

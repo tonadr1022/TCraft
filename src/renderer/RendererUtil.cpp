@@ -228,16 +228,20 @@ SquareTextureAtlas LoadIconTextureAtlas(const BlockDB& block_db, const Texture& 
   return res;
 }
 
-bool LoadImageAndCheckHasTransparency(const std::string& path, int required_channels) {
+TransparencyType LoadImageAndCheckHasTransparency(const std::string& path, int required_channels) {
   Image img;
   util::LoadImage(img, path, required_channels);
-  if (img.channels != 4) return false;
+  TransparencyType type = TransparencyType::kNone;
+  if (img.channels != 4) return type;
   for (int i = 0; i < img.channels * img.width * img.height; i += 4) {
-    if (*(img.pixels + i + 3) != 255) {
-      return true;
+    if (*(img.pixels + i + 3) < 255) {
+      type = TransparencyType::kAllOrNone;
+      if (*(img.pixels + i + 3) > 0) {
+        type = TransparencyType::kSemi;
+      }
     }
   }
-  return false;
+  return type;
   util::FreeImage(img.pixels);
 }
 }  // namespace util::renderer

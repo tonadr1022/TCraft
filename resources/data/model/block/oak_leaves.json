@@ -1,7 +1,7 @@
 {
   "textures": {
     "all": "block/oak_leaves",
-    "transparent": true
+    "transparency_type": 1
   },
   "type": "block/all"
 }
