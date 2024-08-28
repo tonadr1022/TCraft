@@ -147,7 +147,6 @@ BlockDB::BlockDB() {
     ZoneScopedN("Load block model data");
     // cannot fail
     default_model_data_ = LoadBlockModelData("block/default").value();
-    EASSERT_MSG(default_model_data.has_value(), "Default mesh data failed to load");
 
     // Load each block model file (skip air)
     for (size_t i = 1; i < block_model_names_.size(); i++) {

@@ -411,16 +411,12 @@ void BlockEditorScene::OnImGui() {
       if (ImGui::Button("Save")) {
         std::string path =
             GET_PATH("resources/data/model/block/" + state_->add_model_name + ".json");
-        int add_idx;
         if (add_model_type_ == BlockModelType::kAll) {
           BlockDB::WriteBlockModelTypeAll(add_model_data_all_, path);
-          add_idx = 0;
         } else if (add_model_type_ == BlockModelType::kTopBottom) {
           BlockDB::WriteBlockModelTypeTopBot(add_model_data_top_bot_, path);
-          add_idx = 1;
         } else {
           BlockDB::WriteBlockModelTypeUnique(add_model_data_unique_, path);
-          add_idx = 2;
         }
         all_block_model_names_ = BlockDB::GetAllBlockModelNames();
         ReloadIcons();
@@ -651,14 +647,13 @@ void BlockTypeSelectMenu(const std::string& name, BlockDB& block_db_,
                          const std::function<void(BlockType)>& on_select) {
   if (ImGui::BeginPopup(name.c_str())) {
     if (ImGui::BeginTable("Block Type Select", 10)) {
-      int num_rows = block_db_.GetBlockData().size() / 10 + 1;
       int block_id = 1;
       bool done = false;
-      for (int row = 0; row < block_db_.GetBlockData().size(); row++) {
+      for (size_t row = 0; row < block_db_.GetBlockData().size(); row++) {
         if (done) break;
         ImGui::TableNextRow();
         for (int col = 0; col < 10; col++, block_id++) {
-          if (block_id >= block_db_.GetBlockData().size()) {
+          if (block_id >= static_cast<BlockType>(block_db_.GetBlockData().size())) {
             done = true;
             break;
           }

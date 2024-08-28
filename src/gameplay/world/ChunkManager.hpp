@@ -83,12 +83,11 @@ class ChunkManager {
   std::queue<glm::ivec2> chunk_terrain_queue_;
   std::deque<glm::ivec2> finished_chunk_terrain_queue_;
 
-  void PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, const glm::ivec3& pos,
-                              bool add_new_chunks);
+  void PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, const glm::ivec3& pos);
   static void AddRelatedChunks(const glm::ivec3& block_pos_in_chunk, const glm::ivec3& chunk_pos,
                                std::unordered_set<glm::ivec3>& chunk_set);
   bool ChunkPosOutsideHorizontalRange(int x, int z, int dist, const glm::ivec2& pos);
-  bool mesh_greedy_{true};
+  bool ChunkPosWithinDistance(int x, int z, int distance) const;
 
   float frequency_;
   StateStats state_stats_;
