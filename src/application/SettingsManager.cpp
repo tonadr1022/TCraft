@@ -34,7 +34,7 @@ void SettingsManager::Load(const std::string& path) {
   // Main settings
   auto& main = settings_json_["main"];
   mouse_sensitivity = main.value("mouse_sensitivity", 1.0f);
-  fps_cam_fov_deg = main.value("fps_cam_fov_deg", 75.f);
+  fov_degrees = main.value("fps_cam_fov_deg", 75.f);
   orbit_mouse_sensitivity = main.value("orbit_mouse_sensitivity", 1.f);
 }
 
@@ -42,7 +42,7 @@ void SettingsManager::Shutdown(const std::string& path) {
   ZoneScoped;
   // save main settings
   settings_json_["main"] = {{"mouse_sensitivity", mouse_sensitivity},
-                            {"fps_cam_fov_deg", fps_cam_fov_deg},
+                            {"fps_cam_fov_deg", fov_degrees},
                             {"orbit_mouse_sensitivity", orbit_mouse_sensitivity}};
   util::json::WriteJson(settings_json_, path);
 }
@@ -60,9 +60,9 @@ void SettingsManager::OnImGui() {
   if (ImGui::CollapsingHeader("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::SliderFloat("Mouse Sensitivity", &mouse_sensitivity, 0.2, 3.0);
     ImGui::SliderFloat("Orbit Mouse Sensitivity", &orbit_mouse_sensitivity, 0.2, 1.0);
-    float fps_cam_fov_rad = glm::radians(fps_cam_fov_deg);
+    float fps_cam_fov_rad = glm::radians(fov_degrees);
     if (ImGui::SliderAngle("FPS Camera FOV", &fps_cam_fov_rad, 45, 120)) {
-      fps_cam_fov_deg = glm::degrees(fps_cam_fov_rad);
+      fov_degrees = glm::degrees(fps_cam_fov_rad);
     }
   }
 }

@@ -207,6 +207,25 @@ void Renderer::Init() {
   skybox_vao_.AttachVertexBuffer(skybox_vbo_.Id(), 0, 0, sizeof(float) * 3);
 
   InitFrameBuffers();
+  // shadow map
+  glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &shadow_map_tex_arr_);
+  glTextureStorage3D(shadow_map_tex_arr_, 1, GL_DEPTH_COMPONENT32F, kDepthMapResolution,
+                     kDepthMapResolution, kCascadeLevels);
+  glTextureParameteri(shadow_map_tex_arr_, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTextureParameteri(shadow_map_tex_arr_, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTextureParameteri(shadow_map_tex_arr_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+  glTextureParameteri(shadow_map_tex_arr_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+  constexpr float kBorderColor[] = {1.f, 1.f, 1.f, 1.f};
+  glTextureParameterfv(shadow_map_tex_arr_, GL_TEXTURE_BORDER_COLOR, kBorderColor);
+
+  glCreateFramebuffers(1, &shadow_map_light_fbo_);
+  glNamedFramebufferTexture(shadow_map_light_fbo_, GL_DEPTH_ATTACHMENT, shadow_map_tex_arr_, 0);
+  glNamedFramebufferDrawBuffer(shadow_map_light_fbo_, GL_NONE);
+  glNamedFramebufferReadBuffer(shadow_map_light_fbo_, GL_NONE);
+  if (glCheckNamedFramebufferStatus(shadow_map_light_fbo_, GL_FRAMEBUFFER) !=
+      GL_FRAMEBUFFER_COMPLETE) {
+    spdlog::error("Framebuffer incomplete");
+  }
 }
 
 void Renderer::DrawQuads() {
@@ -297,7 +316,7 @@ void Renderer::SetFrustumShaderData(const RenderInfo& render_info) {
   Frustum frustum;
   if (settings.extra_fov_degrees > 0) {
     auto aspect_ratio = Window::Get().GetAspectRatio();
-    frustum.SetData(glm::perspective(glm::radians(SettingsManager::Get().fps_cam_fov_deg +
+    frustum.SetData(glm::perspective(glm::radians(SettingsManager::Get().fov_degrees +
                                                   settings.extra_fov_degrees + 180),
                                      aspect_ratio, 0.01f, 3000.f) *
                     render_info.view_matrix);
@@ -333,19 +352,22 @@ void Renderer::DrawStaticTransparentChunks(const RenderInfo& render_info) {
           GL_DYNAMIC_STORAGE_BIT, nullptr);
     }
 
-    uint32_t zero{0};
-    glClearNamedBufferSubData(static_transparent_chunk_draw_count_buffer_.Id(), GL_R32UI, 0,
-                              sizeof(GLuint), GL_RED, GL_UNSIGNED_INT, &zero);
+    if (!frame_state_.static_transparent_chunk_frustum_compute_called) {
+      frame_state_.static_transparent_chunk_frustum_compute_called = true;
+      uint32_t zero{0};
+      glClearNamedBufferSubData(static_transparent_chunk_draw_count_buffer_.Id(), GL_R32UI, 0,
+                                sizeof(GLuint), GL_RED, GL_UNSIGNED_INT, &zero);
+      SetFrustumShaderData(render_info);
+      static_transparent_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+      static_transparent_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
+      static_transparent_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
+      static_transparent_chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
+      // Round work groups up by one, and it's a one dimensional work load
+      glDispatchCompute((static_transparent_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
+      // Wait for data to be written to
+      glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    }
 
-    SetFrustumShaderData(render_info);
-    static_transparent_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    static_transparent_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
-    static_transparent_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
-    static_transparent_chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
-    // Round work groups up by one, and it's a one dimensional work load
-    glDispatchCompute((static_transparent_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
-    // Wait for data to be written to
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     // draw using the uniforms and indirect buffers
     auto chunk_shader = ShaderManager::Get().GetShader("chunk_batch");
     chunk_shader->Bind();
@@ -364,7 +386,9 @@ void Renderer::DrawStaticTransparentChunks(const RenderInfo& render_info) {
   }
 }
 
-void Renderer::DrawStaticOpaqueChunks(const RenderInfo& render_info) {
+template <CallableNoArgs F1, CallableNoArgs F2>
+void Renderer::DrawStaticOpaqueChunks(const RenderInfo& render_info, F1 non_lod_shader_func,
+                                      F2 lod_shader_func) {
   ZoneScoped;
   if (stats_.opaque_chunk_allocs > 0) {
     if (static_chunk_buffer_dirty_) {
@@ -380,24 +404,24 @@ void Renderer::DrawStaticOpaqueChunks(const RenderInfo& render_info) {
           nullptr);
     }
 
-    uint32_t zero{0};
-    glClearNamedBufferSubData(static_chunk_draw_count_buffer_.Id(), GL_R32UI, 0, sizeof(GLuint),
-                              GL_RED, GL_UNSIGNED_INT, &zero);
+    if (!frame_state_.static_opaque_chunk_frustum_compute_called) {
+      frame_state_.static_opaque_chunk_frustum_compute_called = true;
+      uint32_t zero{0};
+      glClearNamedBufferSubData(static_chunk_draw_count_buffer_.Id(), GL_R32UI, 0, sizeof(GLuint),
+                                GL_RED, GL_UNSIGNED_INT, &zero);
 
-    SetFrustumShaderData(render_info);
-    static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    static_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
-    static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
-    static_chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
-    // Round work groups up by one, and it's a one dimensional work load
-    glDispatchCompute((static_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
-    // Wait for data to be written to
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    // draw using the uniforms and indirect buffers
-    auto chunk_shader = ShaderManager::Get().GetShader("chunk_batch");
-    chunk_shader->Bind();
-    chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
-    chunk_shader->SetBool("u_UseAO", settings.chunk_use_ao);
+      SetFrustumShaderData(render_info);
+      static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+      static_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
+      static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
+      static_chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
+      // Round work groups up by one, and it's a one dimensional work load
+      glDispatchCompute((static_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
+      // Wait for data to be written to
+      glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    }
+
+    non_lod_shader_func();
 
     chunk_tex_array->Bind(0);
     static_chunk_vao_.Bind();
@@ -426,25 +450,25 @@ void Renderer::DrawStaticOpaqueChunks(const RenderInfo& render_info) {
           nullptr);
     }
 
-    // reset the index counter for cull compute shader
-    uint32_t zero{0};
-    glClearNamedBufferSubData(lod_static_chunk_draw_count_buffer_.Id(), GL_R32UI, 0, sizeof(GLuint),
-                              GL_RED, GL_UNSIGNED_INT, &zero);
+    if (!frame_state_.static_lod_chunk_frustum_compute_called) {
+      frame_state_.static_lod_chunk_frustum_compute_called = true;
+      // reset the index counter for cull compute shader
+      uint32_t zero{0};
+      glClearNamedBufferSubData(lod_static_chunk_draw_count_buffer_.Id(), GL_R32UI, 0,
+                                sizeof(GLuint), GL_RED, GL_UNSIGNED_INT, &zero);
 
-    SetFrustumShaderData(render_info);
-    lod_static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
-    lod_static_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
-    lod_static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
-    lod_static_chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
-    // Round work groups up by one, and it's a one dimensional work load
-    glDispatchCompute((lod_static_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
-    // Wait for data to be written to
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+      SetFrustumShaderData(render_info);
+      lod_static_chunk_draw_info_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 0);
+      lod_static_chunk_draw_indirect_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 1);
+      lod_static_chunk_uniform_ssbo_.BindBase(GL_SHADER_STORAGE_BUFFER, 2);
+      lod_static_chunk_draw_count_buffer_.BindBase(GL_SHADER_STORAGE_BUFFER, 3);
+      // Round work groups up by one, and it's a one dimensional work load
+      glDispatchCompute((lod_static_chunk_vbo_.Allocs().size() + 63) / 64, 1, 1);
+      // Wait for data to be written to
+      glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    }
 
-    // draw using the uniforms and indirect buffers
-    auto chunk_shader = ShaderManager::Get().GetShader("lod_chunk_batch");
-    chunk_shader->Bind();
-    chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
+    lod_shader_func();
 
     chunk_tex_array->Bind(0);
     lod_static_chunk_vao_.Bind();
@@ -527,20 +551,75 @@ void Renderer::Render(const RenderInfo& render_info) {
   uniform_ubo_.ResetOffset();
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
   uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
+  glEnable(GL_DEPTH_TEST);
+
+  // TODO: make configurable
+  constexpr bool kDrawShadows = true;
+  if (kDrawShadows) {
+    // TODO: configure index
+    // const glm::vec3 light_dir = glm::normalize(glm::vec3(20.0f, 50, 20.0f));
+    const glm::vec3 light_dir = glm::normalize(glm::vec3(1, 1, 0));
+    CalculateLightSpaceMatrices(light_space_matrices_, SettingsManager::Get().fov_degrees,
+                                render_info.view_matrix, light_dir);
+    // shadow_map_matrix_ubo_.ResetOffset();
+    // for (size_t i = 0; i < kShadowCascadeLevels.size(); i++) {
+    //   shadow_map_matrix_ubo_.SubData(sizeof(glm::mat4), &light_space_matrices_[i]);
+    // }
+    glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_light_fbo_);
+    glViewport(0, 0, kDepthMapResolution, kDepthMapResolution);
+    glCullFace(GL_FRONT);  // peter panning
+
+    for (size_t i = 0; i < kShadowCascadeLevels.size(); i++) {
+      glNamedFramebufferTextureLayer(shadow_map_light_fbo_, GL_DEPTH_ATTACHMENT,
+                                     shadow_map_tex_arr_, 0, i);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      if (settings.draw_chunks && chunk_tex_array) {
+        DrawStaticOpaqueChunks(
+            render_info,
+            [this, i]() {
+              auto shader = ShaderManager::Get().GetShader("chunk_batch_depth").value();
+              shader.Bind();
+              shader.SetMat4("vp_matrix", light_space_matrices_[i]);
+            },
+            [this, i]() {
+              auto shader = ShaderManager::Get().GetShader("lod_chunk_batch_depth").value();
+              shader.Bind();
+              shader.SetMat4("vp_matrix", light_space_matrices_[i]);
+            });
+        //   // DrawNonStaticChunks(render_info);
+      }
+      // DrawStaticTransparentChunks(render_info);
+      // if (settings.draw_regular_meshes) DrawRegularMeshes(render_info);
+    }
+    glCullFace(GL_BACK);
+  }
+
   auto dims = window_.GetWindowSize();
   glViewport(0, 0, dims.x, dims.y);
 
   glBindFramebuffer(GL_FRAMEBUFFER, fbo1_);
-  glEnable(GL_STENCIL_TEST);
-  glEnable(GL_DEPTH_TEST);
   glClearColor(0.1, 0.1, 0.1, 0.1);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPolygonMode(GL_FRONT_AND_BACK, wireframe_enabled_ ? GL_LINE : GL_FILL);
-
   // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   if (settings.draw_chunks && chunk_tex_array) {
     glDisable(GL_BLEND);
-    DrawStaticOpaqueChunks(render_info);
+    DrawStaticOpaqueChunks(
+        render_info,
+        [this]() {
+          // draw using the uniforms and indirect buffers
+          auto chunk_shader = ShaderManager::Get().GetShader("chunk_batch");
+          chunk_shader->Bind();
+          chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
+          chunk_shader->SetBool("u_UseAO", settings.chunk_use_ao);
+        },
+        [this]() {
+          // draw using the uniforms and indirect buffers
+          auto chunk_shader = ShaderManager::Get().GetShader("lod_chunk_batch");
+          chunk_shader->Bind();
+          chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
+        });
+
     DrawNonStaticChunks(render_info);
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
@@ -575,10 +654,19 @@ void Renderer::Render(const RenderInfo& render_info) {
   glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
-  ShaderManager::Get().GetShader("quad")->Bind();
   full_screen_quad_vao_.Bind();
+  if (settings.draw_debug_depth) {
+    auto shader = ShaderManager::Get().GetShader("debug_depth_quad").value();
+    shader.Bind();
+    shader.SetInt("layer", settings.debug_depth_layer);
+    shader.SetFloat("near_plane", kCameraNearPlane);
+    shader.SetFloat("far_plane", kCameraFarPlane);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, shadow_map_tex_arr_);
+  } else {
+    ShaderManager::Get().GetShader("quad")->Bind();
+    glBindTexture(GL_TEXTURE_2D, fbo1_tex_);
+  }
   glDisable(GL_DEPTH_TEST);
-  glBindTexture(GL_TEXTURE_2D, fbo1_tex_);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 }
 
@@ -618,14 +706,15 @@ void Renderer::SubmitChunkDrawCommand(const glm::mat4& model, uint32_t mesh_hand
 void Renderer::SubmitRegMeshDrawCommand(const glm::mat4& model, uint32_t mesh_handle,
                                         uint32_t material_handle) {
   ZoneScoped;
-  reg_mesh_frame_uniforms_mesh_ids_.first.emplace_back(UniformsModelMaterial{model, material_allocs_[material_handle]});
+  reg_mesh_frame_uniforms_mesh_ids_.first.emplace_back(
+      UniformsModelMaterial{model, material_allocs_[material_handle]});
   reg_mesh_frame_uniforms_mesh_ids_.second.emplace_back(mesh_handle);
 }
 
 void Renderer::DrawQuad(uint32_t material_handle, const glm::vec2& center, const glm::vec2& size) {
   // TODO: handle gracefully no material handle
-  quad_textured_uniforms_.emplace_back(UniformsModelMaterial{CenterSizeToModel(center, size),
-                                       material_allocs_.at(material_handle)});
+  quad_textured_uniforms_.emplace_back(
+      UniformsModelMaterial{CenterSizeToModel(center, size), material_allocs_.at(material_handle)});
   stats_.textured_quad_draw_calls++;
 }
 
@@ -636,8 +725,8 @@ void Renderer::DrawQuad(const glm::vec3& color, const glm::vec2& center, const g
 
 void Renderer::AddStaticQuad(uint32_t material_handle, const glm::vec2& center,
                              const glm::vec2& size) {
-  static_textured_quad_uniforms_.emplace_back(UniformsModelMaterial{CenterSizeToModel(center, size),
-                                              material_allocs_.at(material_handle)});
+  static_textured_quad_uniforms_.emplace_back(
+      UniformsModelMaterial{CenterSizeToModel(center, size), material_allocs_.at(material_handle)});
 }
 
 uint32_t Renderer::AllocateChunk(std::vector<ChunkVertex>& vertices,
@@ -928,6 +1017,7 @@ void Renderer::StartFrame(const Window&) {
     stats_.textured_quad_draw_calls = 0;
     stats_.color_quad_draw_calls = 0;
     frustum_shader_data_set_this_frame_ = false;
+    frame_state_ = {};
   }
 
   { ZoneScopedN("OpenGL state"); }
@@ -938,10 +1028,6 @@ bool Renderer::OnEvent(const SDL_Event& event) {
     case SDL_KEYDOWN:
       if (event.key.keysym.sym == SDLK_r && event.key.keysym.mod & KMOD_ALT) {
         ShaderManager::Get().RecompileShaders();
-        return true;
-      }
-      if (event.key.keysym.sym == SDLK_w && event.key.keysym.mod & KMOD_ALT) {
-        wireframe_enabled_ = !wireframe_enabled_;
         return true;
       }
     case SDL_WINDOWEVENT:
@@ -972,11 +1058,21 @@ void Renderer::LoadShaders() {
       "color_single", {{GET_SHADER_PATH("color_single.vs.glsl"), ShaderType::kVertex},
                        {GET_SHADER_PATH("color_single.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader(
+      "debug_depth_quad", {{GET_SHADER_PATH("debug_depth_quad.vs.glsl"), ShaderType::kVertex},
+                           {GET_SHADER_PATH("debug_depth_quad.fs.glsl"), ShaderType::kFragment}});
+  ShaderManager::Get().AddShader(
       "chunk_batch_block", {{GET_SHADER_PATH("chunk_batch_block.vs.glsl"), ShaderType::kVertex},
                             {GET_SHADER_PATH("chunk_batch_block.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader("chunk_batch",
                                  {{GET_SHADER_PATH("chunk_batch.vs.glsl"), ShaderType::kVertex},
                                   {GET_SHADER_PATH("chunk_batch.fs.glsl"), ShaderType::kFragment}});
+  ShaderManager::Get().AddShader(
+      "chunk_batch_depth", {{GET_SHADER_PATH("chunk_batch_depth.vs.glsl"), ShaderType::kVertex},
+                            {GET_SHADER_PATH("empty.fs.glsl"), ShaderType::kFragment}});
+  ShaderManager::Get().AddShader(
+      "lod_chunk_batch_depth",
+      {{GET_SHADER_PATH("lod_chunk_batch_depth.vs.glsl"), ShaderType::kVertex},
+       {GET_SHADER_PATH("empty.fs.glsl"), ShaderType::kFragment}});
   ShaderManager::Get().AddShader(
       "lod_chunk_batch", {{GET_SHADER_PATH("lod_chunk_batch.vs.glsl"), ShaderType::kVertex},
                           {GET_SHADER_PATH("lod_chunk_batch.fs.glsl"), ShaderType::kFragment}});
@@ -994,6 +1090,8 @@ void Renderer::LoadShaders() {
 void Renderer::OnImGui() {
   ImGui::Begin("Renderer");
   ImGui::Text("Chunk Vertices: %i", stats_.total_chunk_vertices);
+  ImGui::SliderInt("Debug Depth Layer", &settings.debug_depth_layer, 0, kCascadeLevels - 1);
+  ImGui::Checkbox("Draw Debug Depth", &settings.draw_debug_depth);
   ImGui::Text("Chunk Indices: %i", stats_.total_chunk_indices);
   ImGui::Text("Static Chunk VBO Allocs: %i", static_chunk_vbo_.NumActiveAllocs());
   ImGui::Text("Static Chunk EBO Allocs: %i", static_chunk_ebo_.NumActiveAllocs());
@@ -1009,4 +1107,80 @@ void Renderer::OnImGui() {
 void Renderer::HandleResize(int new_width, int new_height) {
   glViewport(0, 0, new_width, new_height);
   InitFrameBuffers();
+}
+
+FrustumCorners Renderer::GetFrustumCornersWorldSpace(const glm::mat4& vp_matrix) const {
+  // Calculates matrix to transform back into world space using inverse, then applies it to the
+  // points in the [-1,1] NDC cube
+  FrustumCorners corners;
+  const glm::mat4 inv_vp = glm::inverse(vp_matrix);
+  int i = 0;
+  for (int x = 0; x < 2; x++) {
+    for (int y = 0; y < 2; y++) {
+      for (int z = 0; z < 2; z++, i++) {
+        glm::vec4 pt = inv_vp * glm::vec4(2.f * x - 1.f, 2.f * y - 1.f, 2.f * z - 1.f, 1.f);
+        corners[i] = pt / pt.w;
+      }
+    }
+  }
+  return corners;
+}
+
+glm::mat4 Renderer::GetLightSpaceMatrix(float near_plane, float far_plane, float fov_degrees,
+                                        const glm::mat4& view_matrix,
+                                        const glm::vec3& light_dir) const {
+  glm::mat4 proj_matrix =
+      glm::perspective(glm::radians(fov_degrees), window_.GetAspectRatio(), near_plane, far_plane);
+  glm::vec3 frustum_center_pos{0};
+  FrustumCorners frustum_corners = GetFrustumCornersWorldSpace(proj_matrix * view_matrix);
+  for (const auto& corner : frustum_corners) {
+    frustum_center_pos += glm::vec3(corner);
+  }
+  // TODO: parameterize
+  frustum_center_pos /= frustum_corners.size();
+  const auto light_view_matrix =
+      glm::lookAt(frustum_center_pos + light_dir, frustum_center_pos, glm::vec3(0.f, 1.f, 0.f));
+  // directional light, light needs ortho projection matrix
+  // the coordinates of the boundaries of frustum in light view space
+  float min_x = std::numeric_limits<float>::max();
+  float max_x = std::numeric_limits<float>::lowest();
+  float min_y = std::numeric_limits<float>::max();
+  float max_y = std::numeric_limits<float>::lowest();
+  float min_z = std::numeric_limits<float>::max();
+  float max_z = std::numeric_limits<float>::lowest();
+  for (const auto& corner : frustum_corners) {
+    const glm::vec4 trans_matrix = light_view_matrix * corner;
+    min_x = std::min(min_x, trans_matrix.x);
+    max_x = std::max(max_x, trans_matrix.x);
+    min_y = std::min(min_y, trans_matrix.y);
+    max_y = std::max(max_y, trans_matrix.y);
+    min_z = std::min(min_z, trans_matrix.z);
+    max_z = std::max(max_z, trans_matrix.z);
+  }
+  constexpr const float kZMult = 10.f;
+  if (min_z < 0) {
+    min_z *= kZMult;
+  } else {
+    min_z /= kZMult;
+  }
+  if (max_z < 0) {
+    max_z /= kZMult;
+  } else {
+    max_z *= kZMult;
+  }
+  return glm::ortho(min_x, max_x, min_y, max_y, min_z, max_z) * light_view_matrix;
+}
+
+void Renderer::CalculateLightSpaceMatrices(LightSpaceMatrices& matrices, float fov_degrees,
+                                           const glm::mat4& cam_view_matrix,
+                                           const glm::vec3& light_dir) const {
+  matrices[0] = GetLightSpaceMatrix(kCameraNearPlane, kShadowCascadeLevels[0], fov_degrees,
+                                    cam_view_matrix, light_dir);
+  for (size_t i = 1; i < kShadowCascadeLevels.size(); i++) {
+    matrices[i] = GetLightSpaceMatrix(kShadowCascadeLevels[i - 1], kShadowCascadeLevels[i],
+                                      fov_degrees, cam_view_matrix, light_dir);
+  }
+  matrices[matrices.size() - 1] =
+      GetLightSpaceMatrix(kShadowCascadeLevels[kShadowCascadeLevels.size() - 1], kCameraFarPlane,
+                          fov_degrees, cam_view_matrix, light_dir);
 }

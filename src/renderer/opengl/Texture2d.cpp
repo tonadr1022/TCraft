@@ -10,35 +10,6 @@ uint32_t GetMipLevels(int width, int height) {
 }
 }  // namespace
 
-// Texture::Texture(const TextureCubeCreateParams& params) {
-//   glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &id_);
-//   Image image;
-//   util::LoadImage(image, params.path, 0);
-//
-//   spdlog::info("{} {} {}", image.width / 6, image.height, image.channels);
-//   GLenum format = image.channels == 3 ? GL_RGB : GL_RGBA;
-//   GLenum internal_format = image.channels == 3 ? GL_RGB8 : GL_RGBA8;
-//   glTextureStorage2D(id_, 1, internal_format, image.width / 6, image.height);
-//
-//   int face_width = image.width / 6;
-//
-//   for (int face = 0; face < 6; face++) {
-//     unsigned char* face_data =
-//         static_cast<unsigned char*>(image.pixels) + (face * face_width * image.channels);
-//
-//     // Copy the correct portion for each face
-//     glTextureSubImage3D(id_, 0, 0, 0, face, face_width, image.height, 1, format,
-//     GL_UNSIGNED_BYTE,
-//                         face_data);
-//   }
-//   util::FreeImage(image.pixels);
-//   glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//   glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//   glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-//   glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//   glTextureParameteri(id_, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-// }
-
 Texture::Texture(const TextureCubeCreateParamsPaths& params) {
   glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &id_);
   std::vector<Image> images(6);

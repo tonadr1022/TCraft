@@ -9,6 +9,10 @@
 #include "renderer/opengl/DynamicBuffer.hpp"
 #include "renderer/opengl/VertexArray.hpp"
 
+// TODO: move out of this header file and somewhere more useful
+template <typename F>
+concept CallableNoArgs = std::is_invocable_v<F> && std::same_as<std::invoke_result_t<F>, void>;
+
 struct DrawElementsIndirectCommand {
   uint32_t count;
   uint32_t instance_count;
@@ -27,6 +31,11 @@ struct TextureMaterialData;
 struct RenderInfo;
 class Texture;
 union SDL_Event;
+
+// TODO: find better spot for  this? other classes don't need this data
+constexpr const int kCascadeLevels = 5;
+using FrustumCorners = std::array<glm::vec4, 8>;
+using LightSpaceMatrices = std::array<glm::mat4, kCascadeLevels>;
 
 class Renderer {
  public:
@@ -99,6 +108,8 @@ class Renderer {
     bool draw_chunks{true};
     bool draw_regular_meshes{true};
     bool draw_quads{true};
+    bool draw_debug_depth{false};
+    int debug_depth_layer{0};
   };
   Settings settings;
 
@@ -117,7 +128,10 @@ class Renderer {
 
   void DrawQuads();
   void RenderRegMeshes();
-  void DrawStaticOpaqueChunks(const RenderInfo& render_info);
+
+  template <CallableNoArgs F1, CallableNoArgs F2>
+  void DrawStaticOpaqueChunks(const RenderInfo& render_info, F1 non_lod_shader_func,
+                              F2 lod_shader_func);
   void DrawStaticTransparentChunks(const RenderInfo& render_info);
   void DrawNonStaticChunks(const RenderInfo& render_info);
   void DrawStaticChunksImpl(const RenderInfo& render_info);
@@ -275,6 +289,34 @@ class Renderer {
   void InitFrameBuffers();
   void SetFrustumShaderData(const RenderInfo& render_info);
   bool frustum_shader_data_set_this_frame_{false};
+
+  // TODO: simplify into render pass count?
+  struct FrameState {
+    bool static_opaque_chunk_frustum_compute_called{false};
+    bool static_transparent_chunk_frustum_compute_called{false};
+    bool static_lod_chunk_frustum_compute_called{false};
+  };
+  FrameState frame_state_;
+
+  // shadow maps
+  FrustumCorners GetFrustumCornersWorldSpace(const glm::mat4& vp_matrix) const;
+  glm::vec3 GetFrustumCenterFromCorners(const FrustumCorners& corners) const;
+  glm::mat4 GetLightSpaceMatrix(float near_plane, float far_plane, float fov_degrees,
+                                const glm::mat4& view_matrix, const glm::vec3& light_dir) const;
+  void CalculateLightSpaceMatrices(LightSpaceMatrices& matrices, float fov_degrees,
+                                   const glm::mat4& cam_view_matrix,
+                                   const glm::vec3& light_dir) const;
+  LightSpaceMatrices light_space_matrices_;
+  std::array<uint32_t, kCascadeLevels> shadow_map_display_textures_;
+  constexpr static const float kCameraFarPlane = 3000;
+  constexpr static const float kCameraNearPlane = 0.1f;
+  constexpr static const float kDepthMapResolution = 4096;
+  constexpr static const std::array<float, kCascadeLevels - 1> kShadowCascadeLevels{
+      kCameraFarPlane / 50.f, kCameraFarPlane / 25.f, kCameraFarPlane / 10.f,
+      kCameraFarPlane / 2.f};
+
+  uint32_t shadow_map_tex_arr_{};
+  uint32_t shadow_map_light_fbo_{};
 
   struct Stats {
     uint32_t textured_quad_draw_calls{0};

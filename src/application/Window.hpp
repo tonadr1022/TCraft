@@ -39,11 +39,11 @@ class Window {
   friend class Application;
   Window();
   static Window* instance_;
-
   EventCallback event_callback_;
   SDL_Window* window_{nullptr};
-  bool should_close_{false};
+  uint32_t window_width_, window_height_;
   uint32_t framebuffer_width_;
   uint32_t framebuffer_height_;
+  bool should_close_{false};
   bool vsync_on_{true};
 };

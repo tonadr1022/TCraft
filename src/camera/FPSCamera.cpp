@@ -12,7 +12,7 @@
 
 glm::mat4 FPSCamera::GetProjection(float aspect_ratio) const {
   ZoneScoped;
-  return glm::perspective(glm::radians(SettingsManager::Get().fps_cam_fov_deg), aspect_ratio,
+  return glm::perspective(glm::radians(SettingsManager::Get().fov_degrees), aspect_ratio,
                           near_plane_, far_plane_);
 }
 

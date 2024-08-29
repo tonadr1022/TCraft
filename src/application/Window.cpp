@@ -157,6 +157,11 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
   SDL_GL_MakeCurrent(window_, gl_context);
   SetVsync(true);
 
+  int x, y;
+  SDL_GetWindowSize(window_, &x, &y);
+  window_width_ = x;
+  window_height_ = y;
+
   SDL_SetHint(SDL_HINT_TOUCH_MOUSE_EVENTS, "1");
   SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
 
@@ -205,6 +210,10 @@ void Window::PollEvents() {
             event.window.windowID == SDL_GetWindowID(window_)) {
           should_close_ = true;
           break;
+        }
+        if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+          window_width_ = event.window.data1;
+          window_height_ = event.window.data2;
         }
         event_callback_(event);
         break;
@@ -348,12 +357,7 @@ void Window::SetFullScreen(bool fullscreen) {
   SDL_SetWindowFullscreen(window_, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }
 
-glm::ivec2 Window::GetWindowSize() const {
-  int x;
-  int y;
-  SDL_GetWindowSize(window_, &x, &y);
-  return {x, y};
-}
+glm::ivec2 Window::GetWindowSize() const { return {window_width_, window_height_}; }
 
 glm::ivec2 Window::GetMousePosition() const {
   int x;
