@@ -226,6 +226,7 @@ void Renderer::Init() {
       GL_FRAMEBUFFER_COMPLETE) {
     spdlog::error("Framebuffer incomplete");
   }
+  shadow_map_matrix_ubo_.Init(sizeof(glm::mat4) * 16, GL_DYNAMIC_STORAGE_BIT);
 }
 
 void Renderer::DrawQuads() {
@@ -548,23 +549,24 @@ void Renderer::Render(const RenderInfo& render_info) {
   ZoneScoped;
   UBOUniforms uniform_data;
   uniform_data.vp_matrix = render_info.vp_matrix;
+  uniform_data.view_matrix = render_info.view_matrix;
   uniform_ubo_.ResetOffset();
   uniform_ubo_.SubData(sizeof(UBOUniforms), &uniform_data);
   uniform_ubo_.BindBase(GL_UNIFORM_BUFFER, 0);
   glEnable(GL_DEPTH_TEST);
 
+  const glm::vec3 light_dir = glm::normalize(glm::vec3(1, 1, 0));
   // TODO: make configurable
   constexpr bool kDrawShadows = true;
   if (kDrawShadows) {
     // TODO: configure index
     // const glm::vec3 light_dir = glm::normalize(glm::vec3(20.0f, 50, 20.0f));
-    const glm::vec3 light_dir = glm::normalize(glm::vec3(1, 1, 0));
     CalculateLightSpaceMatrices(light_space_matrices_, SettingsManager::Get().fov_degrees,
                                 render_info.view_matrix, light_dir);
-    // shadow_map_matrix_ubo_.ResetOffset();
-    // for (size_t i = 0; i < kShadowCascadeLevels.size(); i++) {
-    //   shadow_map_matrix_ubo_.SubData(sizeof(glm::mat4), &light_space_matrices_[i]);
-    // }
+    shadow_map_matrix_ubo_.ResetOffset();
+    for (size_t i = 0; i < kShadowCascadeLevels.size(); i++) {
+      shadow_map_matrix_ubo_.SubData(sizeof(glm::mat4), &light_space_matrices_[i]);
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_light_fbo_);
     glViewport(0, 0, kDepthMapResolution, kDepthMapResolution);
     glCullFace(GL_FRONT);  // peter panning
@@ -606,12 +608,17 @@ void Renderer::Render(const RenderInfo& render_info) {
     glDisable(GL_BLEND);
     DrawStaticOpaqueChunks(
         render_info,
-        [this]() {
+        [this, &light_dir]() {
           // draw using the uniforms and indirect buffers
           auto chunk_shader = ShaderManager::Get().GetShader("chunk_batch");
+          glBindTextureUnit(1, shadow_map_tex_arr_);
           chunk_shader->Bind();
           chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
           chunk_shader->SetBool("u_UseAO", settings.chunk_use_ao);
+          chunk_shader->SetFloat("u_farPlane", kCameraFarPlane);
+          chunk_shader->SetInt("u_cascadeCount", kCascadeLevels);
+          chunk_shader->SetVec3("u_lightDir", light_dir);
+          chunk_shader->SetFloatArr("u_cascadePlaneDistances[0]", 16, kShadowCascadeLevels.data());
         },
         [this]() {
           // draw using the uniforms and indirect buffers

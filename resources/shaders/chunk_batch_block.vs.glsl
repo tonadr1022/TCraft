@@ -20,6 +20,7 @@ layout(std430, binding = 0) readonly buffer uniform_data_buffer {
 layout(std140, binding = 0) uniform Matrices
 {
     mat4 vp_matrix;
+    mat4 view_matrix;
     vec3 cam_pos;
 };
 

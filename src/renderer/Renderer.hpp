@@ -173,6 +173,7 @@ class Renderer {
 
   struct alignas(16) UBOUniforms {
     glm::mat4 vp_matrix;
+    glm::mat4 view_matrix;
     glm::vec3 cam_pos;
     float pad;
   };
@@ -315,6 +316,7 @@ class Renderer {
       kCameraFarPlane / 50.f, kCameraFarPlane / 25.f, kCameraFarPlane / 10.f,
       kCameraFarPlane / 2.f};
 
+  Buffer shadow_map_matrix_ubo_;
   uint32_t shadow_map_tex_arr_{};
   uint32_t shadow_map_light_fbo_{};
 

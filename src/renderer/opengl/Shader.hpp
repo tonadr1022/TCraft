@@ -19,6 +19,7 @@ class Shader {
   void SetVec4(const std::string& name, const Float4Arr& vec);
   void SetMat3(const std::string& name, const glm::mat3& mat, bool transpose = false);
   void SetBool(const std::string& name, bool value);
+  void SetFloatArr(const std::string& name, GLuint count, const GLfloat* value);
 
   Shader(uint32_t id, std::unordered_map<std::string, uint32_t>& uniform_locations);
   ~Shader() = default;

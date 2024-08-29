@@ -60,6 +60,11 @@ void Shader::SetMat3(const std::string& name, const glm::mat3& mat, bool transpo
                      glm::value_ptr(mat));
 }
 
+void Shader::SetFloatArr(const std::string& name, GLuint count, const GLfloat* value) {
+  EASSERT_MSG(uniform_locations_.contains(name), "Uniform name not found");
+  glUniform1fv(uniform_locations_.at(name), count, value);
+}
+
 void Shader::SetBool(const std::string& name, bool value) {
   EASSERT_MSG(uniform_locations_.contains(name), "Uniform name not found");
   glUniform1i(uniform_locations_[name], static_cast<GLint>(value));

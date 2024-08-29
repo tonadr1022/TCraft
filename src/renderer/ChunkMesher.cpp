@@ -57,7 +57,9 @@ uint32_t GetVertexData1(uint8_t x, uint8_t y, uint8_t z, uint8_t u, uint8_t v, u
   return (x | y << 6 | z << 12 | ao << 18 | u << 20 | v << 26);
 }
 
-uint32_t GetVertexData2(uint32_t tex_idx) { return tex_idx; }
+uint32_t GetVertexData2(uint32_t tex_idx, uint32_t quad_face) {
+  return (quad_face << 29 | tex_idx);
+}
 
 struct FaceInfo {
   struct Ao {
@@ -167,7 +169,7 @@ void ChunkMesher::AddQuad(uint8_t face_idx, uint8_t x, uint8_t y, uint8_t z,
         GetVertexData1(x + kVertexLookup[combined_offset], y + kVertexLookup[combined_offset + 1],
                        z + kVertexLookup[combined_offset + 2], kVertexLookup[combined_offset + 3],
                        kVertexLookup[combined_offset + 4], 0),
-        GetVertexData2(tex_idx)});
+        GetVertexData2(tex_idx, 0)});
   }
 
   indices.push_back(base_vertex_idx);
@@ -517,7 +519,7 @@ void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks, MeshVerticesI
                 v11v = du[v];
               }
 
-              uint32_t v_data2 = GetVertexData2(tex_idx);
+              uint32_t v_data2 = GetVertexData2(tex_idx, quad_face);
               uint32_t v00_data1 = GetVertexData1(vx, vy, vz, v00u, v00v, curr_face_info.ao.v0);
               uint32_t v01_data1 = GetVertexData1(vx + du[0], vy + du[1], vz + du[2], v01u, v01v,
                                                   curr_face_info.ao.v1);

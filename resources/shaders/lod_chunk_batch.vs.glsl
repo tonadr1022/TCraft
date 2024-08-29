@@ -19,6 +19,7 @@ layout(std430, binding = 0) readonly buffer uniform_data_buffer {
 // https://registry.khronos.org/OpenGL/extensions/ARB/ARB_uniform_buffer_object.txt
 layout(std140, binding = 0) uniform Matrices {
     mat4 vp_matrix;
+    mat4 view_matrix;
     vec3 cam_pos;
 };
 
