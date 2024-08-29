@@ -4,8 +4,8 @@ in vec2 TexCoord;
 
 out vec4 o_Color;
 
-uniform float near_plane;
-uniform float far_plane;
+uniform float near_plane = 0.1;
+uniform float far_plane = 5000.0;
 uniform int layer;
 
 uniform sampler2DArray depthMap;
@@ -17,5 +17,6 @@ float LinearizeDepth(float depth) {
 
 void main() {
     float depth = texture(depthMap, vec3(TexCoord, layer)).r;
-    o_Color = vec4(vec3(LinearizeDepth(depth) / far_plane), 1.0); // linearize for perspective only
+    // o_Color = vec4(vec3(LinearizeDepth(depth) / far_plane), 1.0); // linearize for perspective only
+    o_Color = vec4(vec3(depth), 1.0); // linearize for perspective only
 }

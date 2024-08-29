@@ -19,21 +19,22 @@ layout(std140, binding = 0) uniform Matrices
 };
 
 layout(std140, binding = 1) uniform LightSpaceMatrices {
-    mat4 lightSpaceMatrices;
+    mat4 lightSpaceMatrices[16];
 };
 
 uniform float u_cascadePlaneDistances[16];
 uniform int u_cascadeCount;
 uniform vec3 u_lightDir = normalize(vec3(1, 1, 0));
 uniform float u_farPlane;
+uniform bool u_drawShadows;
 
 out vec4 o_Color;
 
 float CalculateShadow(vec3 fragPosWorldSpace) {
     vec4 fragPosViewSpace = view_matrix * vec4(fragPosWorldSpace, 1.0);
-    float depthValue = abs(fragPosWorldSpace.z);
+    float depthValue = abs(fragPosViewSpace.z);
     int layer = -1;
-    for (int i = 0; i < u_cascadeCount; i++) {
+    for (int i = 0; i < u_cascadeCount; ++i) {
         if (depthValue < u_cascadePlaneDistances[i]) {
             layer = i;
             break;
@@ -64,7 +65,7 @@ float CalculateShadow(vec3 fragPosWorldSpace) {
         bias *= 1 / (u_cascadePlaneDistances[layer] * biasMod);
     }
 
-    // PCF
+    // PCF - soft shadows
     float shadow = 0.0;
     vec2 texelSize = 1.0 / vec2(textureSize(u_shadowMap, 0));
     for (int x = -1; x <= 1; ++x) {
@@ -78,11 +79,15 @@ float CalculateShadow(vec3 fragPosWorldSpace) {
 }
 
 void main() {
+    float shadow_mult = 1.0;
+    if (u_drawShadows) {
+        shadow_mult = (1.0 - CalculateShadow(fs_in.pos_world_space));
+    }
     if (u_UseTexture) {
         vec4 tex = texture(u_Texture, fs_in.tex_coords);
         if (tex.a < 0.5) discard;
-        o_Color = vec4(tex.rgb * fs_in.color, tex.a) * (1.0 - CalculateShadow(fs_in.pos_world_space));
+        o_Color = vec4(tex.rgb * fs_in.color, tex.a) * shadow_mult;
     } else {
-        o_Color = vec4(fs_in.color, 1);
+        o_Color = vec4(fs_in.color, 1) * shadow_mult;
     }
 }

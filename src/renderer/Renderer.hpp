@@ -110,6 +110,7 @@ class Renderer {
     bool draw_quads{true};
     bool draw_debug_depth{false};
     int debug_depth_layer{0};
+    bool draw_cascade_volume_vis{false};
   };
   Settings settings;
 
@@ -307,9 +308,13 @@ class Renderer {
   void CalculateLightSpaceMatrices(LightSpaceMatrices& matrices, float fov_degrees,
                                    const glm::mat4& cam_view_matrix,
                                    const glm::vec3& light_dir) const;
+  void DrawCascadeVolumeVisualizers(const LightSpaceMatrices& lightMatrices);
   LightSpaceMatrices light_space_matrices_;
+  LightSpaceMatrices visualizer_light_space_matrices_;
+  bool refresh_cascade_vis_{false};
+
   std::array<uint32_t, kCascadeLevels> shadow_map_display_textures_;
-  constexpr static const float kCameraFarPlane = 3000;
+  constexpr static const float kCameraFarPlane = 500;
   constexpr static const float kCameraNearPlane = 0.1f;
   constexpr static const float kDepthMapResolution = 4096;
   constexpr static const std::array<float, kCascadeLevels - 1> kShadowCascadeLevels{
@@ -333,4 +338,5 @@ class Renderer {
     uint32_t transparent_chunk_allocs{0};
   };
   Stats stats_;
+  float z_mult_light_space_matrix{10};
 };
