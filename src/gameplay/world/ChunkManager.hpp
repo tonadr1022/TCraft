@@ -65,9 +65,10 @@ class ChunkManager {
   int load_distance_{};
   glm::ivec3 center_{};
   glm::ivec3 prev_center_{};
-  std::mutex mutex_;
   std::queue<glm::ivec2> chunk_mesh_queue_;
   std::unordered_set<glm::ivec3> chunk_mesh_queue_immediate_;
+  std::mutex lod_chunk_mesh_finish_mtx_;
+  std::mutex chunk_mesh_finish_mtx_;
   std::queue<ChunkMeshTask> chunk_mesh_finished_queue_;
   std::queue<LODChunkMeshTask> lod_chunk_mesh_finished_queue_;
   using PositionIteratorFunc = std::function<void(const glm::ivec2&)>;
@@ -81,6 +82,7 @@ class ChunkManager {
   void IterateChunksVertical(int load_distance, const VerticalPositionIteratorFunc& func) const;
 
   std::queue<glm::ivec2> chunk_terrain_queue_;
+  std::mutex chunk_terrain_finish_mtx_;
   std::deque<glm::ivec2> finished_chunk_terrain_queue_;
 
   void PopulateChunkNeighbors(ChunkNeighborArray& neighbor_array, const glm::ivec3& pos);

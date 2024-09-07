@@ -112,7 +112,7 @@ void ChunkManager::Update(double /*dt*/) {
           data[i]->terrain_state = Chunk::State::kFinished;
         }
         {
-          std::lock_guard<std::mutex> lock(mutex_);
+          std::lock_guard<std::mutex> lock(chunk_terrain_finish_mtx_);
           // for (int i = 0; i < NumVerticalChunks; i++) {
           // }
           // state_stats_.loaded_chunks += NumVerticalChunks;
@@ -662,7 +662,7 @@ void ChunkManager::SendChunkMeshTaskLOD1(const glm::ivec2& pos) {
     std::vector<uint32_t> indices;
     ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
     mesher.GenerateLODGreedy2(arr, vertices, indices);
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(lod_chunk_mesh_finish_mtx_);
     lod_chunk_mesh_finished_queue_.emplace(std::move(vertices), std::move(indices), pos,
                                            LODLevel::kOne);
   });
@@ -690,7 +690,7 @@ void ChunkManager::SendChunkMeshTaskNoLOD(const glm::ivec3& pos) {
     ChunkMesher mesher{block_db_.GetBlockData(), block_db_.GetMeshData()};
     MeshVerticesIndices verts_indices;
     mesher.GenerateGreedy(a, verts_indices);
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(chunk_mesh_finish_mtx_);
     chunk_mesh_finished_queue_.emplace(std::move(verts_indices), pos);
   });
 }

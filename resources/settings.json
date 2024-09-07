@@ -4,7 +4,7 @@
   },
   "chunk_manager": {
     "frequency": 10.0,
-    "load_distance": 10,
+    "load_distance": 20,
     "lod_1_load_distance": 8
   },
   "main": {
