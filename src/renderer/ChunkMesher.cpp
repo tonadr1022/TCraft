@@ -51,7 +51,10 @@ constexpr int kVertexLookup[120] = {
 /* clang-format on */
 
 uint32_t GetLODVertexData1(int x, int y, int z) { return x | y << 10 | z << 20; }
-uint32_t GetLODVertexData2(int u, int v, uint32_t tex_idx) { return (u | v << 10 | tex_idx << 20); }
+// uint32_t GetLODVertexData2(int r, int g, int b) { return (r | g << 8 | b << 16); }
+uint32_t GetLODVertexData2(const glm::ivec3& color) {
+  return (color.r | color.g << 8 | color.b << 16);
+}
 
 uint32_t GetVertexData1(uint8_t x, uint8_t y, uint8_t z, uint8_t u, uint8_t v, uint8_t ao) {
   return (x | y << 6 | z << 12 | ao << 18 | u << 20 | v << 26);
@@ -668,30 +671,22 @@ void ChunkMesher::GenerateLODGreedy2(const ChunkStackArray& chunk_data,
 
             int quad_face = ((axis << 1) | (quad_type <= 0));
 
-            uint32_t tex_idx = db_mesh_data[quad_type].texture_indices[quad_face];
             int vx = x[0] * 2;
             int vy = x[1] * 2;
             int vz = x[2] * 2;
-
-            int v00u = du[u] + dv[u];
-            int v00v = du[v] + dv[v];
-            int v01u = dv[u];
-            int v01v = dv[v];
-            int v10u = 0;
-            int v10v = 0;
-            int v11u = du[u];
-            int v11v = du[v];
+            glm::ivec3 avg_colors = db_mesh_data[quad_type].avg_colors[quad_face];
 
             int base_vertex_idx = vertices.size();
+
             vertices.emplace_back(
-                ChunkVertex{GetLODVertexData1(vx, vy, vz), GetLODVertexData2(v00u, v00v, tex_idx)});
+                ChunkVertex{GetLODVertexData1(vx, vy, vz), GetLODVertexData2(avg_colors)});
             vertices.emplace_back(ChunkVertex{GetLODVertexData1(vx + du[0], vy + du[1], vz + du[2]),
-                                              GetLODVertexData2(v01u, v01v, tex_idx)});
+                                              GetLODVertexData2(avg_colors)});
             vertices.emplace_back(ChunkVertex{
                 GetLODVertexData1(vx + du[0] + dv[0], vy + du[1] + dv[1], vz + du[2] + dv[2]),
-                GetLODVertexData2(v10u, v10v, tex_idx)});
+                GetLODVertexData2(avg_colors)});
             vertices.emplace_back(ChunkVertex{GetLODVertexData1(vx + dv[0], vy + dv[1], vz + dv[2]),
-                                              GetLODVertexData2(v11u, v11v, tex_idx)});
+                                              GetLODVertexData2(avg_colors)});
 
             indices.push_back(base_vertex_idx + 1);
             indices.push_back(base_vertex_idx + 2);

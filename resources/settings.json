@@ -9,7 +9,7 @@
   },
   "main": {
     "fps_cam_fov_deg": 75.0,
-    "mouse_sensitivity": 1.0,
+    "mouse_sensitivity": 0.36800000071525574,
     "orbit_mouse_sensitivity": 1.0
   },
   "renderer": {

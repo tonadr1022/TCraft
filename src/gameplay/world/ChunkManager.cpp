@@ -3,7 +3,6 @@
 #include <imgui.h>
 
 #include "application/SettingsManager.hpp"
-#include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
 #include "gameplay/world/Chunk.hpp"
 #include "gameplay/world/ChunkData.hpp"

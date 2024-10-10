@@ -689,10 +689,9 @@ void Renderer::Render(const RenderInfo& render_info) {
             chunk_shader->SetBool("u_drawShadows", false);
           }
         },
-        [this]() {
+        []() {
           auto chunk_shader = ShaderManager::Get().GetShader("lod_chunk_batch");
           chunk_shader->Bind();
-          chunk_shader->SetBool("u_UseTexture", settings.chunk_render_use_texture);
         });
 
     DrawNonStaticChunks(render_info);

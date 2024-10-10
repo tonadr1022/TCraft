@@ -30,13 +30,11 @@ void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_t
   block_mesh_data_.emplace_back(default_mesh_data_);
 
   auto get_avg_color = [](const Image& img) -> glm::ivec3 {
-    const uint8_t* pix_ptr = static_cast<uint8_t*>(img.pixels);
     glm::ivec3 pix_counts{0, 0, 0};
-    for (int i = 0; i < img.width * img.height * img.channels; i += img.channels) {
-      pix_counts.x += pix_ptr[i];
-      pix_counts.y += pix_ptr[i + 1];
-      pix_counts.z += pix_ptr[i + 2];
-      pix_ptr += img.channels;
+    for (int i = 0; i < img.width * img.height * 4; i += 4) {
+      pix_counts.x += img.pixels[i];
+      pix_counts.y += img.pixels[i + 1];
+      pix_counts.z += img.pixels[i + 2];
     }
     pix_counts /= (img.width * img.height);
     return pix_counts;
@@ -59,8 +57,12 @@ void BlockDB::LoadMeshData(std::unordered_map<std::string, uint32_t>& tex_name_t
       uint32_t top_idx = tex_name_to_idx[data->tex_top];
       uint32_t bot_idx = tex_name_to_idx[data->tex_bottom];
       glm::ivec3 side_avg_color = get_avg_color(image_data[side_idx]);
-      mesh_data.avg_colors = {side_avg_color, side_avg_color, get_avg_color(image_data[top_idx]),
-                              get_avg_color(image_data[bot_idx])};
+      mesh_data.avg_colors = {side_avg_color,
+                              side_avg_color,
+                              get_avg_color(image_data[top_idx]),
+                              get_avg_color(image_data[bot_idx]),
+                              side_avg_color,
+                              side_avg_color};
       mesh_data.texture_indices = {side_idx, side_idx, top_idx, bot_idx, side_idx, side_idx};
     } else if (BlockModelDataUnique* data = std::get_if<BlockModelDataUnique>(&data_general)) {
       uint32_t pos_x_idx = tex_name_to_idx[data->tex_pos_x],

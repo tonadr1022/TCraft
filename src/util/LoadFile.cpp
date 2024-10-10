@@ -35,7 +35,6 @@ void LoadImage(Image& image, std::string_view path, int required_channels, bool 
     if (!image.pixels) {
       spdlog::error("Failed to load image at path {}", path);
     }
-    // stbi_image_free(image.pixels);
   }
 }
 void FreeImage(void* pixels) { stbi_image_free(pixels); }
