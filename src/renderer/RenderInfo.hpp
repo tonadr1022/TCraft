@@ -6,4 +6,5 @@ struct RenderInfo {
   glm::mat4 proj_matrix;
   glm::vec3 view_pos;
   glm::vec3 view_dir;
+  float camera_near_plane, camera_far_plane;
 };

@@ -103,6 +103,7 @@ void ChunkManager::Update(double /*dt*/) {
         if (!ChunkPosWithinDistance(pos.x, pos.y, load_distance_)) return;
 
         TerrainGenerator gen{data, pos * kChunkLength, seed_, terrain_};
+        // gen.GenerateYLayer(0, 3);
         // gen.GenerateSolid(3);
         gen.GenerateBiome();
         for (int i = 0; i < kNumVerticalChunks; i++) {

@@ -3,15 +3,18 @@
 #include "EAssert.hpp"
 #include "gameplay/scene/BlockEditorScene.hpp"
 #include "gameplay/scene/MainMenuScene.hpp"
+#include "gameplay/scene/ShadowScene.hpp"
 #include "gameplay/scene/WorldScene.hpp"
 #include "renderer/Renderer.hpp"
 #include "resource/MaterialManager.hpp"
 #include "resource/TextureManager.hpp"
 
 SceneManager::SceneManager(Window& window)
-    : scene_creators_(
-          {{"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }},
-           {"block_editor", [this]() { return std::make_unique<BlockEditorScene>(*this); }}}),
+    : scene_creators_({
+          {"main_menu", [this]() { return std::make_unique<MainMenuScene>(*this); }},
+          {"block_editor", [this]() { return std::make_unique<BlockEditorScene>(*this); }},
+          {"shadow", [this]() { return std::make_unique<ShadowScene>(*this); }},
+      }),
       window_(window) {}
 
 void SceneManager::LoadScene(const std::string& name) {

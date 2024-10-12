@@ -4,8 +4,8 @@ in vec2 TexCoord;
 
 out vec4 o_Color;
 
-uniform float near_plane = 0.1;
-uniform float far_plane = 5000.0;
+uniform float near_plane;
+uniform float far_plane;
 uniform int layer;
 
 uniform sampler2DArray depthMap;

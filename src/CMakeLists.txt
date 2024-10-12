@@ -32,6 +32,7 @@ set(SOURCES
     gameplay/scene/WorldScene.cpp
     gameplay/scene/BlockEditorScene.cpp
     gameplay/scene/MainMenuScene.cpp
+    gameplay/scene/ShadowScene.cpp
     gameplay/world/TerrainGenerator.cpp
     gameplay/world/Chunk.cpp
     gameplay/world/ChunkData.cpp

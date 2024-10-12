@@ -83,7 +83,6 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& directory
                                                    .filter_mode_max = GL_NEAREST,
                                                    .texture_wrap = GL_REPEAT});
     Renderer::Get().chunk_tex_array = chunk_tex_array_;
-
     block_db_.LoadMeshData(tex_name_to_idx, images);
     for (auto const& p : images) {
       util::FreeImage(p.pixels);
@@ -106,8 +105,15 @@ WorldScene::WorldScene(SceneManager& scene_manager, const std::string& directory
                                            glm::mat4(glm::mat3(curr_render_info_.view_matrix)));
 
     double curr_time = SDL_GetPerformanceCounter() * .000000001;
-    glm::vec3 sun_dir = glm::normalize(glm::vec3{glm::cos(curr_time), glm::sin(curr_time), 0});
-    skybox_shader.SetVec3("u_sun_direction", sun_dir);
+    if (animate_time_of_day_) {
+      if (sun_movement_mode_ == SunMovementMode::kRegular) {
+        sun_dir_ = glm::normalize(glm::vec3{glm::cos(curr_time), glm::sin(curr_time), 0});
+      } else if (sun_movement_mode_ == SunMovementMode::kCircleDaytime) {
+        sun_dir_ = glm::normalize(
+            glm::vec3{glm::cos(curr_time), sun_circle_animate_height_, glm::sin(curr_time)});
+      }
+    }
+    skybox_shader.SetVec3("u_sun_direction", sun_dir_);
     skybox_shader.SetFloat("u_time", curr_time * 0.5);
   });
 
@@ -157,13 +163,16 @@ bool WorldScene::OnEvent(const SDL_Event& event) {
 
 void WorldScene::Render() {
   ZoneScoped;
-  glm::mat4 proj = player_.GetCamera().GetProjection(window_.GetAspectRatio());
-  glm::mat4 view = player_.GetCamera().GetView();
+  auto& camera = player_.GetCamera();
+  glm::mat4 proj = camera.GetProjection(window_.GetAspectRatio());
+  glm::mat4 view = camera.GetView();
   curr_render_info_ = {.vp_matrix = proj * view,
                        .view_matrix = view,
                        .proj_matrix = proj,
                        .view_pos = player_.Position(),
-                       .view_dir = player_.GetCamera().GetFront()};
+                       .view_dir = camera.GetFront(),
+                       .camera_near_plane = camera.NearPlane(),
+                       .camera_far_plane = camera.FarPlane()};
   auto win_center = window_.GetWindowCenter();
 
   if (loaded_) {
@@ -198,6 +207,7 @@ void WorldScene::Render() {
     Renderer::Get().DrawQuad(chunk_state_tex_->Handle(), quad_pos, quad_dims);
   }
 
+  Renderer::Get().directional_light_dir = sun_dir_;
   Renderer::Get().Render(curr_render_info_);
 }
 
@@ -231,6 +241,13 @@ void WorldScene::OnImGui() {
   ImGui::Text("time: %f", time_);
   ImGui::SliderInt("Chunk State Y", &chunk_map_display_y_level_, 0, kNumVerticalChunks);
   ImGui::Checkbox("Show Chunk Map", &show_chunk_map_);
+  ImGui::Checkbox("Animate Time of Day", &animate_time_of_day_);
+  int mode = static_cast<int>(sun_movement_mode_);
+  ImGui::SliderFloat("Sun Animation Circle Height", &sun_circle_animate_height_, 0.f, 10.f);
+  if (ImGui::SliderInt("Sun Animation Mode", &mode, 0, 1)) {
+    sun_movement_mode_ = static_cast<SunMovementMode>(mode);
+  }
+  ImGui::SliderFloat3("Dir light dir", &sun_dir_.x, -1, 1);
   DrawInventory();
 }
 

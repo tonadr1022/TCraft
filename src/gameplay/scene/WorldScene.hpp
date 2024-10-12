@@ -41,6 +41,11 @@ class WorldScene : public Scene {
   double time_{0};
   int chunk_map_display_y_level_{0};
   ChunkMapMode chunk_map_mode_{ChunkMapMode::kChunkState};
+  glm::vec3 sun_dir_ = {0.4, 1, 0.4};
+  float sun_circle_animate_height_{1.f};
+  bool animate_time_of_day_{false};
+  enum class SunMovementMode { kRegular, kCircleDaytime };
+  SunMovementMode sun_movement_mode_;
 
   SquareTextureAtlas icon_texture_atlas_;
   Mesh cube_mesh_;

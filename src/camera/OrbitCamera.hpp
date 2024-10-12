@@ -29,6 +29,5 @@ class OrbitCamera : public Camera {
   static constexpr const float kMinDistance = 0.5f;
   static constexpr const float kDefaultOrbitScrollSensitivity = 0.25f;
   bool first_mouse_{true};
-  float near_plane_{0.1f}, far_plane_{500.f};
   void UpdatePosition();
 };

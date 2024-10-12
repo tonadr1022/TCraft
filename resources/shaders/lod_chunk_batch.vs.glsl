@@ -1,10 +1,13 @@
 #version 460 core
 
+#include "common.glsl"
+
 layout(location = 0) in uvec2 data;
 
 layout(location = 0) out VS_OUT {
     vec3 pos_world_space;
     vec3 color;
+    vec3 normal;
 } vs_out;
 
 struct UniformData {
@@ -33,6 +36,7 @@ void main() {
     UniformData uniform_data = uniforms[gl_DrawID + gl_InstanceID];
     vec4 pos_world_space = vec4(vec3(x, y, z) + uniform_data.pos.xyz, 1.0);
     gl_Position = vp_matrix * pos_world_space;
+    vs_out.normal = CubeNormals[bitfieldExtract(data.y, 29, 3)];
     vs_out.pos_world_space = vec3(pos_world_space);
     vs_out.color = vec3(r, g, b) / 255.0;
 }

@@ -71,6 +71,16 @@ void TerrainGenerator::SetBlock(int x, int y, int z, BlockType block) {
   chunks_[y / kChunkLength]->data.SetBlock(x, y % kChunkLength, z, block);
 }
 
+void TerrainGenerator::GenerateYLayer(int layer, BlockType block) {
+  glm::ivec3 iter;
+  iter.y = layer;
+  for (iter.z = 0; iter.z < kChunkLength; iter.z++) {
+    for (iter.x = 0; iter.x < kChunkLength; iter.x++) {
+      SetBlock(iter.x, iter.y, iter.z, block);
+    }
+  }
+}
+
 void TerrainGenerator::GenerateBiome() {
   ZoneScoped;
   EASSERT_MSG(!terrain_.biomes.empty(), "Need biomes");
@@ -195,6 +205,16 @@ void SingleChunkTerrainGenerator::GenerateLayers(std::vector<BlockType>& blocks)
       for (iter.x = 0; iter.x < kChunkLength; iter.x++) {
         SetBlock(iter, blocks[rand() % blocks.size()]);
       }
+    }
+  }
+}
+
+void SingleChunkTerrainGenerator::GenerateYLayer(int layer, BlockType block) {
+  glm::ivec3 iter;
+  iter.y = layer;
+  for (iter.z = 0; iter.z < kChunkLength; iter.z++) {
+    for (iter.x = 0; iter.x < kChunkLength; iter.x++) {
+      SetBlock(iter, block);
     }
   }
 }

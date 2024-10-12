@@ -7,6 +7,13 @@
 
 class ChunkData {
  public:
+  ChunkData() = default;
+  ~ChunkData() = default;
+  ChunkData(const ChunkData& other);
+  ChunkData(ChunkData&& other) noexcept;
+  ChunkData& operator=(ChunkData&& other) noexcept;
+  ChunkData& operator=(const ChunkData& other);
+
   void SetBlock(const glm::ivec3& pos, BlockType block);
   void SetBlock(int x, int y, int z, BlockType block);
   void SetBlockNoCheck(const glm::ivec3& pos, BlockType block);

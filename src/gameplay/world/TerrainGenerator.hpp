@@ -13,6 +13,7 @@ class TerrainGenerator {
                             const glm::ivec2& chunk_world_pos, int seed, const Terrain& terrain);
   void GenerateBiome();
   void GenerateSolid(BlockType block);
+  void GenerateYLayer(int layer, BlockType block);
 
  private:
   const std::array<std::shared_ptr<Chunk>, kNumVerticalChunks>& chunks_;
@@ -26,6 +27,7 @@ class SingleChunkTerrainGenerator {
  public:
   explicit SingleChunkTerrainGenerator(ChunkData& chunk, const glm::ivec3& chunk_world_pos,
                                        int seed, const Terrain& terrain);
+  void GenerateYLayer(int layer, BlockType block);
   void GenerateSolid(BlockType block);
   void GenerateChecker(BlockType block);
   void GenerateChecker(std::vector<BlockType>& blocks);

@@ -15,6 +15,8 @@ class Camera {
   virtual void SetPosition(const glm::vec3& pos) = 0;
   virtual void OnImGui() const = 0;
   virtual void LookAt(const glm::vec3& pos) = 0;
+  [[nodiscard]] inline float NearPlane() const { return near_plane_; }
+  [[nodiscard]] inline float FarPlane() const { return far_plane_; }
 
   static constexpr const glm::vec3 kUpVector{0.f, 1.f, 0.f};
 

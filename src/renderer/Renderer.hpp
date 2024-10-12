@@ -21,6 +21,7 @@ struct DrawElementsIndirectCommand {
   uint32_t base_instance;
 };
 
+class Shader;
 class Window;
 class WorldScene;
 class BlockEditorScene;
@@ -111,12 +112,18 @@ class Renderer {
     bool draw_debug_depth{false};
     int debug_depth_layer{0};
     bool draw_cascade_volume_vis{false};
+    bool peter_panning_front_face{false};
+    bool cascade_debug_colors{false};
   };
   Settings settings;
 
   // The passed callback function should bind a shader and set any uniforms necessary, meant for a
   // procedural skybox rather than a static image.
   void SetSkyboxShaderFunc(const std::function<void()>& func);
+
+  std::function<void(Shader&)> draw_func;
+
+  glm::vec3 directional_light_dir = {0.4, 1, 0.4};
 
  private:
   static Renderer* instance_;
@@ -130,11 +137,14 @@ class Renderer {
   void DrawQuads();
   void RenderRegMeshes();
 
-  template <CallableNoArgs F1, CallableNoArgs F2>
-  void DrawStaticOpaqueChunks(const RenderInfo& render_info, F1 non_lod_shader_func,
-                              F2 lod_shader_func);
+  template <CallableNoArgs ShaderFunc>
+  void DrawStaticOpaqueLODChunks(const RenderInfo& render_info, ShaderFunc non_lod_shader_func);
+  template <CallableNoArgs ShaderFunc>
+  void DrawStaticOpaqueNonLODChunks(const RenderInfo& render_info, ShaderFunc non_lod_shader_func);
+
   void DrawStaticTransparentChunks(const RenderInfo& render_info);
-  void DrawNonStaticChunks(const RenderInfo& render_info);
+  template <CallableNoArgs ShaderFunc>
+  void DrawNonStaticChunks(const RenderInfo& render_info, ShaderFunc shader_func);
   void DrawStaticChunksImpl(const RenderInfo& render_info);
   void DrawRegularMeshes(const RenderInfo& render_info);
   void DrawLines(const RenderInfo& render_info);
@@ -306,20 +316,17 @@ class Renderer {
   glm::mat4 GetLightSpaceMatrix(float near_plane, float far_plane, float fov_degrees,
                                 const glm::mat4& view_matrix, const glm::vec3& light_dir) const;
   void CalculateLightSpaceMatrices(LightSpaceMatrices& matrices, float fov_degrees,
-                                   const glm::mat4& cam_view_matrix,
-                                   const glm::vec3& light_dir) const;
+                                   const glm::mat4& cam_view_matrix, const glm::vec3& light_dir,
+                                   float near_plane, float far_plane) const;
   void DrawCascadeVolumeVisualizers(const LightSpaceMatrices& lightMatrices);
+  void SetShadowCascadeLevels(float near_plane, float far_plane);
   LightSpaceMatrices light_space_matrices_;
   LightSpaceMatrices visualizer_light_space_matrices_;
   bool refresh_cascade_vis_{false};
 
   std::array<uint32_t, kCascadeLevels> shadow_map_display_textures_;
-  constexpr static const float kCameraFarPlane = 500;
-  constexpr static const float kCameraNearPlane = 0.1f;
   constexpr static const float kDepthMapResolution = 4096;
-  constexpr static const std::array<float, kCascadeLevels - 1> kShadowCascadeLevels{
-      kCameraFarPlane / 50.f, kCameraFarPlane / 25.f, kCameraFarPlane / 10.f,
-      kCameraFarPlane / 2.f};
+  std::array<float, kCascadeLevels - 1> shadow_cascade_levels_;
 
   Buffer shadow_map_matrix_ubo_;
   uint32_t shadow_map_tex_arr_{};
@@ -338,5 +345,5 @@ class Renderer {
     uint32_t transparent_chunk_allocs{0};
   };
   Stats stats_;
-  float z_mult_light_space_matrix{10};
+  float z_mult_light_space_matrix_{3};
 };

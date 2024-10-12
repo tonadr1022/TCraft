@@ -110,8 +110,14 @@ since the most CPU heavy tasks are offloaded from the rendering/gameplay thread.
 
 ![Tracy Profiler Capture](screenshots/tracy_profiler.png)
 
+### Screenshots
+
+![Cascaded Shadow Mapping](screenshots/cascaded_shadow_map.png)
+_Cascaded shadow mapping_
+
 ### Other Features
 
+- Cascaded Shadow Mapping
 - Block editor to change and add block models and blocks
 - Terrain editor to modify biome and terrain content
 - World creation

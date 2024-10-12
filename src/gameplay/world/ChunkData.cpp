@@ -3,7 +3,49 @@
 #include <glm/vec3.hpp>
 #include <memory>
 
+#include "gameplay/world/ChunkDef.hpp"
 #include "gameplay/world/ChunkHelpers.hpp"
+
+ChunkData::ChunkData(const ChunkData& other)
+    : block_count_(other.block_count_),
+      lod_needs_refresh_(other.lod_needs_refresh_),
+      has_lod_1_(other.has_lod_1_) {
+  if (other.blocks_) {
+    blocks_ = std::make_unique<BlockTypeArray>(*other.blocks_);
+  }
+  if (other.blocks_lod_1_) {
+    blocks_lod_1_ = std::make_unique<BlockTypeArrayLOD1>(*other.blocks_lod_1_);
+  }
+}
+
+ChunkData::ChunkData(ChunkData&& other) noexcept
+    : blocks_(std::move(other.blocks_)),
+      blocks_lod_1_(std::move(other.blocks_lod_1_)),
+      block_count_(other.block_count_),
+      lod_needs_refresh_(other.lod_needs_refresh_),
+      has_lod_1_(other.has_lod_1_) {}
+
+ChunkData& ChunkData::operator=(const ChunkData& other) {
+  block_count_ = other.block_count_;
+  lod_needs_refresh_ = other.lod_needs_refresh_;
+  has_lod_1_ = other.has_lod_1_;
+  if (other.blocks_) {
+    blocks_ = std::make_unique<BlockTypeArray>(*other.blocks_);
+  }
+  if (other.blocks_lod_1_) {
+    blocks_lod_1_ = std::make_unique<BlockTypeArrayLOD1>(*other.blocks_lod_1_);
+  }
+  return *this;
+}
+
+ChunkData& ChunkData::operator=(ChunkData&& other) noexcept {
+  block_count_ = other.block_count_;
+  lod_needs_refresh_ = other.lod_needs_refresh_;
+  has_lod_1_ = other.has_lod_1_;
+  blocks_ = std::move(other.blocks_);
+  blocks_lod_1_ = std::move(other.blocks_lod_1_);
+  return *this;
+}
 
 BlockType ChunkData::GetBlockLOD1(int x, int y, int z) const {
   if (blocks_lod_1_ == nullptr) return 0;

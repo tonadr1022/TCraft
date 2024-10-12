@@ -12,7 +12,10 @@
 #include "application/SceneManager.hpp"
 #include "application/Window.hpp"
 #include "gameplay/world/BlockDB.hpp"
+#include "gameplay/world/Chunk.hpp"
+#include "gameplay/world/ChunkDef.hpp"
 #include "gameplay/world/Terrain.hpp"
+#include "gameplay/world/TerrainGenerator.hpp"
 #include "pch.hpp"
 #include "renderer/ChunkMesher.hpp"
 #include "renderer/Renderer.hpp"
@@ -60,6 +63,12 @@ void EditBlockImGui(BlockData& data, std::string& curr_model_name,
 }
 
 }  // namespace detail
+
+namespace {
+
+uint32_t mesh_handle = 0;
+
+}
 
 void BlockEditorScene::SetAddBlockModelData() {
   spdlog::info("{} ", state_->add_block_model_name);
@@ -156,6 +165,16 @@ void BlockEditorScene::Reload() {
   terrain_.Load(block_db_);
   icon_texture_atlas_ =
       util::renderer::LoadIconTextureAtlas("block_editor_icons", block_db_, *chunk_tex_array_);
+
+  {
+    Chunk chunk(glm::vec3(0));
+    SingleChunkTerrainGenerator gen(chunk.data, glm::ivec3{0, 0, 0}, 0, terrain_);
+    gen.GenerateYLayer(0, block_db_.GetBlockData("stone")->id);
+    ChunkMesher mesher(block_db_.GetBlockData(), block_db_.GetMeshData());
+    MeshVerticesIndices out_data;
+    mesher.GenerateGreedy(chunk, out_data);
+    mesh_handle = Renderer::Get().AllocateChunk(out_data.opaque_vertices, out_data.opaque_indices);
+  }
 }
 
 void BlockEditorScene::SetModelTexIndices(std::array<uint32_t, 6>& indices,
@@ -309,13 +328,18 @@ void BlockEditorScene::Render() {
       Renderer::Get().SubmitChunkDrawCommand(model, add_block_block_.mesh_handle);
     }
   }
-  glm::mat4 proj = player_.GetCamera().GetProjection(window_.GetAspectRatio());
-  glm::mat4 view = player_.GetCamera().GetView();
-  Renderer::Get().Render({.vp_matrix = proj * view,
-                          .view_matrix = view,
-                          .proj_matrix = proj,
-                          .view_pos = player_.Position(),
-                          .view_dir = player_.GetCamera().GetFront()});
+  Renderer::Get().SubmitChunkDrawCommand(glm::translate(glm::mat4(1), glm::vec3(-16, -4, -16)),
+                                         mesh_handle);
+  auto& camera = player_.GetCamera();
+  glm::mat4 proj = camera.GetProjection(window_.GetAspectRatio());
+  glm::mat4 view = camera.GetView();
+  Renderer::Get().Render(RenderInfo{.vp_matrix = proj * view,
+                                    .view_matrix = view,
+                                    .proj_matrix = proj,
+                                    .view_pos = player_.Position(),
+                                    .view_dir = camera.GetFront(),
+                                    .camera_near_plane = camera.NearPlane(),
+                                    .camera_far_plane = camera.FarPlane()});
 }
 
 void BlockEditorScene::ResetAddModelData() {

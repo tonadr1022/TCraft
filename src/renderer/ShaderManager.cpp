@@ -1,6 +1,8 @@
 #include "ShaderManager.hpp"
 
-#include "util/LoadFile.hpp"
+#include <fstream>
+
+#include "util/Paths.hpp"
 
 ShaderManager *ShaderManager::instance_ = nullptr;
 
@@ -77,11 +79,45 @@ uint32_t CompileShader(ShaderType type, const char *src) {
   return id;
 }
 
+namespace {
+
+std::optional<std::string> PreprocessShader(const std::string &shader_file) {
+  std::ifstream file(shader_file);
+  if (!file.is_open()) {
+    return {};
+  }
+
+  std::ostringstream content;
+  std::string line;
+
+  while (std::getline(file, line)) {
+    if (line.find("#include") == 0) {
+      size_t start = line.find('\"') + 1;
+      size_t end = line.find('\"', start);
+      std::string include_file = line.substr(start, end - start);
+      std::string full_path = GET_SHADER_PATH("") + include_file;
+
+      // TODO: fix macro or make another way to get true path since this is hacky way to get
+      // macro to work
+      auto include_content = PreprocessShader(full_path);
+      if (!include_content.has_value()) {
+        return {};
+      }
+      content << include_content.value();
+    } else {
+      content << line << '\n';
+    }
+  }
+
+  return content.str();
+}
+}  // namespace
+
 std::optional<ShaderManager::ShaderProgramData> ShaderManager::CompileProgram(
     const std::string &name, const std::vector<ShaderCreateInfo> &create_info_vec) {
   std::vector<uint32_t> shader_ids;
   for (const auto &create_info : create_info_vec) {
-    auto src = util::LoadFromFile(create_info.shaderPath);
+    auto src = PreprocessShader(create_info.shaderPath);
     if (!src.has_value()) {
       spdlog::error("Failed to load from file {}", create_info.shaderPath);
       return std::nullopt;

@@ -1,6 +1,7 @@
 #include "ChunkMesher.hpp"
 
 #include <cstddef>
+#include <memory>
 
 #include "../gameplay/world/BlockDB.hpp"
 #include "../gameplay/world/ChunkData.hpp"
@@ -316,6 +317,12 @@ void ChunkMesher::GenerateNaive(const BlockTypeArray& blocks, std::vector<ChunkV
       }
     }
   }
+}
+
+void ChunkMesher::GenerateGreedy(Chunk& chunk, MeshVerticesIndices& out_data) {
+  ChunkNeighborArray chunks;
+  chunks[13] = std::make_shared<Chunk>(chunk);
+  GenerateGreedy(chunks, out_data);
 }
 
 void ChunkMesher::GenerateGreedy(const ChunkNeighborArray& chunks, MeshVerticesIndices& out_data) {

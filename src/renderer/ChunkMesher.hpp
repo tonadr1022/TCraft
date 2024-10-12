@@ -16,6 +16,7 @@ class ChunkMesher {
   void GenerateSmart(const ChunkNeighborArray& chunks, std::vector<ChunkVertex>& vertices,
                      std::vector<uint32_t>& indices) const;
   void GenerateGreedy(const ChunkNeighborArray& chunks, MeshVerticesIndices& out_data);
+  void GenerateGreedy(Chunk& chunk, MeshVerticesIndices& out_data);
   void GenerateLODGreedy2(const ChunkStackArray& chunk_data, std::vector<ChunkVertex>& vertices,
                           std::vector<uint32_t>& indices);
 
