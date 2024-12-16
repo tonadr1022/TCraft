@@ -29,24 +29,26 @@ float CalculateShadow(vec3 fragPosWorldSpace) {
     }
 
     vec3 normal = normalize(fs_in.normal);
-    float bias = max(0.05 * (1.0 - dot(normal, u_lightDir)), 0.005);
+    float bias = max(0.01 * (1.0 - dot(normal, u_lightDir)), 0.005);
     const float biasMod = 0.5;
-    if (layer == u_cascadeCount) {
-        bias *= 1 / (u_farPlane * biasMod);
+    if (layer == u_cascadeCount - 1) {
+        bias *= 1.0 / (u_farPlane * biasMod);
     } else {
-        bias *= 1 / (u_cascadePlaneDistances[layer] * biasMod);
+        bias *= 1.0 / (u_cascadePlaneDistances[layer] * biasMod);
     }
 
     // PCF - soft shadows
     float shadow = 0.0;
     vec2 texelSize = 1.0 / vec2(textureSize(u_shadowMap, 0));
-    for (int x = -1; x <= 1; ++x) {
-        for (int y = -1; y <= 1; ++y) {
+    #define RANGE 2
+    #define COUNT 25
+    for (int x = -RANGE; x <= RANGE; ++x) {
+        for (int y = -RANGE; y <= RANGE; ++y) {
             float pcfDepth = texture(u_shadowMap, vec3(projCoords.xy + vec2(x, y) * texelSize, layer)).r;
             shadow += (currDepth - bias) > pcfDepth ? 1.0 : 0.0;
         }
     }
-    shadow /= 9.0;
+    shadow /= COUNT;
     return shadow;
 }
 

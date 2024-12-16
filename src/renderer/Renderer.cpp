@@ -1186,7 +1186,9 @@ void Renderer::StartFrame(const Window&) {
     frame_state_ = {};
   }
 
-  { ZoneScopedN("OpenGL state"); }
+  {
+    ZoneScopedN("OpenGL state");
+  }
 }
 
 bool Renderer::OnEvent(const SDL_Event& event) {
@@ -1359,18 +1361,18 @@ glm::mat4 Renderer::GetLightSpaceMatrix(float near_plane, float far_plane, float
   // min_z *= z_mult;
   // max_z *= z_mult;
 
-  if (glm::abs(z_mult_light_space_matrix_) - 1.0 > 0.0001) {
-    if (min_z < 0) {
-      min_z *= z_mult_light_space_matrix_;
-    } else {
-      min_z /= z_mult_light_space_matrix_;
-    }
-    if (max_z < 0) {
-      max_z /= z_mult_light_space_matrix_;
-    } else {
-      max_z *= z_mult_light_space_matrix_;
-    }
-  }
+  // if (glm::abs(z_mult_light_space_matrix_) - 1.0 > 0.0001) {
+  //   if (min_z < 0) {
+  //     min_z *= z_mult_light_space_matrix_;
+  //   } else {
+  //     min_z /= z_mult_light_space_matrix_;
+  //   }
+  //   if (max_z < 0) {
+  //     max_z /= z_mult_light_space_matrix_;
+  //   } else {
+  //     max_z *= z_mult_light_space_matrix_;
+  //   }
+  // }
   auto proj = glm::ortho(min_x, max_x, min_y, max_y, min_z, max_z);
   return proj * light_view_matrix;
 }

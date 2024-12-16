@@ -63,17 +63,18 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 target_precompile_headers(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/pch.hpp)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${BSHOSHANY_THREAD_POOL_INCLUDE_DIRS})
-
+find_package(SDL2)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
     $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
-    imgui::imgui
-    GLEW::GLEW
+    imgui_backend
+    glad
     glm::glm
     Tracy::TracyClient
     spdlog::spdlog
     nlohmann_json::nlohmann_json
     FastNoise
     libcuckoo::libcuckoo
+    bs_thread_pool
+    stb_image
 )

@@ -267,8 +267,8 @@ void WorldScene::DrawInventory() {
   uint32_t num_rows =
       glm::ceil(static_cast<float>(icon_texture_atlas_.id_to_offset_map.size()) / icons_per_row);
   float window_width =
-      (img_dims.x * icons_per_row + style.ItemSpacing.x * (icons_per_row - 1)) * 1.25 +
-      style.WindowPadding.x * 2;
+      ((img_dims.x * icons_per_row + style.ItemSpacing.x * (icons_per_row - 1)) * 1.25) +
+      (style.WindowPadding.x * 2);
   float window_height = img_dims.y * num_rows * 1.15 + style.ItemSpacing.y * (num_rows - 1) +
                         style.WindowPadding.y * 2;
   ImGui::SliderFloat2("window padding", &style.WindowPadding.x, 0.0f, 10.0f);
@@ -301,8 +301,9 @@ void WorldScene::DrawInventory() {
     }
 
     ImGui::PushID(id);
-    if (ImGui::ImageButton(reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
-                           ImVec2(img_dims.x, img_dims.y), uv0, uv1)) {
+    if (ImGui::ImageButton(
+            "", static_cast<ImTextureID>(icon_texture_atlas_.material->GetTexture().Id()),
+            ImVec2(img_dims.x, img_dims.y), uv0, uv1)) {
       player_.held_item_id = id;
     }
     if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {

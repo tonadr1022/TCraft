@@ -687,7 +687,7 @@ void BlockTypeSelectMenu(const std::string& name, BlockDB& block_db_,
           constexpr glm::vec2 kImageDims{40, 40};
           ImGui::PushID(block_id);
           if (ImGui::ImageButton(
-                  reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
+                  "", static_cast<ImTextureID>(icon_texture_atlas_.material->GetTexture().Id()),
                   ImVec2(kImageDims.x, kImageDims.y), uv0, uv1)) {
             on_select(block_id);
             ImGui::CloseCurrentPopup();
@@ -837,7 +837,8 @@ void BlockEditorScene::ImGuiTerrainEdit() {
                 icon_texture_atlas_.ComputeUVs(layer.block_types[block_id_idx], uv0, uv1);
                 constexpr glm::vec2 kImageDims = {50, 50};
                 if (ImGui::ImageButton(
-                        reinterpret_cast<void*>(icon_texture_atlas_.material->GetTexture().Id()),
+                        "",
+                        static_cast<ImTextureID>(icon_texture_atlas_.material->GetTexture().Id()),
                         ImVec2(kImageDims.x, kImageDims.y), uv0, uv1)) {
                   ImGui::OpenPopup("Select Block");
                   layer_block_edit_idx = block_id_idx;

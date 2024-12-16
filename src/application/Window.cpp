@@ -178,10 +178,10 @@ void Window::Init(int width, int height, const char* title, const EventCallback&
   ImGui_ImplSDL2_InitForOpenGL(window_, gl_context);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
-  GLenum err = glewInit();
-  if (err != GLEW_OK) {
+  GLenum err = gladLoadGL();
+  if (err) {
     /* Problem: glewInit failed, something is seriously wrong. */
-    const char* err_string = reinterpret_cast<const char*>(glewGetErrorString(err));
+    const char* err_string = reinterpret_cast<const char*>(glad_glGetString(err));
     spdlog::critical("GLEW initialization failed: {}", err_string);
   }
 

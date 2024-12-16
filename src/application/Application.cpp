@@ -47,7 +47,7 @@ void Application::Run() {
   ZoneScoped;
   // scene_manager_.LoadScene("main_menu");
   // scene_manager_.LoadScene("block_editor");
-  scene_manager_.LoadWorld(GET_PATH("resources/worlds/default_world"));
+  scene_manager_.LoadWorld(GET_PATH("resources/default_world"));
   // scene_manager_.LoadScene("shadow");
 
   Uint64 curr_time = SDL_GetPerformanceCounter();
